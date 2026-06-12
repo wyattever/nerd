@@ -383,13 +383,13 @@ if st.session_state.current_result:
 
 if st.session_state.current_result:
     st.divider(); st.subheader("Generated Directory Entry")
-    # Using res_hash to force the component to refresh when the markdown content changes
-    st.components.v1.html(
-        generate_ncademi_html(parse_markdown_to_dict(st.session_state.current_result)), 
-        height=800, 
-        scrolling=True,
-        key=f"html_preview_{res_hash}"
-    )
+    # Wrap in a container with a key to force re-render since st.components.v1.html doesn't support 'key'
+    with st.container(key=f"preview_container_{res_hash}"):
+        st.components.v1.html(
+            generate_ncademi_html(parse_markdown_to_dict(st.session_state.current_result)), 
+            height=800, 
+            scrolling=True
+        )
     with st.expander("🔍 Search Citations"):
         if st.session_state.current_citations:
             for c in st.session_state.current_citations: st.markdown(c, unsafe_allow_html=True)
