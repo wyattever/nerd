@@ -341,44 +341,39 @@ if st.session_state.current_result:
     with r_col: st.text_input("Response", value=st.session_state.feedback_response, disabled=True, key="response_output")
 
     # --- ADD RESOURCES WIDGET ---
+    def add_manual_resources():
+        new_md = st.session_state.current_result
+        added_vendor = parse_manual_links(st.session_state.manual_vendor)
+        added_other = parse_manual_links(st.session_state.manual_other)
+        
+        if added_vendor:
+            v_lines = "\n".join([f"- [{t}]({u})" for t, u in added_vendor])
+            if "--- Accessibility Resources (From Vendor) ---" in new_md:
+                new_md = new_md.replace("--- Accessibility Resources (From Vendor) ---", f"--- Accessibility Resources (From Vendor) ---\n{v_lines}")
+        
+        if added_other:
+            o_lines = "\n".join([f"- Manual Source: Added by User ([{t}]({u}))" for t, u in added_other])
+            if "--- Accessibility Insights (From Third-Party Sources) ---" in new_md:
+                new_md = new_md.replace("--- Accessibility Insights (From Third-Party Sources) ---", f"--- Accessibility Insights (From Third-Party Sources) ---\n{o_lines}")
+        
+        if added_vendor or added_other:
+            temp_md, rej = filter_broken_links(new_md)
+            if len(re.findall(r'https?://[^\)\s]+', temp_md)) > len(re.findall(r'https?://[^\)\s]+', st.session_state.current_result)):
+                st.session_state.current_result = temp_md
+                st.session_state.feedback_response = "Link(s) added successfully."
+                if rej > 0: st.session_state.feedback_response += f" ({rej} invalid rejected)."
+                st.session_state.manual_vendor = ""
+                st.session_state.manual_other = ""
+                try: bq_client.insert_rows_json("telemetry.feedback_logs", [{"timestamp": datetime.now().isoformat(), "product_url": st.session_state.url_field, "original_markdown": st.session_state.current_result, "user_feedback": "Manual link addition", "refined_markdown": temp_md}])
+                except: pass
+            else:
+                st.session_state.feedback_response = "Error: Link(s) were invalid or already present."
+
     with st.expander("➕ Add Resources"):
         st.markdown("To add additional resources, add link text and the URL in this format: `Link text | URL; Link text | URL;...`")
-        vendor_add = st.text_area("From Vendor", placeholder="Camtasia Accessibility | https://example.com; ...", key="manual_vendor")
-        other_add = st.text_area("From Other Sources", placeholder="External Guide | https://example.com; ...", key="manual_other")
-        if st.button("Add to Listing"):
-            new_md = st.session_state.current_result
-            added_vendor = parse_manual_links(vendor_add)
-            added_other = parse_manual_links(other_add)
-            
-            if added_vendor:
-                v_lines = "\n".join([f"- [{t}]({u})" for t, u in added_vendor])
-                if "--- Accessibility Resources (From Vendor) ---" in new_md:
-                    new_md = new_md.replace("--- Accessibility Resources (From Vendor) ---", f"--- Accessibility Resources (From Vendor) ---\n{v_lines}")
-            
-            if added_other:
-                o_lines = "\n".join([f"- Manual Source: Added by User ([{t}]({u}))" for t, u in added_other])
-                if "--- Accessibility Insights (From Third-Party Sources) ---" in new_md:
-                    new_md = new_md.replace("--- Accessibility Insights (From Third-Party Sources) ---", f"--- Accessibility Insights (From Third-Party Sources) ---\n{o_lines}")
-            
-            if added_vendor or added_other:
-                # Validation
-                new_md, rej = filter_broken_links(new_md)
-                
-                # Check if links were actually added (and not just filtered out)
-                if len(re.findall(r'https?://[^\)\s]+', new_md)) > len(re.findall(r'https?://[^\)\s]+', st.session_state.current_result)):
-                    st.session_state.current_result = new_md
-                    st.session_state.feedback_response = f"Link(s) added successfully."
-                    if rej > 0: st.session_state.feedback_response += f" ({rej} invalid rejected)."
-                    
-                    # Clear inputs
-                    st.session_state.manual_vendor = ""
-                    st.session_state.manual_other = ""
-                    
-                    try: bq_client.insert_rows_json("telemetry.feedback_logs", [{"timestamp": datetime.now().isoformat(), "product_url": url_input, "original_markdown": st.session_state.current_result, "user_feedback": "Manual link addition", "refined_markdown": new_md}])
-                    except: pass
-                    st.rerun()
-                else:
-                    st.error("Link addition failed. The URL(s) may be invalid or unreachable.")
+        st.text_area("From Vendor", placeholder="Camtasia Accessibility | https://example.com; ...", key="manual_vendor")
+        st.text_area("From Other Sources", placeholder="External Guide | https://example.com; ...", key="manual_other")
+        st.button("Add to Listing", on_click=add_manual_resources)
 
 if st.session_state.current_result:
     st.divider(); st.subheader("Generated Directory Entry")
