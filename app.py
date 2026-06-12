@@ -139,14 +139,21 @@ def parse_markdown_to_dict(md_text):
                 elif "Evaluating Organization:" in line: curr["Org"] = line.replace("Evaluating Organization:", "").strip()
                 elif "Link:" in line:
                     m = re.search(r"\[(.*?)\]\((.*?)\)", line)
-                    if m: curr["LinkText"], curr["Link"] = m.group(1), m.group(2)
+                    if m: 
+                        curr["LinkText"], curr["Link"] = m.group(1), m.group(2)
+                    else:
+                        # Fallback for when filter_broken_links removes the markdown formatting
+                        clean_text = line.replace("Link:", "").strip()
+                        if clean_text:
+                            curr["LinkText"] = clean_text
+                            curr["Link"] = "#"
                 elif "Note:" in line: curr["Note"] = line.replace("Note:", "").strip()
     return data
 
 def generate_ncademi_html(data):
     vendor_res = "".join([f'<li><a href="{u}" target="_blank">{t}</a></li>' for t, u in data["Vendor Resources"]]) if data["Vendor Resources"] else "<li>No vendor accessibility resources found.</li>"
     third_res = "".join([f'<li>{s}: {sm} (<a href="{u}" target="_blank">{lt}</a>)</li>' for s, sm, lt, u in data["Third Party Insights"]]) if data["Third Party Insights"] else "<li>No authoritative third-party accessibility reviews found.</li>"
-    acr_res = "".join([f'<div style="margin-bottom:20px;border-bottom:1px solid #eee;padding-bottom:10px;"><strong>{a["Title"]}</strong><br><small>Version: {a["Version"]} | Date: {a["Date"]}</small><br><small>Org: {a["Org"]}</small><br><a href="{a["Link"]}" target="_blank">{a["LinkText"]}</a>' + (f'<br><small>Note: {a["Note"]}</small>' if a["Note"] else "") + '</div>' for a in data["ACRs"]]) if data["ACRs"] else "<p>No ACR information found.</p>"
+    acr_res = "".join([f'<div style="margin-bottom:20px;border-bottom:1px solid #eee;padding-bottom:10px;"><strong>{a["Title"]}</strong><br><small>Version: {a["Version"]} | Date: {a["Date"]}</small><br><small>Org: {a["Org"]}</small><br>' + (f'<a href="{a["Link"]}" target="_blank">{a["LinkText"]}</a>' if a["Link"] != "#" else f'<span>{a["LinkText"]}</span>') + (f'<br><small>Note: {a["Note"]}</small>' if a["Note"] else "") + '</div>' for a in data["ACRs"]]) if data["ACRs"] else "<p>No ACR information found.</p>"
     css_content = "@import url('https://ncademi.org/wp-content/themes/ncademitheme/style.css');"
     if os.path.exists("ncademi_combined.css"):
         with open("ncademi_combined.css", "r") as f: css_content = f.read()
