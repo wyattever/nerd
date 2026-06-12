@@ -310,13 +310,19 @@ if st.session_state.current_result:
     ts = datetime.now().strftime('%m-%d-%y-%H-%M-%S')
     clean_name = re.sub(r'[^\w\-]', '_', p_data['Product Name'])
     fname = f"{clean_name}-{ts}"
-    with action_cols[0]: st.download_button("DOCX", data=create_docx(st.session_state.current_result), file_name=f"{fname}.docx", icon=":material/download:", key="btn_docx")
-    with action_cols[1]: st.download_button("HTML", data=generate_ncademi_html(p_data), file_name=f"{fname}.html", icon=":material/download:", key="btn_html")
+    
+    # We use a hash of the result to force iframe re-rendering when content changes
+    import hashlib
+    res_hash = hashlib.md5(st.session_state.current_result.encode()).hexdigest()
+
+    with action_cols[0]: st.download_button("DOCX", data=create_docx(st.session_state.current_result), file_name=f"{fname}.docx", icon=":material/download:", key=f"btn_docx_{res_hash}")
+    with action_cols[1]: st.download_button("HTML", data=generate_ncademi_html(p_data), file_name=f"{fname}.html", icon=":material/download:", key=f"btn_html_{res_hash}")
 
     st.write("")
     f_col, s_col = st.columns([1, 1])
     with f_col: feedback = st.text_input("Feedback (Beta)", placeholder="Instructions...", key="feedback_field")
     with s_col:
+        # (Rest of feedback button logic...)
         if st.button("Send", key="send_feedback_btn"):
             if feedback:
                 with st.spinner(f"Processing feedback for up to {max_search_time} minutes..."):
@@ -377,7 +383,13 @@ if st.session_state.current_result:
 
 if st.session_state.current_result:
     st.divider(); st.subheader("Generated Directory Entry")
-    st.components.v1.html(generate_ncademi_html(parse_markdown_to_dict(st.session_state.current_result)), height=800, scrolling=True)
+    # Using res_hash to force the component to refresh when the markdown content changes
+    st.components.v1.html(
+        generate_ncademi_html(parse_markdown_to_dict(st.session_state.current_result)), 
+        height=800, 
+        scrolling=True,
+        key=f"html_preview_{res_hash}"
+    )
     with st.expander("🔍 Search Citations"):
         if st.session_state.current_citations:
             for c in st.session_state.current_citations: st.markdown(c, unsafe_allow_html=True)
