@@ -244,33 +244,46 @@ Link: [Text](URL)
 """
 
 col_time, _ = st.columns([1, 1])
-with col_time: max_search_time = st.slider("Max Research Time (minutes)", 1, 10, 5, 1)
+with col_time: max_search_time = st.slider("Max Research Time (minutes)", 1, 10, 5, 1, key="search_time")
 
 col_url, col_clear = st.columns([1, 1])
 with col_url: url_input = st.text_input("Product URL", placeholder="https://example.com", key="url_field")
 with col_clear:
     if st.button("Clear All"): st.session_state.current_result = None; st.session_state.current_citations = []; st.session_state.feedback_response = ""; st.rerun()
 
-if st.session_state.current_result: action_cols = st.columns([1, 1, 1])
-else: action_cols = st.columns([1])
+def run_generation():
+    u = st.session_state.url_field
+    t = st.session_state.search_time
+    if not u:
+        st.error("Enter URL")
+        return
+    
+    with st.spinner(f"Running {t}-minute max research session...."):
+        st.session_state.feedback_response = ""
+        resp = client.models.generate_content(
+            model="gemini-2.5-flash", 
+            contents=f"Research: {u}", 
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT, 
+                tools=[types.Tool(google_search=types.GoogleSearchRetrieval())], 
+                temperature=0.0, 
+                http_options=types.HttpOptions(timeout=t*60*1000)
+            )
+        )
+        st.session_state.current_result, _ = filter_broken_links(resp.text)
+        cites = []
+        if resp.candidates and resp.candidates[0].grounding_metadata:
+            if resp.candidates[0].grounding_metadata.search_entry_point: 
+                cites.append(resp.candidates[0].grounding_metadata.search_entry_point.rendered_content)
+        st.session_state.current_citations = cites
+        name = "Product"
+        for l in st.session_state.current_result.split('\n'):
+            if "Product Name:" in l: name = l.replace("Product Name:", "").strip(); break
+        st.session_state.history.append({"name": name, "url": u, "result": st.session_state.current_result, "citations": st.session_state.current_citations})
 
+action_cols = st.columns([1, 1, 1])
 with action_cols[0]:
-    if st.button("Generate Listing", type="primary"):
-        if not url_input: st.error("Enter URL")
-        else:
-            with st.spinner(f"Running {max_search_time}-minute max research session...."):
-                st.session_state.feedback_response = ""
-                resp = client.models.generate_content(model="gemini-2.5-flash", contents=f"Research: {url_input}", config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT, tools=[types.Tool(google_search=types.GoogleSearchRetrieval())], temperature=0.0, http_options=types.HttpOptions(timeout=max_search_time*60*1000)))
-                st.session_state.current_result, _ = filter_broken_links(resp.text)
-                cites = []
-                if resp.candidates and resp.candidates[0].grounding_metadata:
-                    if resp.candidates[0].grounding_metadata.search_entry_point: cites.append(resp.candidates[0].grounding_metadata.search_entry_point.rendered_content)
-                st.session_state.current_citations = cites
-                name = "Product"
-                for l in st.session_state.current_result.split('\n'):
-                    if "Product Name:" in l: name = l.replace("Product Name:", "").strip(); break
-                st.session_state.history.append({"name": name, "url": url_input, "result": st.session_state.current_result, "citations": st.session_state.current_citations})
-                st.rerun()
+    st.button("Generate Listing", type="primary", on_click=run_generation)
 
 if st.session_state.current_result:
     p_data = parse_markdown_to_dict(st.session_state.current_result)
