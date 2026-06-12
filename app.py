@@ -10,6 +10,9 @@ import warnings
 import docx
 import time
 import httpx
+import html
+import socket
+from urllib.parse import urlparse
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -29,10 +32,24 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="google.oauth2"
 
 # --- UTILITIES ---
 def validate_url(url):
-    """Verifies if a URL is valid, public, and not a search redirect."""
+    """Verifies if a URL is valid, public, and not a search redirect/SSRF risk."""
     if "grounding-api-redirect" in url:
         return False, "Search Proxy"
+    
     try:
+        parsed = urlparse(url)
+        if parsed.scheme != "https":
+            return False, "HTTPS required"
+        
+        # Block internal metadata/private ranges (SSRF mitigation)
+        host = parsed.hostname
+        if not host: return False, "Invalid Host"
+        
+        # Resolve hostname to IP to block link-local/private ranges
+        ip = socket.gethostbyname(host)
+        if ip.startswith(("127.", "10.", "169.254.", "172.16.", "192.168.")):
+            return False, "Restricted IP Range"
+            
         with httpx.Client(timeout=5.0, follow_redirects=True) as client:
             resp = client.head(url)
             if resp.status_code == 200: return True, "OK"
@@ -151,23 +168,31 @@ def parse_markdown_to_dict(md_text):
     return data
 
 def generate_ncademi_html(data):
-    vendor_res = "".join([f'<li><a href="{u}" target="_blank">{t}</a></li>' for t, u in data["Vendor Resources"]]) if data["Vendor Resources"] else "<li>No vendor accessibility resources found.</li>"
-    third_res = "".join([f'<li>{s}: {sm} (<a href="{u}" target="_blank">{lt}</a>)</li>' for s, sm, lt, u in data["Third Party Insights"]]) if data["Third Party Insights"] else "<li>No authoritative third-party accessibility reviews found.</li>"
-    acr_res = "".join([f'<div style="margin-bottom:20px;border-bottom:1px solid #eee;padding-bottom:10px;"><strong>{a["Title"]}</strong><br><small>Version: {a["Version"]} | Date: {a["Date"]}</small><br><small>Org: {a["Org"]}</small><br>' + (f'<a href="{a["Link"]}" target="_blank">{a["LinkText"]}</a>' if a["Link"] != "#" else f'<span>{a["LinkText"]}</span>') + (f'<br><small>Note: {a["Note"]}</small>' if a["Note"] else "") + '</div>' for a in data["ACRs"]]) if data["ACRs"] else "<p>No ACR information found.</p>"
+    vendor_res = "".join([f'<li><a href="{html.escape(u)}" target="_blank">{html.escape(t)}</a></li>' for t, u in data["Vendor Resources"]]) if data["Vendor Resources"] else "<li>No vendor accessibility resources found.</li>"
+    third_res = "".join([f'<li>{html.escape(s)}: {html.escape(sm)} (<a href="{html.escape(u)}" target="_blank">{html.escape(lt)}</a>)</li>' for s, sm, lt, u in data["Third Party Insights"]]) if data["Third Party Insights"] else "<li>No authoritative third-party accessibility reviews found.</li>"
+    
+    acr_items = []
+    for a in data["ACRs"]:
+        link_html = f'<a href="{html.escape(a["Link"])}" target="_blank">{html.escape(a["LinkText"])}</a>' if a["Link"] != "#" else f'<span>{html.escape(a["LinkText"])}</span>'
+        note_html = f'<br><small>Note: {html.escape(a["Note"])}</small>' if a["Note"] else ""
+        acr_items.append(f'<div style="margin-bottom:20px;border-bottom:1px solid #eee;padding-bottom:10px;"><strong>{html.escape(a["Title"])}</strong><br><small>Version: {html.escape(a["Version"])} | Date: {html.escape(a["Date"])}</small><br><small>Org: {html.escape(a["Org"])}</small><br>{link_html}{note_html}</div>')
+    acr_res = "".join(acr_items) if acr_items else "<p>No ACR information found.</p>"
+    
     css_content = "@import url('https://ncademi.org/wp-content/themes/ncademitheme/style.css');"
     if os.path.exists("ncademi_combined.css"):
         with open("ncademi_combined.css", "r") as f: css_content = f.read()
+    
     return f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
     <link rel="stylesheet" href="https://ncademi.org/wp-content/uploads/font-awesome/v6.7.2/css/svg-with-js.css">
     <script src="https://kit.fontawesome.com/a7ee836cc9.js" crossorigin="anonymous"></script>
     <style>{css_content} body {{ background: #fff; margin: 0; padding: 20px; }}</style></head>
-    <body class="wp-singular product-template-default single single-product"><main id="main" class="site-main"><header class="page-header"><h1 class="page-title">{data['Product Name']}</h1></header>
+    <body class="wp-singular product-template-default single single-product"><main id="main" class="site-main"><header class="page-header"><h1 class="page-title">{html.escape(data['Product Name'])}</h1></header>
     <article class="product type-product status-publish hentry"><div class="entry-summary">
-    <p><strong>Vendor:</strong> <a href="#">{data['Vendor']}</a></p><p>{data['Description']}</p>
-    <p><a href="{data['Product Website']}" target="_blank"><i class="fa-regular fa-globe" aria-hidden="true"></i> {data['Product Name']} Website</a></p>
+    <p><strong>Vendor:</strong> <a href="#">{html.escape(data['Vendor'])}</a></p><p>{html.escape(data['Description'])}</p>
+    <p><a href="{html.escape(data['Product Website'])}" target="_blank"><i class="fa-regular fa-globe" aria-hidden="true"></i> {html.escape(data['Product Name'])} Website</a></p>
     <h2>Accessibility Documentation & Resources</h2><div class="row g-4 g-lg-5 align-items-start"><div class="col-12 col-lg-8">
-    <h3>From {data['Vendor']}</h3><ul>{vendor_res}</ul><h3>From Other Sources</h3><ul>{third_res}</ul>
-    <div style="margin-top: 2rem;"><h3>Support</h3><ul><li>{data["Support Contact"]}</li></ul></div>
+    <h3>From {html.escape(data['Vendor'])}</h3><ul>{vendor_res}</ul><h3>From Other Sources</h3><ul>{third_res}</ul>
+    <div style="margin-top: 2rem;"><h3>Support</h3><ul><li>{html.escape(data["Support Contact"])}</li></ul></div>
     <div style="margin-top: 1rem;"><h3>Accessibility Conformance Reports</h3>{acr_res}</div></div></div>
     <p class="entry-meta has-text-align-right"><em>Product information last updated {datetime.now().strftime('%B %d, %Y')}</em></p></div></article></main></body></html>"""
 
@@ -197,7 +222,7 @@ TESTING_MODE = os.getenv("TESTING_MODE", "no").lower() == "yes" or st.query_para
 if not TESTING_MODE and not st.session_state.authenticated:
     st.title("🔐 NCADEMI Research Assistant")
     pwd = st.text_input("Enter Password", type="password")
-    if st.button("Login") and pwd == "edtechRA61126":
+    if st.button("Login") and pwd == os.getenv("APP_PASSWORD", "edtechRA61126"):
         st.session_state.authenticated = True; st.rerun()
     st.stop()
 
@@ -286,7 +311,7 @@ if generate_clicked:
                 contents=f"Research: {u}", 
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT, 
-                    tools=[types.Tool(google_search=types.GoogleSearchRetrieval())], 
+                    tools=[types.Tool(google_search=types.GoogleSearch())], 
                     temperature=0.0, 
                     http_options=types.HttpOptions(timeout=t*60*1000)
                 )
@@ -328,7 +353,7 @@ if st.session_state.current_result:
                 with st.spinner(f"Processing feedback for up to {max_search_time} minutes..."):
                     old_md = st.session_state.current_result
                     old_links = set(re.findall(r'https?://[^\)\s]+', old_md))
-                    resp = client.models.generate_content(model="gemini-2.5-flash", contents=f"Draft:\n{old_md}\nFeedback: {feedback}", config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT, tools=[types.Tool(google_search=types.GoogleSearchRetrieval())], temperature=0.0, http_options=types.HttpOptions(timeout=max_search_time*60*1000)))
+                    resp = client.models.generate_content(model="gemini-2.5-flash", contents=f"Draft:\n{old_md}\nFeedback: {feedback}", config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT, tools=[types.Tool(google_search=types.GoogleSearch())], temperature=0.0, http_options=types.HttpOptions(timeout=max_search_time*60*1000)))
                     new_md, rej = filter_broken_links(resp.text)
                     if resp.candidates and resp.candidates[0].grounding_metadata and resp.candidates[0].grounding_metadata.search_entry_point:
                         st.session_state.current_citations.append(resp.candidates[0].grounding_metadata.search_entry_point.rendered_content)
