@@ -1,0 +1,6 @@
+venv/
+.DS_Store
+agent_debug.log
+__pycache__/
+*.pyc
+.dockerignore
