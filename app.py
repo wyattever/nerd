@@ -188,6 +188,8 @@ if 'current_result' not in st.session_state: st.session_state.current_result = N
 if 'current_citations' not in st.session_state: st.session_state.current_citations = []
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 if 'feedback_response' not in st.session_state: st.session_state.feedback_response = ""
+if 'manual_vendor' not in st.session_state: st.session_state.manual_vendor = ""
+if 'manual_other' not in st.session_state: st.session_state.manual_other = ""
 
 # Password Protection
 import sys
@@ -341,8 +343,8 @@ if st.session_state.current_result:
     # --- ADD RESOURCES WIDGET ---
     with st.expander("➕ Add Resources"):
         st.markdown("To add additional resources, add link text and the URL in this format: `Link text | URL; Link text | URL;...`")
-        vendor_add = st.text_area("From Vendor", placeholder="Camtasia Accessibility | https://example.com; ...")
-        other_add = st.text_area("From Other Sources", placeholder="External Guide | https://example.com; ...")
+        vendor_add = st.text_area("From Vendor", placeholder="Camtasia Accessibility | https://example.com; ...", key="manual_vendor")
+        other_add = st.text_area("From Other Sources", placeholder="External Guide | https://example.com; ...", key="manual_other")
         if st.button("Add to Listing"):
             new_md = st.session_state.current_result
             added_vendor = parse_manual_links(vendor_add)
@@ -359,13 +361,24 @@ if st.session_state.current_result:
                     new_md = new_md.replace("--- Accessibility Insights (From Third-Party Sources) ---", f"--- Accessibility Insights (From Third-Party Sources) ---\n{o_lines}")
             
             if added_vendor or added_other:
+                # Validation
                 new_md, rej = filter_broken_links(new_md)
-                st.session_state.current_result = new_md
-                st.session_state.feedback_response = f"Manually added {len(added_vendor) + len(added_other)} resource(s)."
-                if rej > 0: st.session_state.feedback_response += f" ({rej} invalid rejected)."
-                try: bq_client.insert_rows_json("telemetry.feedback_logs", [{"timestamp": datetime.now().isoformat(), "product_url": url_input, "original_markdown": st.session_state.current_result, "user_feedback": "Manual link addition", "refined_markdown": new_md}])
-                except: pass
-                st.rerun()
+                
+                # Check if links were actually added (and not just filtered out)
+                if len(re.findall(r'https?://[^\)\s]+', new_md)) > len(re.findall(r'https?://[^\)\s]+', st.session_state.current_result)):
+                    st.session_state.current_result = new_md
+                    st.session_state.feedback_response = f"Link(s) added successfully."
+                    if rej > 0: st.session_state.feedback_response += f" ({rej} invalid rejected)."
+                    
+                    # Clear inputs
+                    st.session_state.manual_vendor = ""
+                    st.session_state.manual_other = ""
+                    
+                    try: bq_client.insert_rows_json("telemetry.feedback_logs", [{"timestamp": datetime.now().isoformat(), "product_url": url_input, "original_markdown": st.session_state.current_result, "user_feedback": "Manual link addition", "refined_markdown": new_md}])
+                    except: pass
+                    st.rerun()
+                else:
+                    st.error("Link addition failed. The URL(s) may be invalid or unreachable.")
 
 if st.session_state.current_result:
     st.divider(); st.subheader("Generated Directory Entry")
