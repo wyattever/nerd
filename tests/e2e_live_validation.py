@@ -68,7 +68,7 @@ def run_e2e_live_test():
             logger.error("❌ E2E Validation Failed with structural errors:")
             for err in errors:
                 logger.error(f"  - {err}")
-            logger.debug(f"Draft Content:\n{draft}")
+            print(f"\n--- GENERATED DRAFT ---\n{draft}\n-----------------------\n")
             sys.exit(1)
             
         # 4. Artifact Generation Phase

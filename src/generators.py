@@ -80,33 +80,36 @@ class ListingData:
 # Markdown → ListingData parser
 # ---------------------------------------------------------------------------
 
-_LINK_RE    = re.compile(r'^\s*-\s*(?:\[(.+?)\]\((https?://[^\)]+)\)|(.+?)\s*\((https?://[^\)]+)\))')
-_HEADER_RE  = re.compile(r'^(#{1,6})\s+(.+)')
+# Robust link regex: matches [Text](URL), Text (URL), or just URL
+_LINK_RE = re.compile(
+    r'^\s*-\s*(?:'
+    r'\[(?P<text1>.+?)\]\((?P<url1>https?://[^\)\s]+)\)'  # [Text](URL)
+    r'|'
+    r'(?P<text2>.+?)\s*\((?P<url2>https?://[^\)\s]+)\)'  # Text (URL)
+    r'|'
+    r'(?P<url3>https?://\S+)'                          # Raw URL
+    r')'
+)
+_HEADER_RE = re.compile(r'^(#{1,6})\s+(.+)')
 
 def parse_markdown_to_listing(markdown: str) -> ListingData:
     """
     Convert the GEPA-optimized Markdown draft into a ListingData object.
-    
-    Supports the optimized prompt structure:
-    ### Vendor Resources
-    ### Third-Party Insights
-    ### AI Generated Insights
     """
     lines = markdown.splitlines()
     data = ListingData()
     current_section: Optional[str] = None
     ai_lines: list[str] = []
 
-    # Attempt to pull header data from non-sectioned lines at the start
     for line in lines:
         stripped = line.strip()
         if not stripped: continue
         
+        # Section detection
         m = _HEADER_RE.match(stripped)
         if m:
             level, heading = len(m.group(1)), m.group(2).strip()
             heading_lower = heading.lower()
-            # print(f"DEBUG: Found header level {level}: '{heading}'")
             
             if level == 1:
                 data.product_name = heading
@@ -122,9 +125,8 @@ def parse_markdown_to_listing(markdown: str) -> ListingData:
                 current_section = "acr"
             continue
 
+        # Header detection fallback
         if current_section is None:
-            # Header fields (fallback for unformatted drafts)
-            # Use regex to strip both plain and bold labels like "Vendor:", "**Vendor:**", etc.
             metadata_match = re.match(r'^(\*\*|)(Product Name|Vendor|Product Website|Description):(\*\*|)\s*(.*)', stripped, re.I)
             if metadata_match:
                 key = metadata_match.group(2).lower()
@@ -144,20 +146,32 @@ def parse_markdown_to_listing(markdown: str) -> ListingData:
         elif current_section in ("vendor", "other"):
             lm = _LINK_RE.match(stripped)
             if lm:
-                # Group 1/2 are [text](url), Group 3/4 are text (url)
-                text = lm.group(1) or lm.group(3)
-                url = lm.group(2) or lm.group(4)
+                text = lm.group('text1') or lm.group('text2') or lm.group('url3')
+                url = lm.group('url1') or lm.group('url2') or lm.group('url3')
+                
+                # If we matched a raw URL but it was part of a larger line, 
+                # try to extract the text preceding it.
+                if lm.group('url3') and not lm.group('text1') and not lm.group('text2'):
+                    raw_text = stripped[2:].replace(url, '').strip(' ()[]:-')
+                    if raw_text: text = raw_text
+                
                 link = ResourceLink(text=text.strip(), url=url.strip())
                 if current_section == "vendor":
                     data.vendor_resources.append(link)
                 else:
                     data.other_resources.append(link)
-            elif stripped.startswith("- "):
-                # Fallback for raw URLs
+            elif stripped.startswith("- ") and "http" in stripped:
+                # Last resort fallback if regex missed it
                 url_match = re.search(r'https?://\S+', stripped)
                 if url_match:
-                    url = url_match.group(0)
-                    data.vendor_resources.append(ResourceLink(text=url, url=url)) if current_section == "vendor" else data.other_resources.append(ResourceLink(text=url, url=url))
+                    url = url_match.group(0).rstrip(').')
+                    text = stripped[2:].replace(url, '').strip(' ()[]:-')
+                    if not text: text = url
+                    link = ResourceLink(text=text, url=url)
+                    if current_section == "vendor":
+                        data.vendor_resources.append(link)
+                    else:
+                        data.other_resources.append(link)
 
         elif current_section == "insights":
             if not stripped.startswith("#"):

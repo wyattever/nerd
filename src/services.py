@@ -37,13 +37,22 @@ def extract_grounding_urls(response) -> list[str]:
     """Pull the raw redirect URIs from grounding metadata."""
     urls = []
     try:
-        chunks = response.candidates[0].grounding_metadata.grounding_chunks or []
+        # Navigate safely through the response structure
+        candidate = response.candidates[0]
+        if not hasattr(candidate, "grounding_metadata") or not candidate.grounding_metadata:
+            return []
+            
+        metadata = candidate.grounding_metadata
+        chunks = getattr(metadata, "grounding_chunks", []) or []
+        
         for chunk in chunks:
-            uri = getattr(chunk.web, "uri", None)
-            if uri:
-                urls.append(uri)
-    except (AttributeError, IndexError):
-        logger.warning("No grounding metadata found in response.")
+            web = getattr(chunk, "web", None)
+            if web:
+                uri = getattr(web, "uri", None)
+                if uri:
+                    urls.append(uri)
+    except (AttributeError, IndexError) as e:
+        logger.warning("Error extracting grounding metadata: %s", e)
     return urls
 
 
