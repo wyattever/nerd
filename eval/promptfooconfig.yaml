@@ -1,0 +1,28 @@
+# eval/promptfooconfig.yaml
+# ============================================================
+# N.E.R.D. Promptfoo Evaluation Configuration
+# ============================================================
+
+description: "N.E.R.D. URL Recall Evaluation — Gemini 2.5 Flash + Google Search Grounding"
+
+providers:
+  - id: "python:eval/provider.py"
+    label: "nerd-vertex-grounding"
+    config:
+      workers: 1
+      timeout: 120
+
+defaultTest:
+  vars:
+    recall_threshold: 0.70
+  assert:
+    - type: python
+      value: "eval/assertions.py"
+
+cache: true
+
+# Load directly from the generated Golden Dataset
+tests: "eval/eval_data.json"
+
+outputPath: "eval/results/latest.json"
+sharing: false

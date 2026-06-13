@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ product_name }} — NCADEMI EdTech Directory</title>
+<style>
+  /* --- nerd.css (Embedded) --- */
+  {{ css_content|safe }}
+</style>
+</head>
+<body>
+
+<main>
+  <!-- ── Product header ─────────────────────────────────────── -->
+  <div class="product-header">
+    <h1>{{ product_name }}</h1>
+
+    {% if vendor_name %}
+    <p class="vendor-line">
+      <strong>Vendor:</strong>
+      {% if vendor_directory_url %}<a href="{{ vendor_directory_url }}">{{ vendor_name }}</a>{% else %}{{ vendor_name }}{% endif %}
+    </p>
+    {% endif %}
+
+    {% if product_description %}
+    <p class="product-desc">{{ product_description }}</p>
+    {% endif %}
+
+    {% if product_website_url %}
+    <p class="product-website">
+      <a href="{{ product_website_url }}" target="_blank" rel="noopener noreferrer">
+        <span class="icon-globe" aria-hidden="true"></span>{{ product_name }} Website
+      </a>
+    </p>
+    {% endif %}
+  </div>
+
+  <!-- ── Resources section ──────────────────────────────────── -->
+  <h2 class="resources-heading">Accessibility Documentation &amp; Resources</h2>
+
+  <div class="resources-grid">
+
+    <!-- Left column: 2/3 width — resource lists + AI insights -->
+    <div class="left-col">
+
+      {% if vendor_resources %}
+      <h3 class="section-heading">From {{ vendor_name or "Vendor" }}</h3>
+      <ul class="resource-list">
+        {% for item in vendor_resources %}
+        <li><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.text }}</a></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if other_resources %}
+      <h3 class="section-heading">From Other Sources</h3>
+      <ul class="resource-list">
+        {% for item in other_resources %}
+        <li><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.text }}</a></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if ai_insights %}
+      <h3 class="section-heading">AI Generated Insights</h3>
+      <div class="ai-insights">
+        <p>{{ ai_insights }}</p>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Right column: 1/3 width — support + ACR reports -->
+    <div class="right-col">
+
+      {% if support_contacts %}
+      <div class="product-support">
+        <h3 class="section-heading">Support</h3>
+        <ul class="support-list">
+          {% for contact in support_contacts %}
+          <li>
+            {% if contact.type == "email" %}
+            <a href="mailto:{{ contact.value }}">{{ contact.value }}</a>
+            {% elif contact.type == "url" %}
+            <a href="{{ contact.value }}" target="_blank" rel="noopener noreferrer">{{ contact.label or contact.value }}</a>
+            {% else %}
+            {{ contact.value }}
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if acr_reports %}
+      <div class="edtech-acr">
+        <h3 class="section-heading">Accessibility Conformance Reports</h3>
+        {% for acr in acr_reports %}
+        <div class="acr-block">
+          <h4><a href="{{ acr.url }}" target="_blank" rel="noopener noreferrer">{{ acr.title }}</a></h4>
+          <ul>
+            {% if acr.version %}<li><strong>Version:</strong> {{ acr.version }}</li>{% endif %}
+            {% if acr.date %}<li><strong>Date:</strong> {{ acr.date }}</li>{% endif %}
+            {% if acr.auditor_name %}
+            <li>
+              <strong>Completed by:</strong>
+              {% if acr.auditor_url %}<a href="{{ acr.auditor_url }}" target="_blank" rel="noopener noreferrer">{{ acr.auditor_name }}</a>{% else %}{{ acr.auditor_name }}{% endif %}
+            </li>
+            {% endif %}
+          </ul>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {% if last_updated %}
+  <p class="last-updated"><em>Product information last updated {{ last_updated }}</em></p>
+  {% endif %}
+
+</main>
+
+</body>
+</html>

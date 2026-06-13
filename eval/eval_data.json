@@ -1,0 +1,833 @@
+[
+  {
+    "product_name": "i-Ready Classroom Mathematics",
+    "input_url": "https://ncademi.org/provide/directory/products/i-ready-classroom-mathematics/",
+    "ground_truth_vendor": [
+      "https://cdn.bfldr.com/LS6J0F7/at/7wjj4vcgj55sgt6qw93x3/2960284-iready-classroom-mathematics-accessibility-and-accommodations-update_1.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/85p56nx6784htnxf3np3cb/ircl-accessibility-faq.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/3769s45jk9bmjk9k6x9hc/ircl-comprehension-checks-universal-accessibilityaccommodations-guidance.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/9jqqbx3srrgpgfks2vjbvf/ircl-digital-practice-universal-accessibility-and-accommodations-guidance.pdf",
+      "https://www.curriculumassociates.com/instructional-design/committed-to-accessibility",
+      "https://www.curriculumassociates.com/instructional-design/committed-to-accessibility/accessibility-in-our-programs",
+      "https://www.curriculumassociates.com/blog/using-feedback-to-improve-product-accessibility"
+    ],
+    "ground_truth_other": [
+      "https://site.imsglobal.org/accessibility-rubric/app-vetting-profile-for-i-ready/620058"
+    ],
+    "metadata": {
+      "vendor_name": "Curriculum Associates",
+      "scraped_at": "2026-06-12T23:04:22Z",
+      "source_page": "https://ncademi.org/provide/directory/products/i-ready-classroom-mathematics/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Scratch",
+    "input_url": "https://ncademi.org/provide/directory/products/scratch/",
+    "ground_truth_vendor": [
+      "https://www.youtube.com/watch?v=m-4YKkR9wvE",
+      "https://en.scratch-wiki.info/wiki/Accessibility_Color_Changes",
+      "https://medium.com/scratchteam-blog/new-color-contrast-mode-launches-to-support-scratchers-with-disabilities-57c7436b66e0",
+      "https://scratch.mit.edu/discuss/topic/689659",
+      "https://www.scratchfoundation.org/learn/learning-library/scratch-project-editor-settings"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Scratch",
+      "scraped_at": "2026-06-12T23:04:24Z",
+      "source_page": "https://ncademi.org/provide/directory/products/scratch/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "ChatGPT",
+    "input_url": "https://ncademi.org/provide/directory/products/chatgpt/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [
+      "https://help.sunyempire.edu/TDClient/277/Portal/KB/ArticleDet?ID=11286"
+    ],
+    "metadata": {
+      "vendor_name": "ChatGPT",
+      "scraped_at": "2026-06-12T23:04:25Z",
+      "source_page": "https://ncademi.org/provide/directory/products/chatgpt/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "99math",
+    "input_url": "https://ncademi.org/provide/directory/products/99math/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "99math",
+      "scraped_at": "2026-06-13T00:08:30Z",
+      "source_page": "https://ncademi.org/provide/directory/products/99math/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "ABCya!",
+    "input_url": "https://ncademi.org/provide/directory/products/abcya/",
+    "ground_truth_vendor": [
+      "https://www.abcya.com/static/assets/ABCyaAccessibility.pdf"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "IXL Learning",
+      "scraped_at": "2026-06-13T00:08:31Z",
+      "source_page": "https://ncademi.org/provide/directory/products/abcya/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Adobe Acrobat",
+    "input_url": "https://ncademi.org/provide/directory/products/adobe-acrobat/",
+    "ground_truth_vendor": [
+      "https://helpx.adobe.com/acrobat/using/create-verify-pdf-accessibility.html",
+      "https://helpx.adobe.com/reader/using/accessibility-features.html",
+      "https://www.adobe.com/accessibility/pdf/pdf-accessibility-overview.html",
+      "https://www.adobe.com/trust/accessibility.html",
+      "https://www.adobe.com/trust/accessibility/initiatives.html",
+      "https://www.adobe.com/accessibility/compliance.html"
+    ],
+    "ground_truth_other": [
+      "https://webaim.org/techniques/acrobat/acrobat",
+      "https://www.sc.edu/about/offices_and_divisions/digital-accessibility/toolbox/documents_pdfs/adobe_acrobat/accessibility_checker_acrobat/index.php",
+      "https://blog.pope.tech/2024/04/25/how-to-check-and-fix-pdf-accessibility-issues"
+    ],
+    "metadata": {
+      "vendor_name": "Adobe",
+      "scraped_at": "2026-06-13T00:08:33Z",
+      "source_page": "https://ncademi.org/provide/directory/products/adobe-acrobat/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Adobe Express",
+    "input_url": "https://ncademi.org/provide/directory/products/adobe-express/",
+    "ground_truth_vendor": [
+      "https://www.adobe.com/trust/accessibility.html",
+      "https://www.adobe.com/trust/accessibility/initiatives.html",
+      "https://www.adobe.com/accessibility/compliance.html"
+    ],
+    "ground_truth_other": [
+      "https://ashmayes.com/pedagogical-materials/accessible-design-with-adobe-express"
+    ],
+    "metadata": {
+      "vendor_name": "Adobe",
+      "scraped_at": "2026-06-13T00:08:35Z",
+      "source_page": "https://ncademi.org/provide/directory/products/adobe-express/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "ALEKS",
+    "input_url": "https://ncademi.org/provide/directory/products/aleks/",
+    "ground_truth_vendor": [
+      "https://www.mheducation.com/unitas/school/explore/sites/aleks/6-12-accessibility.pdf",
+      "https://mh.my.site.com/aleks/s/article/ALEKS-Accessibility",
+      "https://veroniiiica.com/aleks-accessibility-visual-impairment",
+      "https://www.aleks.com/manual/pdf/student-account-independent-use.pdf",
+      "https://www.mheducation.com/about-us/trust-center/accessibility"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "McGraw Hill",
+      "scraped_at": "2026-06-13T00:08:37Z",
+      "source_page": "https://ncademi.org/provide/directory/products/aleks/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Blooket",
+    "input_url": "https://ncademi.org/provide/directory/products/blooket/",
+    "ground_truth_vendor": [
+      "https://help.blooket.com/hc/en-us/articles/16182356890647-How-to-Enable-Automatic-Audio-Text-to-Speech-in-Blooket"
+    ],
+    "ground_truth_other": [
+      "https://edtechbooks.org/onlinetools/blooket"
+    ],
+    "metadata": {
+      "vendor_name": "Blooket",
+      "scraped_at": "2026-06-13T00:08:39Z",
+      "source_page": "https://ncademi.org/provide/directory/products/blooket/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Canva",
+    "input_url": "https://ncademi.org/provide/directory/products/canva/",
+    "ground_truth_vendor": [
+      "https://www.canva.com/en_au/help/canva-accessibility-features",
+      "https://www.canva.com/accessibility",
+      "https://www.canva.com/en_au/help/using-design-accessibility",
+      "https://www.canva.com/en_au/help/using-alt-text",
+      "https://www.canva.com/en_au/help/pdf-accessibility-features",
+      "https://www.canva.com/en_au/help/enable-captions",
+      "https://www.youtube.com/watch?v=GGR8UDCdi14"
+    ],
+    "ground_truth_other": [
+      "https://help.illinoisstate.edu/accessibility/website-and-digital/accessibility-tips-for-canva",
+      "https://freshspectrum.com/canva-accessibility"
+    ],
+    "metadata": {
+      "vendor_name": "Canva",
+      "scraped_at": "2026-06-13T00:08:40Z",
+      "source_page": "https://ncademi.org/provide/directory/products/canva/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Canvas LMS",
+    "input_url": "https://ncademi.org/provide/directory/products/canvas-lms/",
+    "ground_truth_vendor": [
+      "https://www.youtube.com/watch?v=1bLVz87pPjg",
+      "https://community.instructure.com/en/kb/articles/662723-what-are-the-canvas-accessibility-standards",
+      "https://www.youtube.com/watch?v=RmACqaQCbb4",
+      "https://community.instructure.com/en/discussion/650334/canvas-course-accessibility-checklist",
+      "https://www.instructure.com/resources/infographic/create-accessible-courses-canvas",
+      "https://www.instructure.com/accessibility",
+      "https://community.instructure.com/en/categories/accessibility",
+      "https://www.instructure.com/resources/blog/opening-doors-learning-essential-role-accessibility-k-12-schools"
+    ],
+    "ground_truth_other": [
+      "https://accessibility.asu.edu/articles/canvas-courses",
+      "https://blog.elkhart.k12.in.us/2022/08/canvas-accessibility-101"
+    ],
+    "metadata": {
+      "vendor_name": "Instructure",
+      "scraped_at": "2026-06-13T00:08:42Z",
+      "source_page": "https://ncademi.org/provide/directory/products/canvas-lms/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Canvas Studio",
+    "input_url": "https://ncademi.org/provide/directory/products/canvas-studio/",
+    "ground_truth_vendor": [
+      "https://community.instructure.com/en/kb/articles/660520-unknown",
+      "https://community.instructure.com/en/kb/articles/660518-how-do-i-add-auto-generated-captions-to-my-media-file-in-canvas-studio",
+      "https://community.instructure.com/en/kb/articles/660521-unknown",
+      "https://community.instructure.com/en/discussion/402269/accessibility-within-studio",
+      "https://www.instructure.com/accessibility",
+      "https://community.instructure.com/en/categories/accessibility",
+      "https://www.instructure.com/resources/blog/opening-doors-learning-essential-role-accessibility-k-12-schools"
+    ],
+    "ground_truth_other": [
+      "https://oit.colorado.edu/services/teaching-learning-applications/canvas/enhancements-integrations/integrations/canvas-0"
+    ],
+    "metadata": {
+      "vendor_name": "Instructure",
+      "scraped_at": "2026-06-13T00:08:44Z",
+      "source_page": "https://ncademi.org/provide/directory/products/canvas-studio/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Code.org",
+    "input_url": "https://ncademi.org/provide/directory/products/code-org/",
+    "ground_truth_vendor": [
+      "https://code.org/en-US/about/accessibility",
+      "https://support.code.org/hc/en-us/articles/32758737802253-Voluntary-Product-Accessibility-Template-2024",
+      "https://support.code.org/hc/en-us/sections/15186591538957-Accessibility",
+      "https://support.code.org/hc/en-us/articles/115001306531-How-can-students-with-disabilities-participate-in-the-Hour-of-Code",
+      "https://support.code.org/hc/en-us/articles/15802430711053-Video-Captions-for-Code-org-Videos",
+      "https://support.code.org/hc/en-us/articles/15802388622861-Code-org-Instruction-Panel-Immersive-Reading-Support",
+      "https://support.code.org/hc/en-us/articles/15187510110733-Using-Keyboard-Navigation-for-Block-Based-Coding-Levels",
+      "https://support.code.org/hc/en-us/articles/15186855444493-How-to-Change-Font-Size-for-Improved-Accessibility",
+      "https://support.code.org/hc/en-us/articles/15187409884429-Customizing-Color-Themes-for-Accessibility"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Code.org",
+      "scraped_at": "2026-06-13T00:08:45Z",
+      "source_page": "https://ncademi.org/provide/directory/products/code-org/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "CoolMathGames",
+    "input_url": "https://ncademi.org/provide/directory/products/coolmathgames/",
+    "ground_truth_vendor": [
+      "https://www.coolmathgames.com/coolmath-games-accessibility"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "CoolMathGames",
+      "scraped_at": "2026-06-13T00:08:47Z",
+      "source_page": "https://ncademi.org/provide/directory/products/coolmathgames/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Desmos",
+    "input_url": "https://ncademi.org/provide/directory/products/desmos/",
+    "ground_truth_vendor": [
+      "https://www.youtube.com/watch?v=EqqiqTkThi8",
+      "https://www.desmos.com/accessibility",
+      "https://help.desmos.com/hc/en-us/articles/37064105800333-Audio-Trace",
+      "https://www.desmos.com/graphingshortcuts",
+      "https://help.desmos.com/hc/en-us/articles/4404860698253-What-Accessibility-features-does-Desmos-offer",
+      "https://www.desmos.com/braille-examples",
+      "https://help.desmos.com/hc/en-us/articles/4407851291149-Embossing-Graphs-with-Desmos"
+    ],
+    "ground_truth_other": [
+      "https://library.tsbvi.edu/Play/19640",
+      "https://www.freedomscientific.com/training/teachers/desmos-online-graphing-calculator",
+      "https://www.youtube.com/watch?v=37u6MkUtD9M",
+      "https://www.youtube.com/watch?v=42cd3v9ECRY"
+    ],
+    "metadata": {
+      "vendor_name": "Desmos",
+      "scraped_at": "2026-06-13T00:08:49Z",
+      "source_page": "https://ncademi.org/provide/directory/products/desmos/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "EdPuzzle",
+    "input_url": "https://ncademi.org/provide/directory/products/edpuzzle/",
+    "ground_truth_vendor": [
+      "https://support.edpuzzle.com/hc/en-us/articles/360034886311-Edpuzzle-Accessibility-VPAT-2-5"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "EdPuzzle",
+      "scraped_at": "2026-06-13T00:08:50Z",
+      "source_page": "https://ncademi.org/provide/directory/products/edpuzzle/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Encyclopedia Britannica",
+    "input_url": "https://ncademi.org/provide/directory/products/encyclopedia-britannica/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [
+      "https://guides.stetson.edu/c.php?g=1292248&p=9492779"
+    ],
+    "metadata": {
+      "vendor_name": "Encyclopedia Britannica",
+      "scraped_at": "2026-06-13T00:08:52Z",
+      "source_page": "https://ncademi.org/provide/directory/products/encyclopedia-britannica/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Epic!",
+    "input_url": "https://ncademi.org/provide/directory/products/epic/",
+    "ground_truth_vendor": [
+      "https://support.getepic.com/hc/en-us/articles/21405636781709-Enhancing-Accessibility-on-Epic-The-Best-Apps-Features"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Epic!",
+      "scraped_at": "2026-06-13T00:08:54Z",
+      "source_page": "https://ncademi.org/provide/directory/products/epic/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Excel",
+    "input_url": "https://ncademi.org/provide/directory/products/excel/",
+    "ground_truth_vendor": [
+      "https://support.microsoft.com/en-us/office/accessibility-best-practices-with-excel-spreadsheets-6cc05fc5-1314-48b5-8eb3-683e49b3e593",
+      "https://support.microsoft.com/en-us/office/accessibility-tools-for-excel-9d06ce53-457b-49dc-abd1-b31a7a92993f",
+      "https://www.microsoft.com/en-us/accessibility",
+      "https://support.microsoft.com/en-us/office/set-up-your-device-to-work-with-accessibility-in-microsoft-365-a0ca81c1-fa3e-417e-9d3b-78b8816fce58",
+      "https://support.microsoft.com/en-us/office/improve-accessibility-with-the-accessibility-checker-a16f6de0-2f39-4a2b-8bd8-5ad801426c7f",
+      "https://support.microsoft.com/en-us/accessibility"
+    ],
+    "ground_truth_other": [
+      "https://webaim.org/techniques/excel",
+      "https://www.section508.gov/create/spreadsheets/training-videos",
+      "https://www.youtube.com/watch?v=8N6NGrIXxtM",
+      "https://a11y.canada.ca/en/accessible-excel-workbooks-in-microsoft-365"
+    ],
+    "metadata": {
+      "vendor_name": "Microsoft",
+      "scraped_at": "2026-06-13T00:08:56Z",
+      "source_page": "https://ncademi.org/provide/directory/products/excel/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Gimkit",
+    "input_url": "https://ncademi.org/provide/directory/products/gimkit/",
+    "ground_truth_vendor": [
+      "https://help.gimkit.com/en/article/enable-read-to-me-1gb7blg"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Gimkit",
+      "scraped_at": "2026-06-13T00:08:57Z",
+      "source_page": "https://ncademi.org/provide/directory/products/gimkit/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Google Classroom",
+    "input_url": "https://ncademi.org/provide/directory/products/google-classroom/",
+    "ground_truth_vendor": [
+      "https://edu.google.com/intl/ALL_us/our-values/accessibility",
+      "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC"
+    ],
+    "ground_truth_other": [
+      "https://afb.org/aw/summer2023/teaching-and-learning-in-google-classroom"
+    ],
+    "metadata": {
+      "vendor_name": "Google",
+      "scraped_at": "2026-06-13T00:08:58Z",
+      "source_page": "https://ncademi.org/provide/directory/products/google-classroom/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Google Docs",
+    "input_url": "https://ncademi.org/provide/directory/products/google-docs/",
+    "ground_truth_vendor": [
+      "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "https://support.google.com/accessibility/answer/16454276?co=GENIE.Platform%3DDesktop&hl=en",
+      "https://support.google.com/docs/answer/6282736?hl=en",
+      "https://edu.google.com/intl/ALL_us/our-values/accessibility",
+      "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC"
+    ],
+    "ground_truth_other": [
+      "https://www.mtu.edu/accessibility/training/documents/google-docs",
+      "https://www.colorado.edu/digital-accessibility/google-docs-and-accessibility",
+      "https://www.accessibility.com/blog/how-to-make-google-docs-accessible",
+      "https://accessibility.huit.harvard.edu/google-docs"
+    ],
+    "metadata": {
+      "vendor_name": "Google",
+      "scraped_at": "2026-06-13T00:09:00Z",
+      "source_page": "https://ncademi.org/provide/directory/products/google-docs/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Google Sheets",
+    "input_url": "https://ncademi.org/provide/directory/products/google-sheets/",
+    "ground_truth_vendor": [
+      "https://support.google.com/accessibility/answer/1632199?hl=en",
+      "https://support.google.com/docs/answer/181110",
+      "https://edu.google.com/intl/ALL_us/our-values/accessibility",
+      "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC"
+    ],
+    "ground_truth_other": [
+      "https://accessibility.huit.harvard.edu/creating-accessible-google-sheets",
+      "https://dap.berkeley.edu/documents-forms/google/google-sheets"
+    ],
+    "metadata": {
+      "vendor_name": "Google",
+      "scraped_at": "2026-06-13T00:09:02Z",
+      "source_page": "https://ncademi.org/provide/directory/products/google-sheets/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Google Slides",
+    "input_url": "https://ncademi.org/provide/directory/products/google-slides/",
+    "ground_truth_vendor": [
+      "https://support.google.com/docs/answer/1634140?hl=en",
+      "https://edu.google.com/intl/ALL_us/our-values/accessibility",
+      "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC"
+    ],
+    "ground_truth_other": [
+      "https://www.usu.edu/accessibility/documents/google-slides-accessibility",
+      "https://www.wm.edu/sites/digitalaccessibility/resource-guide/google-slides"
+    ],
+    "metadata": {
+      "vendor_name": "Google",
+      "scraped_at": "2026-06-13T00:09:03Z",
+      "source_page": "https://ncademi.org/provide/directory/products/google-slides/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "History.com",
+    "input_url": "https://ncademi.org/provide/directory/products/history-com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "A+E Global Media",
+      "scraped_at": "2026-06-13T00:09:05Z",
+      "source_page": "https://ncademi.org/provide/directory/products/history-com/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "i-Ready",
+    "input_url": "https://ncademi.org/provide/directory/products/i-ready/",
+    "ground_truth_vendor": [
+      "https://cdn.bfldr.com/LS6J0F7/at/2x94qrbfktssnrj8r5fhs2z/i-ready-accessibility-and-accommodations-update.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/b49tkfcqtnftqtwngskwcj/iready-assessment-faq-accessibility.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/34rrjprt98h43bnkj7qjbgf/i-Ready-Diagnostic-Accessibility-and-Accommodations-Guidance-Document.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/xpxc8nhtxqgbkgfq7b4tmpxj/iready-diagnostic-audio-support-feature-overview-accessibility.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/qsc9smr5827q7fztm43qbhs/iready-diagnostic-tactile-graphics-guidance.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/kqfz974qq4xxbrmm4bvbw7/iready-standards-mastery-universal-accessibility-features-and-accommodations-guidance-brief.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/pw3zp3kr9z337qg6rm4bcmb5/i-ready-assessment-of-spanish-reading-universal-accessibility-guidance.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/cqftmn8kmf3p5s43sc8w9z2q/i-ready-faq-literacy-tasks-accessibility-and-accommodations-guidance.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/mj8npjn82qjg79bvmvf92cf9/iready-personalized-Instruction-accessibility-faq.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/5x28vrbcwrp7sqgb6jv7mbn/i-ready-personalized-instruction-audio-support-feature-overview.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/cqr8btkn6jrwsq3cqt4mvjt/iready-personalized-instruction-closed-captions-feature-overview_1.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/xw8qkvg9jk4hbfq6fxg55z33/iready-personalized-instruction-keyboard-navigation-feature-overview_1_1.pdf",
+      "https://cdn.bfldr.com/LS6J0F7/at/6zpj2x87x9rq6fk976bfjfrv/iready-screen-reader-feature-overview-accessibility.pdf",
+      "https://www.curriculumassociates.com/instructional-design/committed-to-accessibility",
+      "https://www.curriculumassociates.com/instructional-design/committed-to-accessibility/accessibility-in-our-programs",
+      "https://www.curriculumassociates.com/blog/using-feedback-to-improve-product-accessibility"
+    ],
+    "ground_truth_other": [
+      "https://site.imsglobal.org/accessibility-rubric/app-vetting-profile-for-i-ready/620058"
+    ],
+    "metadata": {
+      "vendor_name": "Curriculum Associates",
+      "scraped_at": "2026-06-13T00:09:07Z",
+      "source_page": "https://ncademi.org/provide/directory/products/i-ready/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "IXL",
+    "input_url": "https://ncademi.org/provide/directory/products/ixl/",
+    "ground_truth_vendor": [
+      "https://blog.ixl.com/2021/07/07/how-ixl-supports-families-with-disabilities",
+      "https://www.ixl.com/help-center/article/1273803/is_there_audio_available_for_additional_support",
+      "https://www.ixl.com/membership/administrators/special-education",
+      "https://www.ixl.com/materials/us/IXL_Accommodations.pdf"
+    ],
+    "ground_truth_other": [
+      "https://yourtechvision.com/2020/02/20/ixl-accessible-learning-tool-all-subjects"
+    ],
+    "metadata": {
+      "vendor_name": "IXL Learning",
+      "scraped_at": "2026-06-13T00:09:09Z",
+      "source_page": "https://ncademi.org/provide/directory/products/ixl/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Kahoot!",
+    "input_url": "https://ncademi.org/provide/directory/products/kahoot/",
+    "ground_truth_vendor": [
+      "https://support.kahoot.com/hc/en-us/articles/115004537447-Does-Kahoot-meet-accessibility-standards",
+      "https://trust.kahoot.com/inclusion-and-accessibility-policy",
+      "https://trust.kahoot.com/accessibility-settings",
+      "https://kahoot.com/blog/2024/09/16/accessibility",
+      "https://kahoot.com/accessibility"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Kahoot!",
+      "scraped_at": "2026-06-13T00:09:10Z",
+      "source_page": "https://ncademi.org/provide/directory/products/kahoot/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Kami",
+    "input_url": "https://ncademi.org/provide/directory/products/kami/",
+    "ground_truth_vendor": [
+      "https://www.kamiapp.com/solutions/accessibility",
+      "https://help.kamiapp.com/en/articles/3007110-kami-for-special-education"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Kami",
+      "scraped_at": "2026-06-13T00:09:12Z",
+      "source_page": "https://ncademi.org/provide/directory/products/kami/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Khan Academy",
+    "input_url": "https://ncademi.org/provide/directory/products/khan-academy/",
+    "ground_truth_vendor": [
+      "https://www.khanacademy.org/about/accessibility-statement",
+      "https://support.khanacademy.org/hc/en-us/sections/4404526648845-Accessibility-Features"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Khan Academy",
+      "scraped_at": "2026-06-13T00:09:14Z",
+      "source_page": "https://ncademi.org/provide/directory/products/khan-academy/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Mastery Connect",
+    "input_url": "https://ncademi.org/provide/directory/products/mastery-connect/",
+    "ground_truth_vendor": [
+      "https://community.instructure.com/en/discussion/609423/mastery-connect-s-new-accessible-mastery-level-color-palette/p1",
+      "https://community.instructure.com/en/kb/articles/661988-how-do-i-take-an-enhanced-accommodations-assessment-as-a-student",
+      "https://community.instructure.com/en/kb/articles/661989-how-do-i-use-assessment-tools-and-accommodations-as-a-student",
+      "https://community.instructure.com/en/kb/articles/661944-how-do-i-configure-tools-and-accommodations-for-individual-formative-assessments",
+      "https://www.instructure.com/accessibility",
+      "https://community.instructure.com/en/categories/accessibility",
+      "https://www.instructure.com/resources/blog/opening-doors-learning-essential-role-accessibility-k-12-schools"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Instructure",
+      "scraped_at": "2026-06-13T00:09:16Z",
+      "source_page": "https://ncademi.org/provide/directory/products/mastery-connect/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Math Playground",
+    "input_url": "https://ncademi.org/provide/directory/products/math-playground/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Math Playground",
+      "scraped_at": "2026-06-13T00:09:17Z",
+      "source_page": "https://ncademi.org/provide/directory/products/math-playground/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Notebook LM",
+    "input_url": "https://ncademi.org/provide/directory/products/notebook-lm/",
+    "ground_truth_vendor": [
+      "https://edu.google.com/intl/ALL_us/our-values/accessibility",
+      "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC"
+    ],
+    "ground_truth_other": [
+      "https://kb.wisc.edu/accessibility/157699",
+      "https://help.sunyempire.edu/TDClient/277/Portal/KB/ArticleDet?ID=11378"
+    ],
+    "metadata": {
+      "vendor_name": "Google",
+      "scraped_at": "2026-06-13T00:09:19Z",
+      "source_page": "https://ncademi.org/provide/directory/products/notebook-lm/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "PBS",
+    "input_url": "https://ncademi.org/provide/directory/products/pbs/",
+    "ground_truth_vendor": [
+      "https://www.pbs.org/standards/inclusiveness",
+      "https://docs.pbs.org/space/DLM/3578971/Accessibility+Indicators"
+    ],
+    "ground_truth_other": [
+      "https://www.parentingspecialneeds.org/article/pbs-kids-focus-is-on-content-accessibility-for-all",
+      "https://at-newswire.com/pbs-kids-enhances-accessibility-with-asl-in-childrens-shows",
+      "https://assistivetechnologyblog.com/pbs-kids-enhances-programming-with-asl-interpreters-for-deaf-and-hard-of-hearing-viewers"
+    ],
+    "metadata": {
+      "vendor_name": "PBS",
+      "scraped_at": "2026-06-13T00:09:21Z",
+      "source_page": "https://ncademi.org/provide/directory/products/pbs/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "PhET Interactive Simulations",
+    "input_url": "https://ncademi.org/provide/directory/products/phet-interactive/",
+    "ground_truth_vendor": [
+      "https://phet.colorado.edu/en/simulations/filter?a11yFeatures=accessibility&type=html",
+      "https://phet.colorado.edu/en/inclusive-design",
+      "https://phet.colorado.edu/en/inclusive-design/features"
+    ],
+    "ground_truth_other": [
+      "https://www.perkins.org/resource/phet-accessible-simulations-physics-and-more"
+    ],
+    "metadata": {
+      "vendor_name": "PhET Interactive Simulations",
+      "scraped_at": "2026-06-13T00:09:23Z",
+      "source_page": "https://ncademi.org/provide/directory/products/phet-interactive/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "PowerPoint",
+    "input_url": "https://ncademi.org/provide/directory/products/powerpoint/",
+    "ground_truth_vendor": [
+      "https://support.microsoft.com/en-us/office/make-your-powerpoint-presentations-accessible-to-people-with-disabilities-6f7772b2-2f33-4bd2-8ca7-dae3b2b3ef25",
+      "https://www.usu.edu/accessibility/documents/powerpoint-accessibility",
+      "https://support.microsoft.com/en-us/office/accessibility-tools-for-powerpoint-2b7a387c-bc02-408f-8c49-59534665850f",
+      "https://www.microsoft.com/en-us/accessibility",
+      "https://support.microsoft.com/en-us/office/set-up-your-device-to-work-with-accessibility-in-microsoft-365-a0ca81c1-fa3e-417e-9d3b-78b8816fce58",
+      "https://support.microsoft.com/en-us/office/improve-accessibility-with-the-accessibility-checker-a16f6de0-2f39-4a2b-8bd8-5ad801426c7f",
+      "https://support.microsoft.com/en-us/accessibility"
+    ],
+    "ground_truth_other": [
+      "https://webaim.org/techniques/powerpoint",
+      "https://www.oaisd.org/about-us/ada-compliance/resources/creating-accessible-documents/microsoft-powerpoint"
+    ],
+    "metadata": {
+      "vendor_name": "Microsoft",
+      "scraped_at": "2026-06-13T00:09:24Z",
+      "source_page": "https://ncademi.org/provide/directory/products/powerpoint/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Prodigy",
+    "input_url": "https://ncademi.org/provide/directory/products/prodigy/",
+    "ground_truth_vendor": [
+      "https://prodigygame.zendesk.com/hc/en-us/articles/4404249350292-FAQ-Supporting-Variable-Learners"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Prodigy",
+      "scraped_at": "2026-06-13T00:09:26Z",
+      "source_page": "https://ncademi.org/provide/directory/products/prodigy/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Quizlet",
+    "input_url": "https://ncademi.org/provide/directory/products/quizlet/",
+    "ground_truth_vendor": [
+      "https://www.youtube.com/watch?v=GiylZvSXA88"
+    ],
+    "ground_truth_other": [
+      "https://www.perkins.org/resource/quizlet-and-low-vision"
+    ],
+    "metadata": {
+      "vendor_name": "Quizlet",
+      "scraped_at": "2026-06-13T00:09:28Z",
+      "source_page": "https://ncademi.org/provide/directory/products/quizlet/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Study.com",
+    "input_url": "https://ncademi.org/provide/directory/products/study-com/",
+    "ground_truth_vendor": [
+      "https://study.com/pages/ada.html",
+      "https://study.com/special-needs-education/index.html"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Study.com",
+      "scraped_at": "2026-06-13T00:09:30Z",
+      "source_page": "https://ncademi.org/provide/directory/products/study-com/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Wayground",
+    "input_url": "https://ncademi.org/provide/directory/products/wayground/",
+    "ground_truth_vendor": [
+      "https://help.wayground.com/support/solutions/articles/158000404015-wayground-accessibility-and-inclusion-statement-including-vpat-",
+      "https://wayground.com/home/accommodations",
+      "https://wayground.com/blog/accessibility-compliance-and-equitable-learning-just-got-easier"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Wayground",
+      "scraped_at": "2026-06-13T00:09:31Z",
+      "source_page": "https://ncademi.org/provide/directory/products/wayground/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Weebly",
+    "input_url": "https://ncademi.org/provide/directory/products/weebly/",
+    "ground_truth_vendor": [
+      "https://www.weebly.com/app/help/us/en/sections/web-accessibility",
+      "https://platformaccessibility.weebly.com/"
+    ],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "Weebly",
+      "scraped_at": "2026-06-13T00:09:33Z",
+      "source_page": "https://ncademi.org/provide/directory/products/weebly/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "Word",
+    "input_url": "https://ncademi.org/provide/directory/products/word/",
+    "ground_truth_vendor": [
+      "https://support.microsoft.com/en-us/office/make-your-word-documents-accessible-to-people-with-disabilities-d9bf3683-87ac-47ea-b91a-78dcacb3c66d",
+      "https://support.microsoft.com/en-us/office/accessibility-tools-for-word-5fa2c21f-0ef4-4d4a-ae2d-451fb7003518",
+      "https://www.microsoft.com/en-us/accessibility",
+      "https://support.microsoft.com/en-us/office/set-up-your-device-to-work-with-accessibility-in-microsoft-365-a0ca81c1-fa3e-417e-9d3b-78b8816fce58",
+      "https://support.microsoft.com/en-us/office/improve-accessibility-with-the-accessibility-checker-a16f6de0-2f39-4a2b-8bd8-5ad801426c7f",
+      "https://support.microsoft.com/en-us/accessibility"
+    ],
+    "ground_truth_other": [
+      "https://webaim.org/techniques/word",
+      "https://a11y.canada.ca/en/accessible-word-documents-in-microsoft-365"
+    ],
+    "metadata": {
+      "vendor_name": "Microsoft",
+      "scraped_at": "2026-06-13T00:09:35Z",
+      "source_page": "https://ncademi.org/provide/directory/products/word/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "YouTube",
+    "input_url": "https://ncademi.org/provide/directory/products/youtube/",
+    "ground_truth_vendor": [
+      "https://support.google.com/youtube/topic/9257112",
+      "https://support.google.com/youtube/answer/189278?hl=en",
+      "https://dustinwhisman.com/writing/accessibility-top-100/youtube",
+      "https://edu.google.com/intl/ALL_us/our-values/accessibility",
+      "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC"
+    ],
+    "ground_truth_other": [
+      "https://accessible.org/how-to-make-youtube-video-ada-compliant",
+      "https://afb.org/aw/20/4/16406"
+    ],
+    "metadata": {
+      "vendor_name": "Google",
+      "scraped_at": "2026-06-13T00:09:36Z",
+      "source_page": "https://ncademi.org/provide/directory/products/youtube/",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  }
+]
