@@ -80,10 +80,10 @@ class ListingData:
 # Markdown → ListingData parser
 # ---------------------------------------------------------------------------
 
-# Robust link regex: matches [Text](URL), Text (URL), or just URL
+# Robust link regex: matches [Text](URL), [Text] (URL), Text (URL), or just URL
 _LINK_RE = re.compile(
     r'^\s*-\s*(?:'
-    r'\[(?P<text1>.+?)\]\((?P<url1>https?://[^\)\s]+)\)'  # [Text](URL)
+    r'\[(?P<text1>.+?)\]\s?\((?P<url1>https?://[^\)\s]+)\)'  # [Text](URL) or [Text] (URL)
     r'|'
     r'(?P<text2>.+?)\s*\((?P<url2>https?://[^\)\s]+)\)'  # Text (URL)
     r'|'

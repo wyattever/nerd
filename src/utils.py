@@ -119,26 +119,33 @@ def filter_broken_links(md_text):
     
     Replaces proxy links with direct ones and appends status if not 100% OK.
     """
-    link_pattern = r'\[(.*?)\]\((https?://[^\)\s]+)\)'
-    matches = re.findall(link_pattern, md_text)
+    # Robust pattern for finding all URLs, with special handling for standard markdown [text](url)
+    # to extract labels for later status appending if needed. Allows optional space [text] (url).
+    markdown_link_pattern = r'\[(?P<text>.*?)\]\s?\((?P<url>https?://[^\)\s<>"]+)\)'
+    raw_url_pattern = r'(?<!\()\bhttps?://[^\)\s<>"]+'
+
     processed_md = md_text
     rejections = []
     seen = {}
     
-    for text, url in matches:
+    # 1. First, handle standard markdown links [text](url)
+    matches = list(re.finditer(markdown_link_pattern, md_text))
+    for match in matches:
+        text = match.group('text')
+        url = match.group('url')
+        
         if url not in seen:
             seen[url] = resolve_and_validate_url(url)
         
         resolved_url, is_valid, reason = seen[url]
         
-        # Always replace the original URL with the resolved (direct) URL if it changed
+        # Replace the original markdown link with the resolved one
         if resolved_url != url:
             processed_md = processed_md.replace(f"({url})", f"({resolved_url})")
         
-        # If the link is not 'OK', append a label instead of deleting it
+        # Append status label if not fully valid
         if not is_valid or "Unverified" in reason:
             label = f" (Status: {reason})"
-            # Avoid double labeling if the model already added something similar
             if label not in processed_md:
                 processed_md = processed_md.replace(
                     f"[{text}]({resolved_url})", 
@@ -146,6 +153,21 @@ def filter_broken_links(md_text):
                 )
             if not is_valid:
                 rejections.append(f"{resolved_url} ({reason})")
+
+    # 2. Second, catch any remaining raw URLs that aren't inside parentheses (already handled)
+    # This ensures Google redirect URLs that weren't put into [text](url) blocks are also fixed.
+    raw_matches = re.findall(raw_url_pattern, processed_md)
+    for url in raw_matches:
+        if url not in seen:
+            seen[url] = resolve_and_validate_url(url)
+        
+        resolved_url, is_valid, reason = seen[url]
+        
+        if resolved_url != url:
+            processed_md = processed_md.replace(url, resolved_url)
+        
+        if not is_valid and resolved_url not in [r.split(' ')[0] for r in rejections]:
+            rejections.append(f"{resolved_url} ({reason})")
                 
     return processed_md, rejections
 
