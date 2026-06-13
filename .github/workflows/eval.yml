@@ -1,0 +1,128 @@
+# .github/workflows/eval.yml
+name: LLM Eval — URL Recall Gate
+
+on:
+  pull_request:
+    paths:
+      - "src/services.py"
+      - "prompts/**"
+      - "eval/promptfooconfig.yaml"
+      - "eval/assertions.py"
+      - "eval/provider.py"
+
+concurrency:
+  group: "eval-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  url-recall-eval:
+    name: "URL Recall Evaluation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install \
+            google-genai \
+            google-cloud-bigquery \
+            httpx \
+            aiolimiter \
+            tenacity \
+            url-normalize \
+            beautifulsoup4 \
+            jinja2
+
+      - name: Restore Promptfoo cache
+        uses: actions/cache@v4
+        with:
+          path: .promptfoo-cache
+          key: >-
+            ${{ runner.os }}-promptfoo-
+            ${{ hashFiles('prompts/**', 'eval/promptfooconfig.yaml', 'eval/provider.py') }}
+          restore-keys: |
+            ${{ runner.os }}-promptfoo-
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: "${{ secrets.GCP_SA_KEY }}"
+
+      - name: Set up Node.js for Promptfoo
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run Promptfoo eval
+        env:
+          PROMPTFOO_CACHE_PATH: .promptfoo-cache
+          GOOGLE_GENAI_USE_VERTEXAI: "true"
+          GOOGLE_CLOUD_PROJECT: "edtech-agent-2026"
+          GOOGLE_CLOUD_LOCATION: "us-central1"
+        run: |
+          npx promptfoo@latest eval \
+            -c eval/promptfooconfig.yaml \
+            -j 1 \
+            --no-table \
+            -o eval/results/latest.json
+
+      - name: Post PR comment
+        if: always()
+        uses: promptfoo/promptfoo-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          results-path: "eval/results/latest.json"
+        continue-on-error: true
+
+      - name: Enforce recall threshold
+        run: |
+          python - <<'EOF'
+          import json, sys
+          try:
+              with open("eval/results/latest.json") as f:
+                  data = json.load(f)
+          except FileNotFoundError:
+              print("ERROR: Eval results file not found.")
+              sys.exit(1)
+              
+          results   = data.get("results", {}).get("results", [])
+          total     = len(results)
+          passed    = sum(1 for r in results if r.get("success", False))
+          errors    = sum(1 for r in results if "QUOTA_EXHAUSTED" in str(r.get("error", "")))
+          effective = total - errors
+          
+          if effective == 0:
+              print("WARNING: All results were quota errors — cannot gate.")
+              sys.exit(0)
+              
+          rate = passed / effective
+          print(f"Pass rate: {passed}/{effective} = {rate:.1%} (errors excluded: {errors})")
+          if rate < 0.80:
+              print(f"FAIL: Pass rate {rate:.1%} is below the 80% threshold.")
+              sys.exit(1)
+          print("PASS: Recall gate passed.")
+          EOF
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "eval-results-${{ github.sha }}"
+          path: "eval/results/latest.json"
+          retention-days: 90

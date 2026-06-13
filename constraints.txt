@@ -1,0 +1,20 @@
+# N.E.R.D. — constraints for Python 3.12
+# Use with: pip install -r requirements.txt -c constraints.txt
+#
+# These are the transitive pins that litellm==1.83.10 imposes. Listing them
+# here makes the "load-bearing" versions explicit, so an accidental bump to
+# any of them surfaces as a clear conflict instead of a silent downgrade.
+#
+# If you ever change the litellm version, RE-VERIFY every line below — these
+# pins move every litellm release (e.g. openai was 2.30.0 in 1.83.1, rolled
+# back to 2.24.0 in 1.83.10).
+
+pydantic==2.12.5
+pydantic-core==2.41.5
+openai==2.24.0
+aiohttp==3.13.3
+click==8.1.8
+python-dotenv==1.0.1
+importlib-metadata==8.5.0
+jsonschema==4.23.0
+typer==0.23.1
