@@ -173,9 +173,49 @@ def parse_markdown_to_listing(markdown: str) -> ListingData:
                     else:
                         data.other_resources.append(link)
 
+        elif current_section == "support":
+            if "Support Contact:" in stripped:
+                val = stripped.replace("Support Contact:", "").strip()
+                if "@" in val:
+                    data.support_contacts.append(SupportContact(type="email", value=val))
+                elif "http" in val:
+                    # Attempt to extract markdown link if present
+                    lm = _LINK_RE.match("- " + val)
+                    if lm:
+                        text = lm.group('text1') or lm.group('text2') or lm.group('url3')
+                        url = lm.group('url1') or lm.group('url2') or lm.group('url3')
+                        data.support_contacts.append(SupportContact(type="url", value=url.strip(), label=text.strip()))
+                    else:
+                        data.support_contacts.append(SupportContact(type="url", value=val))
+                else:
+                    data.support_contacts.append(SupportContact(type="text", value=val))
+                    
+        elif current_section == "acr":
+            if "Report Title:" in stripped:
+                data.acr_reports.append(ACRReport(title=stripped.replace("Report Title:", "").strip(), url="#"))
+            elif data.acr_reports:
+                curr = data.acr_reports[-1]
+                if "VPAT Version:" in stripped: curr.version = stripped.replace("VPAT Version:", "").strip()
+                elif "Date Completed:" in stripped: curr.date = stripped.replace("Date Completed:", "").strip()
+                elif "Evaluating Organization:" in stripped: curr.auditor_name = stripped.replace("Evaluating Organization:", "").strip()
+                elif "Link:" in stripped:
+                    # Parse the link using the robust regex
+                    lm = _LINK_RE.match("- " + stripped.replace("Link:", "").strip())
+                    if lm:
+                        url = lm.group('url1') or lm.group('url2') or lm.group('url3')
+                        curr.url = url.strip()
+                    else:
+                        # Fallback raw url grab
+                        url_match = re.search(r'https?://\S+', stripped)
+                        if url_match: curr.url = url_match.group(0).rstrip(').')
+
         elif current_section == "insights":
             if not stripped.startswith("#"):
-                ai_lines.append(stripped)
+                # Handle "Description:" prefix if present
+                if stripped.startswith("Description:"):
+                    stripped = stripped.replace("Description:", "").strip()
+                if stripped:
+                    ai_lines.append(stripped)
 
     data.ai_insights = " ".join(ai_lines).strip()
     data.last_updated = datetime.now().strftime('%B %d, %Y')
