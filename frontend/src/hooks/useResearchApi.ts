@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
+import { auth } from "@/lib/firebase";
 import type { ListingData } from "@/schemas/listing";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -36,60 +38,97 @@ const INITIAL_STATE: ResearchState = {
 
 export function useResearchApi() {
   const [state, setState] = useState<ResearchState>(INITIAL_STATE);
-  const sseRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const _closeSse = () => {
-    if (sseRef.current) {
-      sseRef.current.close();
-      sseRef.current = null;
+  const _closeSse = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
-  };
-
-  const _listenToJob = useCallback((jobId: string) => {
-    _closeSse();
-    const sse = new EventSource(`${API_BASE}/jobs/${jobId}`);
-    sseRef.current = sse;
-
-    sse.addEventListener("status", (e: MessageEvent) => {
-      const data = JSON.parse(e.data) as { status: JobStatus };
-      setState((prev) => ({ ...prev, status: data.status, jobId }));
-    });
-
-    sse.addEventListener("result", (e: MessageEvent) => {
-      const data = JSON.parse(e.data);
-      setState((prev) => ({
-        ...prev,
-        status: "complete",
-        result: {
-          rawMarkdown: data.raw_markdown,
-          parsedListing: data.parsed_listing,
-          urlCache: data.url_cache,
-          rejections: data.rejections ?? [],
-        },
-      }));
-    });
-
-    sse.addEventListener("end", () => {
-      _closeSse();
-    });
-
-    sse.onerror = () => {
-      setState((prev) => ({
-        ...prev,
-        status: "error",
-        error: "Connection to job stream lost.",
-      }));
-      _closeSse();
-    };
   }, []);
+
+  const _listenToJob = useCallback(async (jobId: string) => {
+    _closeSse();
+    const ctrl = new AbortController();
+    abortControllerRef.current = ctrl;
+
+    const getHeaders = async () => {
+      const token = await auth.currentUser?.getIdToken();
+      return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      };
+    };
+
+    try {
+      await fetchEventSource(`${API_BASE}/jobs/${jobId}`, {
+        method: "GET",
+        headers: await getHeaders(),
+        signal: ctrl.signal,
+        async onopen(response) {
+          if (response.ok) {
+            return;
+          } else if (response.status === 401) {
+            // Token likely expired. Attempt one refresh.
+            await auth.currentUser?.getIdToken(true);
+            throw new Error("token_refresh_required");
+          } else {
+            throw new Error(`SSE Connection failed: ${response.status}`);
+          }
+        },
+        onmessage(msg) {
+          if (msg.event === "status") {
+            const data = JSON.parse(msg.data) as { status: JobStatus };
+            setState((prev) => ({ ...prev, status: data.status, jobId }));
+          } else if (msg.event === "result") {
+            const data = JSON.parse(msg.data);
+            setState((prev) => ({
+              ...prev,
+              status: "complete",
+              result: {
+                rawMarkdown: data.raw_markdown,
+                parsedListing: data.parsed_listing,
+                urlCache: data.url_cache,
+                rejections: data.rejections ?? [],
+              },
+            }));
+          } else if (msg.event === "end") {
+            _closeSse();
+          }
+        },
+        onerror(err) {
+          if (err.message === "token_refresh_required") {
+            _listenToJob(jobId);
+            throw err; 
+          }
+          console.error("SSE Error:", err);
+          setState((prev) => ({
+            ...prev,
+            status: "error",
+            error: "Connection to job stream lost.",
+          }));
+          _closeSse();
+          throw err;
+        },
+      });
+    } catch (err: any) {
+      if (err.name === "AbortError") return;
+      if (err.message === "token_refresh_required") return;
+      console.error("fetchEventSource failed:", err);
+    }
+  }, [_closeSse]);
 
   const startInitialResearch = useCallback(
     async (productUrl: string, timeoutMin: number = 4) => {
       setState({ ...INITIAL_STATE, status: "queued" });
       try {
+        const token = await auth.currentUser?.getIdToken();
         const res = await fetch(`${API_BASE}/research/initial`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify({ product_url: productUrl, timeout_min: timeoutMin }),
         });
         if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -113,9 +152,13 @@ export function useResearchApi() {
     }) => {
       setState((prev) => ({ ...prev, status: "queued", result: null, error: null }));
       try {
+        const token = await auth.currentUser?.getIdToken();
         const res = await fetch(`${API_BASE}/research/deep-dive`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify({
             product_url: payload.productUrl,
             product_name: payload.productName,
@@ -130,7 +173,7 @@ export function useResearchApi() {
         setState((prev) => ({ ...prev, jobId: job_id }));
         _listenToJob(job_id);
       } catch (err) {
-        setState((prev) => ({ ...prev, status: "error", error: String(err) }));
+        setState({ ...INITIAL_STATE, status: "error", error: String(err) });
       }
     },
     [_listenToJob]
@@ -139,7 +182,7 @@ export function useResearchApi() {
   const reset = useCallback(() => {
     _closeSse();
     setState(INITIAL_STATE);
-  }, []);
+  }, [_closeSse]);
 
   return { state, startInitialResearch, startDeepDive, reset };
 }

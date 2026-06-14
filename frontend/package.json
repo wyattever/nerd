@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
+    "@microsoft/fetch-event-source": "^2.0.1",
     "@tanstack/react-table": "^8.13.2",
     "dompurify": "^3.0.9",
     "firebase": "^10.8.1",
