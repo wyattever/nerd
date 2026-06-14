@@ -3,7 +3,6 @@ nerd_core/generators.py — Artifact Engine for N.E.R.D.
 =================================================
 Converts a parsed NCADEMI listing (from the GEPA-optimized agent) into:
   - A standalone HTML preview (rendered in Streamlit)
-  - Downloadable DOCX bytes
 
 Both outputs exactly match the NCADEMI directory page structure.
 """
@@ -18,10 +17,6 @@ from pathlib import Path
 from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from docx import Document
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-from docx.opc.part import Part
 
 # ---------------------------------------------------------------------------
 # Setup Jinja2
@@ -256,34 +251,3 @@ def generate_ncademi_html(markdown: str) -> str:
     """
     listing = parse_markdown_to_listing(markdown)
     return render_listing_html(listing)
-
-
-# ---------------------------------------------------------------------------
-# DOCX high-fidelity builder
-# ---------------------------------------------------------------------------
-
-def add_html_alt_chunk(doc, html_string):
-    """Embeds HTML into a Word doc as a high-fidelity 'altChunk'."""
-    package = doc.part.package
-    part_name = package.next_partname('/word/htmlChunk%d.html')
-    html_part = Part(part_name, 'text/html', html_string.encode('utf-8'), package)
-    r_id = doc.part.relate_to(
-        html_part,
-        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk',
-    )
-    alt_chunk = OxmlElement('w:altChunk')
-    alt_chunk.set(qn('r:id'), r_id)
-    doc.element.body.append(alt_chunk)
-
-
-def create_docx_bytes(markdown: str) -> bytes:
-    """
-    Build the DOCX and return raw bytes by mirroring the HTML structure.
-    """
-    full_html = generate_ncademi_html(markdown)
-    doc = Document()
-    add_html_alt_chunk(doc, full_html)
-    bio = io.BytesIO()
-    doc.save(bio)
-    bio.seek(0)
-    return bio.getvalue()

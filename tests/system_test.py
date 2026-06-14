@@ -3,7 +3,7 @@ tests/system_test.py — Automated System-Wide Verification for N.E.R.D.
 ========================================================================
 Comprehensive test suite covering:
   1. Parser robustness (Structural mapping)
-  2. Artifact fidelity (HTML/DOCX generation)
+  2. Artifact fidelity (HTML generation)
   3. Metric sanity (GEPA logic & penalties)
   4. Integration (End-to-end data flow)
 """
@@ -21,7 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 # --- Project Imports ---
-from nerd_core.generators import parse_markdown_to_listing, generate_ncademi_html, create_docx_bytes
+from nerd_core.generators import parse_markdown_to_listing, generate_ncademi_html
 from nerd_core.utils import normalize_url
 from eval.optimize import url_recall_with_feedback
 
@@ -77,10 +77,6 @@ def test_artifact_generation():
         logger.error(f"HTML Output mismatch. Snippet: {html[:500]} ... {html[-500:]}")
         raise
     
-    # DOCX Test
-    docx_bytes = create_docx_bytes(SAMPLE_MARKDOWN)
-    assert len(docx_bytes) > 0
-    assert docx_bytes.startswith(b"PK")  # Standard ZIP/DOCX header
     logger.info("✅ Artifact Generation Passed")
 
 def test_metric_sanity():
