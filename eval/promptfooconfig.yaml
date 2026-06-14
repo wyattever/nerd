@@ -22,7 +22,7 @@ defaultTest:
 cache: true
 
 # Load directly from the generated Golden Dataset
-tests: "eval/eval_data.json"
+tests: "eval_data.json"
 
 outputPath: "eval/results/latest.json"
 sharing: false

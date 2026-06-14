@@ -1,7 +1,7 @@
 
 import unittest
 import re
-from src.generators import parse_markdown_to_listing, ListingData, ResourceLink
+from nerd_core.generators import parse_markdown_to_listing, ListingData, ResourceLink
 
 class TestParserRobustness(unittest.TestCase):
     
@@ -40,13 +40,13 @@ class TestParserRobustness(unittest.TestCase):
         self.assertEqual(listing.vendor_resources[1].url, "https://vendor.com/another-link")
 
     def test_link_resolution_logic(self):
-        from src.utils import filter_broken_links
+        from nerd_core.utils import filter_broken_links
         import unittest.mock as mock
         
         md = "Check this: [Canvas](https://redirect.com/123)"
         
         # Mock resolve_and_validate_url to simulate finding a direct link
-        with mock.patch('src.utils.resolve_and_validate_url') as mock_resolve:
+        with mock.patch('nerd_core.utils.resolve_and_validate_url') as mock_resolve:
             mock_resolve.return_value = ("https://direct-canvas.com/final", True, "OK")
             
             processed_md, _ = filter_broken_links(md)

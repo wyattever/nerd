@@ -7,10 +7,10 @@ The application has been refactored from a monolithic script into a clean, modul
 
 ### Module Map:
 - **`app.py` (Controller)**: The main entry point. Handles Streamlit page configuration, UI layout, and high-reactivity fragments.
-- **`src/services.py` (Integration Layer)**: Orchestrates external APIs (Gemini 2.5 Flash via Google GenAI SDK, Google Search Grounding, BigQuery).
-- **`src/parser.py` (Data Engine)**: Responsible for the "Greedy Narrative Parser" and deep-dive markdown merging.
-- **`src/generators.py` (Artifact Engine)**: Builds the NCADEMI-standard HTML preview and DOCX reports.
-- **`src/utils.py` (Security & Network)**: Handles permissive link validation, Google Search proxy resolution, and SSRF threat mitigation.
+- **`nerd_core/services.py` (Integration Layer)**: Orchestrates external APIs (Gemini 2.5 Flash via Google GenAI SDK, Google Search Grounding, BigQuery).
+- **`nerd_core/parser.py` (Data Engine)**: Responsible for the "Greedy Narrative Parser" and deep-dive markdown merging.
+- **`nerd_core/generators.py` (Artifact Engine)**: Builds the NCADEMI-standard HTML preview and DOCX reports.
+- **`nerd_core/utils.py` (Security & Network)**: Handles permissive link validation, Google Search proxy resolution, and SSRF threat mitigation.
 - **`eval/`**: Programmatic evaluation harness (Promptfoo/DSPy) and Golden Dataset.
 - **`prompts/`**: Versioned Jinja2 templates (`system_prompt.j2`, `delta_system_prompt.j2`, `synthesis_prompt.j2`).
 

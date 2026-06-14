@@ -9,10 +9,10 @@ N.E.R.D. is an AI-powered, human-in-the-loop research assistant built on Streaml
 The application follows a modular, production-ready architecture, separating the UI from the business logic and external I/O.
 
 *   **`app.py` (UI Controller)**: Manages the Streamlit layout, session state initialization, CSS styling, and the highly-reactive UI fragments.
-*   **`src/services.py` (Integration Layer)**: Orchestrates the Google GenAI SDK, Google Search Grounding tools, and BigQuery telemetry logging. It holds the strict Prompt definitions.
-*   **`src/parser.py` (Data Engine)**: Contains the greedy Markdown parser. It strictly enforces structural headers and segregates unlinked narrative knowledge into the AI Generated Insights field.
-*   **`src/generators.py` (Artifact Engine)**: Responsible for dynamically building the NCADEMI-branded HTML preview and creating downloadable `.docx` files.
-*   **`src/utils.py` (Security & Network)**: Handles URL validation, Proxy resolution, and SSRF threat mitigation.
+*   **`nerd_core/services.py` (Integration Layer)**: Orchestrates the Google GenAI SDK, Google Search Grounding tools, and BigQuery telemetry logging. It holds the strict Prompt definitions.
+*   **`nerd_core/parser.py` (Data Engine)**: Contains the greedy Markdown parser. It strictly enforces structural headers and segregates unlinked narrative knowledge into the AI Generated Insights field.
+*   **`nerd_core/generators.py` (Artifact Engine)**: Responsible for dynamically building the NCADEMI-branded HTML preview and creating downloadable `.docx` files.
+*   **`nerd_core/utils.py` (Security & Network)**: Handles URL validation, Proxy resolution, and SSRF threat mitigation.
 *   **`eval/` (Evaluation Layer)**: Contains Promptfoo configurations, custom providers, and the Golden Dataset.
     *   `eval_data.json`: The source of truth for evaluation.
     *   `provider.py`: Custom Promptfoo Python wrapper for Vertex AI.
@@ -86,7 +86,23 @@ This telemetry data is used for **Prompt Debugging** (analyzing when the model f
 
 ---
 
-## 8. Automated LLM Evaluation & Prompt Optimization Pipeline
+## 8. Phase 4: Production Architecture (GCP)
+The system is migrated from a monolithic Streamlit app to a distributed three-tier architecture on Google Cloud Run.
+
+### A. Component Services
+1.  **Frontend (Next.js)**: Deployed to Cloud Run. Handles UI, Form management, and real-time Preview via Jinja2/API. Protected by **Firebase Auth**.
+2.  **API (FastAPI)**: Deployed to Cloud Run. Serves as the orchestrator. Validates auth, enqueues research tasks to Cloud Tasks, and manages Job status in Firestore.
+3.  **Worker (FastAPI)**: Deployed to Cloud Run (Scale-to-Zero). Executes long-running research tasks. Protected by **OIDC Authentication** (only callable by Cloud Tasks).
+
+### B. Deployment & Runtime Considerations
+*   **Stateless Caching**: Cloud Run is stateless. Local filesystem caching (`.next/cache`) is per-instance. Multi-instance scaling may result in redundant image optimization or cache misses. For this internal tool, this is acceptable.
+*   **CPU Throttling**: By default, Cloud Run freezes CPU after an HTTP response is sent. Any Next.js background tasks (like ISR revalidation) require `--no-cpu-throttling` to ensure completion.
+*   **Structured Logging**: To leverage Cloud Logging (Stackdriver), critical errors should be emitted as JSON objects (including `severity` and `message` fields) rather than raw text strings.
+*   **Firestore TTL**: A native TTL policy on the `expires_at` field in the `nerd_research_jobs` collection automatically purges job data after 24 hours.
+
+---
+
+## 9. Automated LLM Evaluation & Prompt Optimization Pipeline
 *Synthesized from Technical Validation Reports (Gemini & Claude)*
 
 To achieve deterministic improvements, N.E.R.D. utilizes a dual-layer evaluation architecture.

@@ -1,0 +1,20 @@
+-c constraints.txt
+
+# Core API routing for Webhook
+fastapi
+uvicorn[standard]
+pydantic
+
+# External Cloud Connectors
+google-cloud-tasks==2.16.0
+google-cloud-firestore
+google-cloud-bigquery
+
+# nerd_core Dependencies
+google-genai==1.47.0
+jinja2
+beautifulsoup4
+url-normalize
+httpx
+python-docx==1.2.0
+lxml

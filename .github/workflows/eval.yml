@@ -4,7 +4,7 @@ name: LLM Eval — URL Recall Gate
 on:
   pull_request:
     paths:
-      - "src/services.py"
+      - "nerd_core/services.py"
       - "prompts/**"
       - "eval/promptfooconfig.yaml"
       - "eval/assertions.py"

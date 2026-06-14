@@ -1,6 +1,11 @@
 venv/
+venv312/
+.git/
 .DS_Store
 agent_debug.log
+nerd_debug.log
 __pycache__/
 *.pyc
 .dockerignore
+.pytest_cache/
+frontend/node_modules/

@@ -3,7 +3,7 @@ eval/build_grounding_cache.py — Pre-resolve Production Grounding URLs for GEPA
 ===============================================================================
 This script bridges the two halves of the N.E.R.D. eval architecture:
 
-  Production path  (src/services.py + real Google Search Grounding)
+  Production path  (nerd_core/services.py + real Google Search Grounding)
         ↓  resolves redirect URLs to canonical form
   eval/grounding_cache.json  (keyed by product input_url)
         ↓  loaded by optimize.py as `cached_predicted_urls`
@@ -32,6 +32,7 @@ import argparse
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 
 logging.basicConfig(
@@ -45,15 +46,15 @@ _PROJECT_ROOT = Path(__file__).parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from src.services import run_initial_research, QuotaExhaustedError  # noqa: E402
-from src.utils import resolve_and_validate_all, normalize_url        # noqa: E402
+from nerd_core.services import run_initial_research, QuotaExhaustedError  # noqa: E402
+from nerd_core.utils import resolve_and_validate_all, normalize_url        # noqa: E402
 
 EVAL_DIR        = Path(__file__).parent
 GOLDEN_DATASET  = EVAL_DIR / "eval_data.json"
 GROUNDING_CACHE = EVAL_DIR / "grounding_cache.json"
 
 
-def build_cache(force: bool = False) -> None:
+def build_cache(force: bool = False, delay: int = 0) -> None:
     if not GOLDEN_DATASET.exists():
         logger.error("Golden Dataset not found: %s", GOLDEN_DATASET)
         sys.exit(1)
@@ -106,6 +107,10 @@ def build_cache(force: bool = False) -> None:
         with open(GROUNDING_CACHE, "w") as f:
             json.dump(cache, f, indent=2)
 
+        if delay > 0 and i < len(dataset) - 1:
+            logger.info("  Sleeping for %d seconds...", delay)
+            time.sleep(delay)
+
     logger.info(
         "Grounding cache complete: %d/%d products cached → %s",
         len(cache), len(dataset), GROUNDING_CACHE,
@@ -121,8 +126,14 @@ def main() -> None:
         action="store_true",
         help="Re-run all products even if already cached.",
     )
+    parser.add_argument(
+        "--delay",
+        type=int,
+        default=0,
+        help="Seconds to delay between research requests (measured process).",
+    )
     args = parser.parse_args()
-    build_cache(force=args.force)
+    build_cache(force=args.force, delay=args.delay)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 eval/provider.py — Promptfoo Custom Python Provider for N.E.R.D.
 ================================================================
 Bridges Promptfoo's eval harness to the Vertex AI / Google Search
-Grounding stack in src/services.py.
+Grounding stack in nerd_core/services.py.
 """
 
 from __future__ import annotations
@@ -12,15 +12,15 @@ import sys
 import os
 
 # ---------------------------------------------------------------------------
-# Path bootstrap — lets the provider import src/* when Promptfoo's worker
+# Path bootstrap — lets the provider import nerd_core/* when Promptfoo's worker
 # process cwd is the project root (the standard layout).
 # ---------------------------------------------------------------------------
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from src.services import run_initial_research, QuotaExhaustedError  # noqa: E402
-from src.utils import resolve_and_validate_all, normalize_url        # noqa: E402
+from nerd_core.services import run_initial_research, QuotaExhaustedError  # noqa: E402
+from nerd_core.utils import resolve_and_validate_all, normalize_url        # noqa: E402
 
 logger = logging.getLogger(__name__)
 

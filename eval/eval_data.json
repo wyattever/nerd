@@ -829,5 +829,1032 @@
       "difficulty": "unset",
       "known_failure_mode": ""
     }
+  },
+  {
+    "product_name": "https://www.powerschool.com",
+    "input_url": "https://www.powerschool.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.powerschool.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.instructure.com/canvas",
+    "input_url": "https://www.instructure.com/canvas",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.instructure.com/canvas",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://classroom.google.com",
+    "input_url": "https://classroom.google.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://classroom.google.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.schoology.com",
+    "input_url": "https://www.schoology.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.schoology.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.blackbaud.com",
+    "input_url": "https://www.blackbaud.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.blackbaud.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.edsby.com",
+    "input_url": "https://www.edsby.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.edsby.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.infinitecampus.com",
+    "input_url": "https://www.infinitecampus.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.infinitecampus.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.gradelink.com",
+    "input_url": "https://www.gradelink.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.gradelink.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.classlink.com",
+    "input_url": "https://www.classlink.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.classlink.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.jamf.com",
+    "input_url": "https://www.jamf.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.jamf.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.alma.us",
+    "input_url": "https://www.alma.us/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.alma.us",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.skyward.com",
+    "input_url": "https://www.skyward.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.skyward.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.classe365.com",
+    "input_url": "https://www.classe365.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.classe365.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.classter.com",
+    "input_url": "https://www.classter.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.classter.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.quickschools.com",
+    "input_url": "https://www.quickschools.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.quickschools.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.myschoolworx.com",
+    "input_url": "https://www.myschoolworx.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.myschoolworx.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.factsmgt.com",
+    "input_url": "https://www.factsmgt.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.factsmgt.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.frontlineeducation.com",
+    "input_url": "https://www.frontlineeducation.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.frontlineeducation.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://moodle.org",
+    "input_url": "https://moodle.org/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://moodle.org",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.blackboard.com",
+    "input_url": "https://www.blackboard.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.blackboard.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.kahoot.com",
+    "input_url": "https://www.kahoot.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.kahoot.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://nearpod.com",
+    "input_url": "https://nearpod.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://nearpod.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://edpuzzle.com",
+    "input_url": "https://edpuzzle.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://edpuzzle.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://peardeck.com",
+    "input_url": "https://peardeck.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://peardeck.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.classdojo.com",
+    "input_url": "https://www.classdojo.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.classdojo.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.padlet.com",
+    "input_url": "https://www.padlet.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.padlet.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://miro.com",
+    "input_url": "https://miro.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://miro.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://quizlet.com",
+    "input_url": "https://quizlet.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://quizlet.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://socrative.com",
+    "input_url": "https://socrative.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://socrative.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://polleverywhere.com",
+    "input_url": "https://polleverywhere.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://polleverywhere.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://flip.com",
+    "input_url": "https://flip.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://flip.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.turnitin.com",
+    "input_url": "https://www.turnitin.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.turnitin.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.gradescope.com",
+    "input_url": "https://www.gradescope.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.gradescope.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.classtime.com",
+    "input_url": "https://www.classtime.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.classtime.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.prezi.com",
+    "input_url": "https://www.prezi.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.prezi.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.mentimeter.com",
+    "input_url": "https://www.mentimeter.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.mentimeter.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.khanacademy.org",
+    "input_url": "https://www.khanacademy.org/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.khanacademy.org",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.duolingo.com",
+    "input_url": "https://www.duolingo.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.duolingo.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.prodigygame.com",
+    "input_url": "https://www.prodigygame.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.prodigygame.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.abcmouse.com",
+    "input_url": "https://www.abcmouse.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.abcmouse.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.epicbooks.com",
+    "input_url": "https://www.epicbooks.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.epicbooks.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.photomath.com",
+    "input_url": "https://www.photomath.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.photomath.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://scratch.mit.edu",
+    "input_url": "https://scratch.mit.edu/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://scratch.mit.edu",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.babbel.com",
+    "input_url": "https://www.babbel.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.babbel.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.rosettastone.com",
+    "input_url": "https://www.rosettastone.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.rosettastone.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.pimsleur.com",
+    "input_url": "https://www.pimsleur.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.pimsleur.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.varsitytutors.com",
+    "input_url": "https://www.varsitytutors.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.varsitytutors.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.mathworks.com",
+    "input_url": "https://www.mathworks.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.mathworks.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.sphero.com",
+    "input_url": "https://www.sphero.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.sphero.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.wonderworkshop.com",
+    "input_url": "https://www.wonderworkshop.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.wonderworkshop.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.americanreading.com",
+    "input_url": "https://www.americanreading.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.americanreading.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.noredink.com",
+    "input_url": "https://www.noredink.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.noredink.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.getepic.com",
+    "input_url": "https://www.getepic.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.getepic.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.funbrain.com",
+    "input_url": "https://www.funbrain.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.funbrain.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.magicschool.ai",
+    "input_url": "https://www.magicschool.ai/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.magicschool.ai",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://gradingpal.com",
+    "input_url": "https://gradingpal.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://gradingpal.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://cograder.com",
+    "input_url": "https://cograder.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://cograder.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.squirrelai.com",
+    "input_url": "https://www.squirrelai.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.squirrelai.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.microsoft.com/en-us/education/reading-coach",
+    "input_url": "https://www.microsoft.com/en-us/education/reading-coach",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.microsoft.com/en-us/education/reading-coach",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://kidsai.app",
+    "input_url": "https://kidsai.app/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://kidsai.app",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://gemini.google.com",
+    "input_url": "https://gemini.google.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://gemini.google.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://notebooklm.google.com",
+    "input_url": "https://notebooklm.google.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://notebooklm.google.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.mheducation.com",
+    "input_url": "https://www.mheducation.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.mheducation.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.hmhco.com",
+    "input_url": "https://www.hmhco.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.hmhco.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.savvas.com",
+    "input_url": "https://www.savvas.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.savvas.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.pearson.com",
+    "input_url": "https://www.pearson.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.pearson.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.edmentum.com",
+    "input_url": "https://www.edmentum.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.edmentum.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.greatminds.org",
+    "input_url": "https://www.greatminds.org/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.greatminds.org",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.cambiumlearning.com",
+    "input_url": "https://www.cambiumlearning.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.cambiumlearning.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.infobase.com",
+    "input_url": "https://www.infobase.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.infobase.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.discoveryeducation.com",
+    "input_url": "https://www.discoveryeducation.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.discoveryeducation.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://workspace.google.com",
+    "input_url": "https://workspace.google.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://workspace.google.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.microsoft.com/education",
+    "input_url": "https://www.microsoft.com/education",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.microsoft.com/education",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://zoom.us",
+    "input_url": "https://zoom.us/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://zoom.us",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.slack.com",
+    "input_url": "https://www.slack.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.slack.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.dropbox.com",
+    "input_url": "https://www.dropbox.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.dropbox.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.teacherspayteachers.com",
+    "input_url": "https://www.teacherspayteachers.com/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.teacherspayteachers.com",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.donorschoose.org",
+    "input_url": "https://www.donorschoose.org/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.donorschoose.org",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
+  },
+  {
+    "product_name": "https://www.iste.org",
+    "input_url": "https://www.iste.org/",
+    "ground_truth_vendor": [],
+    "ground_truth_other": [],
+    "metadata": {
+      "vendor_name": "https://www.iste.org",
+      "scraped_at": "2026-06-13T14:00:00Z",
+      "source_page": "k-12-URLs.rtf",
+      "difficulty": "unset",
+      "known_failure_mode": ""
+    }
   }
 ]

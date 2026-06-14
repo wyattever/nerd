@@ -21,8 +21,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 # --- Project Imports ---
-from src.generators import parse_markdown_to_listing, generate_ncademi_html, create_docx_bytes
-from src.utils import normalize_url
+from nerd_core.generators import parse_markdown_to_listing, generate_ncademi_html, create_docx_bytes
+from nerd_core.utils import normalize_url
 from eval.optimize import url_recall_with_feedback
 
 logging.basicConfig(level=logging.INFO)
@@ -141,7 +141,7 @@ def run_dataset_audit():
         
     logger.info(f"✅ Dataset Audit Passed: {len(dataset)} records verified.")
 
-from src.services import extract_grounding_urls
+from nerd_core.services import extract_grounding_urls
 
 def test_grounding_none_chunks():
     logger.info("Testing grounding metadata with None chunks (Original Bug)...")

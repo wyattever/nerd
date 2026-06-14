@@ -2,6 +2,7 @@ import re
 import socket
 import ipaddress
 import hashlib
+import asyncio
 from urllib.parse import urlparse, urlsplit, urlunsplit, parse_qsl, urlencode
 from functools import lru_cache
 import httpx
@@ -32,8 +33,7 @@ def _is_blocked_ip(ip_str):
     )
 
 
-@lru_cache(maxsize=1024)
-def resolve_and_validate_url(url):
+async def resolve_and_validate_url(url):
     """Resolve redirects (like Google Search Proxy) and validate the final destination.
     
     Returns (resolved_url, is_valid, reason). 
@@ -47,15 +47,15 @@ def resolve_and_validate_url(url):
         return url, False, "Corrupted URL String"
 
     try:
-        with httpx.Client(
+        async with httpx.AsyncClient(
             timeout=15.0,
             follow_redirects=True,
             headers={"User-Agent": BROWSER_UA},
         ) as client:
             # We follow redirects to get the direct URL
-            resp = client.head(url)
+            resp = await client.head(url)
             if resp.status_code == 405:
-                resp = client.get(url)
+                resp = await client.get(url)
             
             final_url = str(resp.url)
             
@@ -70,6 +70,8 @@ def resolve_and_validate_url(url):
 
             # Resolve IP to check for private ranges
             try:
+                # socket.getaddrinfo is blocking, but fast enough for most DNS
+                # For high concurrency, consider aiodns
                 infos = socket.getaddrinfo(host, None)
                 resolved_ips = {info[4][0] for info in infos}
                 if any(_is_blocked_ip(ip) for ip in resolved_ips):
@@ -93,57 +95,68 @@ def resolve_and_validate_url(url):
         return url, False, type(e).__name__
 
 
-def resolve_and_validate_all(urls: list[str], cache: dict[str, str] = None) -> dict[str, str]:
-    """Helper to resolve a batch of URLs, using an external cache if provided."""
+async def resolve_and_validate_all(urls: list[str], cache: dict[str, str] = None) -> dict[str, str]:
+    """Helper to resolve a batch of URLs concurrently."""
     if cache is None:
         cache = {}
     
     results = {}
+    tasks = []
+    urls_to_resolve = []
+    seen_in_batch = set()
+
     for url in urls:
         if url in cache:
             results[url] = cache[url]
-            continue
-            
-        resolved, is_valid, reason = resolve_and_validate_url(url)
-        if not is_valid:
-            results[url] = f"ERROR: {reason}"
-        else:
-            results[url] = resolved
-            cache[url] = resolved
+        elif url not in seen_in_batch:
+            seen_in_batch.add(url)
+            urls_to_resolve.append(url)
+            tasks.append(resolve_and_validate_url(url))
+
+    if tasks:
+        resolved_batch = await asyncio.gather(*tasks)
+        batch_map = dict(zip(urls_to_resolve, resolved_batch))
+        
+        for url in urls:
+            if url in batch_map:
+                resolved, is_valid, reason = batch_map[url]
+                if not is_valid:
+                    results[url] = f"ERROR: {reason}"
+                else:
+                    results[url] = resolved
+                    cache[url] = resolved
             
     return results
 
 
-def filter_broken_links(md_text):
-    """Resolve and label links without deleting them. 
-    
-    Replaces proxy links with direct ones and appends status if not 100% OK.
-    """
-    # Robust pattern for finding all URLs, with special handling for standard markdown [text](url)
-    # to extract labels for later status appending if needed. Allows optional space [text] (url).
+async def filter_broken_links(md_text):
+    """Resolve and label links concurrently without deleting them."""
     markdown_link_pattern = r'\[(?P<text>.*?)\]\s?\((?P<url>https?://[^\)\s<>"]+)\)'
     raw_url_pattern = r'(?<!\()\bhttps?://[^\)\s<>"]+'
 
+    # Extract all unique URLs first for batch processing
+    links_matches = list(re.finditer(markdown_link_pattern, md_text))
+    raw_urls = re.findall(raw_url_pattern, md_text)
+    
+    all_urls = list(set([m.group('url') for m in links_matches] + raw_urls))
+    
+    # Resolve all URLs in parallel
+    tasks = [resolve_and_validate_url(u) for u in all_urls]
+    resolved_data = await asyncio.gather(*tasks)
+    seen = dict(zip(all_urls, resolved_data))
+
     processed_md = md_text
     rejections = []
-    seen = {}
     
-    # 1. First, handle standard markdown links [text](url)
-    matches = list(re.finditer(markdown_link_pattern, md_text))
-    for match in matches:
+    # 1. Handle standard markdown links
+    for match in links_matches:
         text = match.group('text')
         url = match.group('url')
-        
-        if url not in seen:
-            seen[url] = resolve_and_validate_url(url)
-        
         resolved_url, is_valid, reason = seen[url]
         
-        # Replace the original markdown link with the resolved one
         if resolved_url != url:
             processed_md = processed_md.replace(f"({url})", f"({resolved_url})")
         
-        # Append status label if not fully valid
         if not is_valid or "Unverified" in reason:
             label = f" (Status: {reason})"
             if label not in processed_md:
@@ -154,20 +167,15 @@ def filter_broken_links(md_text):
             if not is_valid:
                 rejections.append(f"{resolved_url} ({reason})")
 
-    # 2. Second, catch any remaining raw URLs that aren't inside parentheses (already handled)
-    # This ensures Google redirect URLs that weren't put into [text](url) blocks are also fixed.
+    # 2. Handle raw URLs
     raw_matches = re.findall(raw_url_pattern, processed_md)
     for url in raw_matches:
-        if url not in seen:
-            seen[url] = resolve_and_validate_url(url)
-        
-        resolved_url, is_valid, reason = seen[url]
-        
-        if resolved_url != url:
-            processed_md = processed_md.replace(url, resolved_url)
-        
-        if not is_valid and resolved_url not in [r.split(' ')[0] for r in rejections]:
-            rejections.append(f"{resolved_url} ({reason})")
+        if url in seen:
+            resolved_url, is_valid, reason = seen[url]
+            if resolved_url != url:
+                processed_md = processed_md.replace(url, resolved_url)
+            if not is_valid and resolved_url not in [r.split(' ')[0] for r in rejections]:
+                rejections.append(f"{resolved_url} ({reason})")
                 
     return processed_md, rejections
 

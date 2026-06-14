@@ -4,8 +4,8 @@ from google import genai
 from google.genai import types
 from google.genai.errors import APIError
 from jinja2 import Environment, FileSystemLoader
-from src.utils import URLMask
-from src.telemetry import log_event
+from nerd_core.utils import URLMask
+from nerd_core.telemetry import log_event
 
 logger = logging.getLogger(__name__)
 

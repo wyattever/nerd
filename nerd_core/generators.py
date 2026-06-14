@@ -1,5 +1,5 @@
 """
-src/generators.py — Artifact Engine for N.E.R.D.
+nerd_core/generators.py — Artifact Engine for N.E.R.D.
 =================================================
 Converts a parsed NCADEMI listing (from the GEPA-optimized agent) into:
   - A standalone HTML preview (rendered in Streamlit)
@@ -226,15 +226,14 @@ def parse_markdown_to_listing(markdown: str) -> ListingData:
 # HTML preview builder
 # ---------------------------------------------------------------------------
 
-def generate_ncademi_html(markdown: str) -> str:
+def render_listing_html(listing: ListingData) -> str:
     """
-    Render the Markdown draft as a standalone NCADEMI-structured HTML string.
+    Render a ListingData object as a standalone NCADEMI-structured HTML string.
     Utilizes Jinja2 and nerd.css.
     """
-    listing = parse_markdown_to_listing(markdown)
     css_path = _TEMPLATES_DIR / "nerd.css"
     css_content = css_path.read_text() if css_path.exists() else ""
-    
+
     template = _jinja.get_template("ncademi_listing.html")
     return template.render(
         product_name=listing.product_name,
@@ -250,6 +249,13 @@ def generate_ncademi_html(markdown: str) -> str:
         last_updated=listing.last_updated,
         css_content=css_content
     )
+
+def generate_ncademi_html(markdown: str) -> str:
+    """
+    Render the Markdown draft as a standalone NCADEMI-structured HTML string.
+    """
+    listing = parse_markdown_to_listing(markdown)
+    return render_listing_html(listing)
 
 
 # ---------------------------------------------------------------------------

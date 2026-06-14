@@ -28,7 +28,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 try:
-    from src.utils import normalize_url
+    from nerd_core.utils import normalize_url
 except ImportError:
     def normalize_url(url: str) -> str:  # type: ignore[misc]
         return url.strip()

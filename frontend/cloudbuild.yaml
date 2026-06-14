@@ -1,0 +1,22 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "--build-arg"
+      - "FIREBASE_API_KEY=${_FIREBASE_API_KEY}"
+      - "--build-arg"
+      - "FIREBASE_APP_ID=${_FIREBASE_APP_ID}"
+      - "--build-arg"
+      - "NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL}"
+      - "-t"
+      - "${_REPO}/nerd-frontend"
+      - "."
+
+images:
+  - "${_REPO}/nerd-frontend"
+
+substitutions:
+  _FIREBASE_API_KEY: ""
+  _FIREBASE_APP_ID: ""
+  _NEXT_PUBLIC_API_BASE_URL: ""
+  _REPO: ""

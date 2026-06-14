@@ -10,8 +10,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 # --- Project Imports ---
-from src.services import run_initial_research
-from src.generators import parse_markdown_to_listing, generate_ncademi_html
+from nerd_core.services import run_initial_research
+from nerd_core.generators import parse_markdown_to_listing, generate_ncademi_html
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)

@@ -1,4 +1,10 @@
 -c constraints.txt
+
+# Phase 4: fastapi and uvicorn explicitly added (were implicit transitive deps)
+fastapi
+uvicorn[standard]
+
+# Existing deps
 altair==5.5.0
 annotated-types==0.7.0
 anyio==4.12.1
@@ -56,6 +62,9 @@ urllib3>=2.0.0
 watchdog==6.0.0
 websockets==15.0.1
 google-cloud-bigquery
+google-cloud-tasks==2.16.0
+google-cloud-firestore
+firebase-admin
 dspy-ai~=3.0.0
 gepa
 litellm[proxy]==1.83.10

@@ -161,3 +161,16 @@ cython_debug/
 agent_debug.log
 directory_entry.txt
 updated_sources.rtf
+
+# N.E.R.D. Specific
+archive/
+ncademi_archive/
+ncademi_archive\ copy/
+ncademi_archive\ copy.zip
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+venv_verify/
+eval/results/
+*.pyc
+.pytest_cache/

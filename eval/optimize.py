@@ -45,7 +45,7 @@ using grounding results that were pre-resolved offline.
 
 The two-phase design below handles this explicitly:
 
-  Phase 1 (Offline — src/services.py path):
+  Phase 1 (Offline — nerd_core/services.py path):
     The production research pipeline (with real Google Search Grounding)
     runs against the Golden Dataset. Its resolved canonical URLs are
     cached to eval/grounding_cache.json so Phase 2 has ground-truth
@@ -87,11 +87,11 @@ import dspy
 # ---------------------------------------------------------------------------
 # Path bootstrap
 # ---------------------------------------------------------------------------
-_PROJECT_ROOT = Path(__file__).parent.parent
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from src.utils import normalize_url  # noqa: E402
+from nerd_core.utils import normalize_url  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -103,7 +103,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-EVAL_DIR          = Path(__file__).parent
+EVAL_DIR          = _PROJECT_ROOT / "eval"
 GOLDEN_DATASET    = EVAL_DIR / "eval_data.json"
 GROUNDING_CACHE   = EVAL_DIR / "grounding_cache.json"
 PROMPTS_DIR       = _PROJECT_ROOT / "prompts"
