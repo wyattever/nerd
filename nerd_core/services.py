@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 from google import genai
@@ -9,12 +10,22 @@ from nerd_core.telemetry import log_event
 
 logger = logging.getLogger(__name__)
 
+# --- Environment Configuration ---
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "edtech-agent-2026")
+LOCATION = os.getenv("GCP_LOCATION", "us-central1")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 # --- Client (singleton) ---
-_client = genai.Client(
-    vertexai=True,
-    project="edtech-agent-2026",
-    location="us-central1",
-)
+if GEMINI_API_KEY:
+    # Use API Key (External/Developer mode)
+    _client = genai.Client(api_key=GEMINI_API_KEY)
+else:
+    # Use Vertex AI (Enterprise/Production mode on GCP)
+    _client = genai.Client(
+        vertexai=True,
+        project=PROJECT_ID,
+        location=LOCATION,
+    )
 
 MODEL = "gemini-2.5-flash"
 

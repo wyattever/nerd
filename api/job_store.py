@@ -13,6 +13,7 @@ LOCAL_MODE = os.getenv("LOCAL_MODE", "false").lower() == "true"
 
 # ── In-Memory Store for Local Mode ───────────────────────────────────────────
 _local_jobs: Dict[str, dict] = {}
+_local_lock = asyncio.Lock()
 
 # ── Firestore Store for Production ───────────────────────────────────────────
 if not LOCAL_MODE:
@@ -23,13 +24,16 @@ if not LOCAL_MODE:
 
 async def create_job(job_id: str) -> None:
     """Initialize a new job document."""
-    expires_at = datetime.now(timezone.utc) + timedelta(days=1)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=1)
     data = {
         "status": "queued",
         "events": [],
         "result": None,
         "done": False,
-        "expires_at": expires_at
+        "updated_at": now,
+        "expires_at": expires_at,
+        "worker_id": None
     }
     
     if LOCAL_MODE:
@@ -38,57 +42,132 @@ async def create_job(job_id: str) -> None:
         doc_ref = db.collection(COLLECTION).document(job_id)
         await doc_ref.set(data)
 
+async def claim_job(job_id: str, worker_id: str = "unknown", stale_timeout_minutes: int = 10) -> bool:
+    """
+    Atomically attempt to claim a job for processing.
+    Returns True if the claim was successful (status transitioned from queued to searching_initial,
+    or a stale job was reclaimed).
+    """
+    now = datetime.now(timezone.utc)
+    stale_threshold = now - timedelta(minutes=stale_timeout_minutes)
+
+    if LOCAL_MODE:
+        async with _local_lock:
+            job = _local_jobs.get(job_id)
+            if not job:
+                return False
+            
+            is_stale = (job["status"] == "processing" and 
+                        job.get("updated_at") and 
+                        job["updated_at"] < stale_threshold)
+            
+            if job["status"] == "queued" or is_stale:
+                status = "searching_initial"
+                event = {"status": status, "reclaimed": is_stale}
+                job.update({
+                    "status": status,
+                    "updated_at": now,
+                    "worker_id": worker_id
+                })
+                job["events"].append(event)
+                return True
+            return False
+    else:
+        doc_ref = db.collection(COLLECTION).document(job_id)
+        
+        @firestore.async_transactional
+        async def _transactional_claim(transaction, doc_ref):
+            snapshot = await doc_ref.get(transaction=transaction)
+            if not snapshot.exists:
+                return False
+            data = snapshot.to_dict()
+            
+            current_status = data.get("status")
+            last_updated = data.get("updated_at")
+            
+            is_stale = (current_status == "processing" and 
+                        last_updated and 
+                        last_updated < stale_threshold)
+
+            if current_status == "queued" or is_stale:
+                status = "searching_initial"
+                event = {"status": status, "reclaimed": is_stale}
+                transaction.update(doc_ref, {
+                    "status": status,
+                    "updated_at": now,
+                    "worker_id": worker_id,
+                    "events": firestore.ArrayUnion([event])
+                })
+                return True
+            return False
+        
+        return await _transactional_claim(db.transaction(), doc_ref)
+
 async def emit_event(job_id: str, status: str, **extra: Any) -> None:
     """Append a status event to the job's event array."""
     print(f"[JOB_STORE] Job {job_id} -> {status} {extra if extra else ''}")
+    now = datetime.now(timezone.utc)
     event = {"status": status, **extra}
     
     if LOCAL_MODE:
         if job_id in _local_jobs:
             _local_jobs[job_id]["status"] = status
+            _local_jobs[job_id]["updated_at"] = now
             _local_jobs[job_id]["events"].append(event)
     else:
         doc_ref = db.collection(COLLECTION).document(job_id)
         await doc_ref.update({
             "status": status,
+            "updated_at": now,
             "events": firestore.ArrayUnion([event])
         })
 
 async def complete_job(job_id: str, result: dict) -> None:
     """Mark the job as done and attach the final payload."""
+    now = datetime.now(timezone.utc)
     if LOCAL_MODE:
         if job_id in _local_jobs:
             _local_jobs[job_id]["status"] = "complete"
+            _local_jobs[job_id]["updated_at"] = now
             _local_jobs[job_id]["result"] = result
             _local_jobs[job_id]["done"] = True
     else:
         doc_ref = db.collection(COLLECTION).document(job_id)
         await doc_ref.update({
             "status": "complete",
+            "updated_at": now,
             "result": result,
             "done": True
         })
 
 async def fail_job(job_id: str, error_msg: str, code: int = 500) -> None:
     """Fail the job gracefully."""
+    now = datetime.now(timezone.utc)
     event = {"status": "error", "error": error_msg, "code": code}
     
     if LOCAL_MODE:
         if job_id in _local_jobs:
             _local_jobs[job_id]["status"] = "error"
+            _local_jobs[job_id]["updated_at"] = now
             _local_jobs[job_id]["events"].append(event)
             _local_jobs[job_id]["done"] = True
     else:
         doc_ref = db.collection(COLLECTION).document(job_id)
         await doc_ref.update({
             "status": "error",
+            "updated_at": now,
             "events": firestore.ArrayUnion([event]),
             "done": True
         })
 
-async def stream_job_events(job_id: str) -> AsyncGenerator[str, None]:
-    """Yield SSE formatted strings."""
-    last_idx = 0
+async def stream_job_events(job_id: str, last_event_id: str | None = None) -> AsyncGenerator[str, None]:
+    """Yield SSE formatted strings with heartbeats and resume support."""
+    try:
+        last_idx = int(last_event_id) if last_event_id else 0
+    except (ValueError, TypeError):
+        last_idx = 0
+
+    last_heartbeat = datetime.now(timezone.utc)
     
     while True:
         if LOCAL_MODE:
@@ -107,13 +186,20 @@ async def stream_job_events(job_id: str) -> AsyncGenerator[str, None]:
         while last_idx < len(events):
             evt = events[last_idx]
             last_idx += 1
-            yield f"event: status\ndata: {json.dumps(evt)}\n\n"
+            yield f"id: {last_idx}\nevent: status\ndata: {json.dumps(evt)}\n\n"
+            last_heartbeat = datetime.now(timezone.utc)
             
         # If the job is done, yield the payload and close the stream
         if data.get("done"):
             if data.get("result") is not None:
-                yield f"event: result\ndata: {json.dumps(data['result'])}\n\n"
+                # We use 'result' as the ID for the final payload
+                yield f"id: result\nevent: result\ndata: {json.dumps(data['result'])}\n\n"
             yield "event: end\ndata: {}\n\n"
             break
             
+        # Heartbeat every 20 seconds to keep connection alive on Cloud Run
+        if (datetime.now(timezone.utc) - last_heartbeat).total_seconds() > 20:
+            yield ": heartbeat\n\n"
+            last_heartbeat = datetime.now(timezone.utc)
+
         await asyncio.sleep(0.5)

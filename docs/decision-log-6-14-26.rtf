@@ -1,0 +1,201 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;\f1\fnil\fcharset0 Menlo-Bold;}
+{\colortbl;\red255\green255\blue255;\red82\green0\blue83;\red255\green255\blue255;\red0\green0\blue117;
+\red45\green56\blue64;\red52\green52\blue52;\red171\green175\blue178;}
+{\*\expandedcolortbl;;\cssrgb\c40000\c0\c40000;\cssrgb\c100000\c100000\c100000\c93000;\cssrgb\c0\c0\c53333;
+\csgenericrgb\c17530\c21854\c24942;\cssrgb\c26667\c26667\c26667;\csgenericrgb\c67012\c68741\c69977\c95800;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf2 \cb3 \CocoaLigature0 \uc0\u10022  
+\f1\b \cf4 N.E.R.D. Decision Log (Updated: June 14, 2026)
+\f0\b0 \cf5 \
+\
+  \cf6 Present-tense record of SETTLED decisions and their rationale, so they are not relitigated. Update a line only when\cf5 \
+  \cf6 the underlying decision actually changes.\cf5 \
+\
+  \cf7 ---\cf5 \
+\
+  
+\f1\b \cf4 Architecture & Scope
+\f0\b0 \cf5 \
+\
+   \cf6 1. 
+\f1\b OUTPUT FORMAT \'97 HTML only, DOCX removed.
+\f0\b0 \cf5 \
+      \cf6 - 
+\f1\b Decision:
+\f0\b0  The app generates WordPress-compatible HTML (mirroring \cf2 wp-block\cf6  classes). DOCX generation and the \cf2 lxml\cf5 \
+        \cf6 dependency are removed entirely.\cf5 \
+      \cf6 - 
+\f1\b Rationale:
+\f0\b0  Legacy \cf2 altChunk\cf6  DOCX was an XSS vector and non-portable. Product focus is now 100% on the\cf5 \
+        \cf6 WordPress-native workflow.\cf5 \
+      \cf6 - 
+\f1\b Status:
+\f0\b0  
+\f1\b SETTLED/VERIFIED.
+\f0\b0  Codebase is clean of \cf2 python-docx\cf6  and \cf2 lxml\cf6 .\cf5 \
+\
+   \cf6 2. 
+\f1\b MOBILE \'97 completely out of scope.
+\f0\b0 \cf5 \
+      \cf6 - 
+\f1\b Decision:
+\f0\b0  N.E.R.D. is a desktop-only research tool.\cf5 \
+      \cf6 - 
+\f1\b Rationale:
+\f0\b0  Explicit product constraint to simplify transport (SSE) and auth (Firebase) logic.\cf5 \
+\
+   \cf6 3. 
+\f1\b WCAG COMPLIANCE \'97 mandatory streaming UI features.
+\f0\b0 \cf5 \
+      \cf6 - 
+\f1\b Decision:
+\f0\b0  Streaming status changes must be announced via ARIA live regions; errors via \cf2 role="alert"\cf6 .\cf5 \
+      \cf6 - 
+\f1\b Status:
+\f0\b0  
+\f1\b SETTLED/VERIFIED.
+\f0\b0  Implemented in \cf2 ResearchForm.tsx\cf6  using \cf2 sr-only\cf6  polite live regions.\cf5 \
+\
+  \cf7 ---\cf5 \
+\
+  
+\f1\b \cf4 SSE / Auth (cross-origin)
+\f0\b0 \cf5 \
+\
+   \cf6 4. 
+\f1\b SSE TRANSPORT \'97 fetch-based with Bearer token.
+\f0\b0 \cf5 \
+      \cf6 - 
+\f1\b Decision:
+\f0\b0  SSE consumed via \cf2 @microsoft/fetch-event-source\cf6  sending \cf2 Authorization: Bearer <ID token>\cf6 .\cf5 \
+      \cf6 - 
+\f1\b Rationale:
+\f0\b0  Bypasses cookie-blocking on \cf2 run.app\cf6  domains. Handles 1-hour token expiry via \cf2 onopen\cf6  refresh logic.\cf5 \
+      \cf6 - 
+\f1\b Status:
+\f0\b0  
+\f1\b SETTLED/VERIFIED.
+\f0\b0  Implemented in \cf2 useResearchApi.ts\cf6 .\cf5 \
+\
+   \cf6 5. 
+\f1\b BACKEND SSE \'97 standard streaming headers.
+\f0\b0 \cf5 \
+      \cf6 - 
+\f1\b Decision:
+\f0\b0  Endpoint yields \cf2 text/event-stream\cf6  with \cf2 Cache-Control: no-cache\cf6  and \cf2 X-Accel-Buffering: no\cf6 .\cf5 \
+      \cf6 - 
+\f1\b Status:
+\f0\b0  
+\f1\b SETTLED/VERIFIED.
+\f0\b0  Implemented in \cf2 api/main.py\cf6  and \cf2 api/job_store.py\cf6 .\cf5 \
+\
+  \cf7 ---\cf5 \
+\
+  
+\f1\b \cf4 Local Development
+\f0\b0 \cf5 \
+\
+   \cf6 6. 
+\f1\b LOCAL AUTH BYPASS \'97 env-gated.
+\f0\b0 \cf5 \
+      \cf6 - 
+\f1\b Decision:
+\f0\b0  Local dev bypasses login via \cf2 NEXT_PUBLIC_DISABLE_AUTH=true\cf6  in \cf2 middleware.ts\cf6 .\cf5 \
+      \cf6 - 
+\f1\b CRITICAL:
+\f0\b0  Must never reach production.\cf5 \
+      \cf6 - 
+\f1\b TODO:
+\f0\b0  Implement CI assertion to fail production builds if this flag is true.\cf5 \
+\
+   \cf6 7. 
+\f1\b LOCAL MODE \'97 GCP dependency stubbing.
+\f0\b0 \cf5 \
+      \cf6 - 
+\f1\b Decision:
+\f0\b0  \cf2 LOCAL_MODE=true\cf6  stubs Cloud Tasks (uses \cf2 BackgroundTasks\cf6 ) and Firestore (uses in-memory dict).\cf5 \
+      \cf6 - 
+\f1\b Status:
+\f0\b0  
+\f1\b SETTLED/VERIFIED.
+\f0\b0  Implemented in \cf2 api/job_store.py\cf6 .\cf5 \
+\
+  \cf7 ---\cf5 \
+\
+  
+\f1\b \cf4 Cloud Deployment
+\f0\b0 \cf5 \
+\
+   \cf6 8. 
+\f1\b FRONTEND BUILD \'97 build-time env inlining.
+\f0\b0 \cf5 \
+      \cf6 - 
+\f1\b Decision:
+\f0\b0  \cf2 NEXT_PUBLIC_API_BASE_URL\cf6  must be passed as a Docker \cf2 --build-arg\cf6  to ensure it is inlined into the JS\cf5 \
+        \cf6 bundle.\cf5 \
+      \cf6 - 
+\f1\b Status:
+\f0\b0  
+\f1\b SETTLED/VERIFIED.
+\f0\b0  Dockerfile and \cf2 deploy.sh\cf6  updated.\cf5 \
+\
+   \cf6 9. 
+\f1\b WORKER \'97 OIDC Auth & Retry Suppression.
+\f0\b0 \cf5 \
+      \cf6 - 
+\f1\b Decision:
+\f0\b0  Worker is private (\cf2 --no-allow-unauthenticated\cf6 ) and invoked via OIDC. Worker returns \cf2 200 OK\cf6  on research\cf5 \
+        \cf6 failure to prevent Cloud Tasks from triggering redundant/expensive retries.\cf5 \
+      \cf6 - 
+\f1\b TODO:
+\f0\b0  Implement strict idempotency via atomic state claim (Firestore transaction) to protect against duplicate\cf5 \
+        \cf6 task delivery.\cf5 \
+\
+  \cf7 ---\cf5 \
+\
+  
+\f1\b \cf4 Knowledge Management (Project Context)
+\f0\b0 \cf5 \
+\
+   \cf6 10. 
+\f1\b CLAUDE PROJECT KNOWLEDGE BASE \'97 Stable Contracts Only.
+\f0\b0 \cf5 \
+       \cf6 - 
+\f1\b Decision:
+\f0\b0  The Claude Project knowledge base contains only high-reference, stable files (schemas/architecture)\cf5 \
+         \cf6 to preserve context. Actively churning files (prompts, progress logs) are excluded.\cf5 \
+       \cf6 - 
+\f1\b Included Files:
+\f0\b0 \cf5 \
+           \cf6 1. \cf2 docs/NERD_System_Architecture.md\cf6  (System Map)\cf5 \
+           \cf6 2. \cf2 docs/EDTECH_AGENT_LOGIC.md\cf6  (Parsing/Synthesis Logic)\cf5 \
+           \cf6 3. \cf2 api/schemas.py\cf6  (Pydantic/Data Contract)\cf5 \
+           \cf6 4. \cf2 templates/ncademi_listing.html\cf6  (HTML Target)\cf5 \
+           \cf6 5. \cf2 nerd_core/generators.py\cf6  (Implementation Contract)\cf5 \
+       \cf6 - 
+\f1\b Status:
+\f0\b0  
+\f1\b SETTLED.
+\f0\b0  Recommendation based on 30-day git stability analysis.\cf5 \
+\
+  \cf7 ---\cf5 \
+\
+  
+\f1\b \cf4 Working Model (Multi-Agent)
+\f0\b0 \cf5 \
+\
+   \cf6 11. 
+\f1\b GIT DISCIPLINE.
+\f0\b0 \cf5 \
+       \cf6 - 
+\f1\b Decision:
+\f0\b0  Commit at verified-good states; checkpoint before risky operations; never push/rewrite without\cf5 \
+         \cf6 instruction.\cf5 \
+       \cf6 - 
+\f1\b Status:
+\f0\b0  
+\f1\b SETTLED.
+\f0\b0  Standard operating procedure.}

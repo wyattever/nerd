@@ -39,6 +39,7 @@ const INITIAL_STATE: ResearchState = {
 export function useResearchApi() {
   const [state, setState] = useState<ResearchState>(INITIAL_STATE);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const lastEventIdRef = useRef<string | null>(null);
 
   const _closeSse = useCallback(() => {
     if (abortControllerRef.current) {
@@ -52,12 +53,20 @@ export function useResearchApi() {
     const ctrl = new AbortController();
     abortControllerRef.current = ctrl;
 
-    const getHeaders = async () => {
-      const token = await auth.currentUser?.getIdToken();
-      return {
+    const getHeaders = async (forceRefresh = false) => {
+      let token = "bypass-token";
+      if (process.env.NEXT_PUBLIC_DISABLE_AUTH !== "true") {
+        token = (await auth.currentUser?.getIdToken(forceRefresh)) ?? "";
+      }
+      
+      const headers: Record<string, string> = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
       };
+      if (lastEventIdRef.current) {
+        headers["Last-Event-ID"] = lastEventIdRef.current;
+      }
+      return headers;
     };
 
     try {
@@ -72,11 +81,17 @@ export function useResearchApi() {
             // Token likely expired. Attempt one refresh.
             await auth.currentUser?.getIdToken(true);
             throw new Error("token_refresh_required");
+          } else if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+            // Client error, don't retry automatically
+            throw new Error(`Fatal error: ${response.status} ${response.statusText}`);
           } else {
-            throw new Error(`SSE Connection failed: ${response.status}`);
+            throw new Error(`Server error or timeout: ${response.status}`);
           }
         },
         onmessage(msg) {
+          if (msg.id) {
+            lastEventIdRef.current = msg.id;
+          }
           if (msg.event === "status") {
             const data = JSON.parse(msg.data) as { status: JobStatus };
             setState((prev) => ({ ...prev, status: data.status, jobId }));
@@ -98,14 +113,16 @@ export function useResearchApi() {
         },
         onerror(err) {
           if (err.message === "token_refresh_required") {
+            // Re-call _listenToJob to use the new token
             _listenToJob(jobId);
+            // Throw to stop the current fetchEventSource retry loop
             throw err; 
           }
           console.error("SSE Error:", err);
           setState((prev) => ({
             ...prev,
             status: "error",
-            error: "Connection to job stream lost.",
+            error: `Connection to research stream lost: ${err.message || "Unknown error"}`,
           }));
           _closeSse();
           throw err;
@@ -121,8 +138,13 @@ export function useResearchApi() {
   const startInitialResearch = useCallback(
     async (productUrl: string, timeoutMin: number = 4) => {
       setState({ ...INITIAL_STATE, status: "queued" });
+      lastEventIdRef.current = null;
       try {
-        const token = await auth.currentUser?.getIdToken();
+        let token = "bypass-token";
+        if (process.env.NEXT_PUBLIC_DISABLE_AUTH !== "true") {
+          token = (await auth.currentUser?.getIdToken()) ?? "";
+        }
+
         const res = await fetch(`${API_BASE}/research/initial`, {
           method: "POST",
           headers: { 
@@ -151,8 +173,13 @@ export function useResearchApi() {
       jobId?: string;
     }) => {
       setState((prev) => ({ ...prev, status: "queued", result: null, error: null }));
+      lastEventIdRef.current = null;
       try {
-        const token = await auth.currentUser?.getIdToken();
+        let token = "bypass-token";
+        if (process.env.NEXT_PUBLIC_DISABLE_AUTH !== "true") {
+          token = (await auth.currentUser?.getIdToken()) ?? "";
+        }
+
         const res = await fetch(`${API_BASE}/research/deep-dive`, {
           method: "POST",
           headers: { 

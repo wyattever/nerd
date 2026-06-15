@@ -1,0 +1,991 @@
+## Research Plan: Optimizing the NCADEMI Static Artifact Viewer
+
+### Objective
+
+To identify, validate, and document frontend and architectural best practices for building out the **NCADEMI Static Artifact Viewer**. The plan focuses on resolving the conflict between rendering full-fidelity live previews and exporting clean, semantic HTML for seamless WordPress integration, while incorporating secure, low-latency real-time stream syncs.
+
+---
+
+## 1. Core Research Pillars & Hypotheses
+
+### Pillar A: "Full Preview, Partial Extraction" Isolation Mechanics
+
+* **Context:** The viewer must load a full HTML document (including stylesheets) inside an isolated `<iframe>` using the `srcDoc` property to ensure 100% visual fidelity to the live site. However, the WordPress editor requires only inner semantic elements (`<h2>`, `<p>`, `<ul>`).
+
+
+* **Hypothesis:** Utilizing the native browser `DOMParser` API on the client side allows the frontend to serve a single full-fidelity source of truth in the iframe while dynamically filtering out shell tags right before copying to the clipboard.
+
+
+* **Key Question:** What fallback behaviors are necessary if a specific target class (e.g., `.entry-content`) is missing from the artifact structure?
+
+
+
+### Pillar B: Real-Time Stream Synchronization
+
+* **Context:** The viewer needs to reflect live research drafts and asynchronous processing statuses in real time[cite: 1, 5, 6].
+* **Hypothesis:** Utilizing a userland stream consumer like `@microsoft/fetch-event-source` provides superior header manipulation (handling Firebase ID tokens) over the native `EventSource` API, minimizing backend state lookups and optimization blockers.
+
+
+* **Key Question:** How does token expiration (1-hour lifecycle) affect long-lived viewer connections, and can an `onopen` interceptor elegantly resolve re-authentication loops?
+
+
+
+---
+
+## 2. Methodology & Test Cases
+
+The research will be conducted using isolated prototype environments mimicking the existing React/Tailwind component layout.
+
+| Phase | Methodology | Target Metrics / Success Criteria |
+| --- | --- | --- |
+| **Phase 1: Iframe Rendering** | Inject raw document layouts with custom styles (`mockNerdCss`) into `srcDoc` iframes. Test performance over Split and Single views.
+
+ | Zero leak of iframe styles into parent viewer layout. Correct display of production vs. proposed draft banners.
+
+ |
+| **Phase 2: Extraction Logic** | Implement a clipboard utility utilizing `DOMParser().parseFromString()`. Target `.entry-content` with progressive fallbacks (`main`, `body`).
+
+ | Pure semantic HTML string copied to clipboard with trimmed leading/trailing whitespace. Immediate WordPress Gutenberg block conversion upon pasting.
+
+ |
+| **Phase 3: Connection Resiliency** | Simulate network drops and browser tab minimizing/backgrounding on mobile and desktop environments during stream views.
+
+ | Verification of explicit header injections. Proper initialization of `AbortController` when a user switches products or closes tabs.
+
+ |
+
+---
+
+## 3. Planned Tasks & Step-by-Step Execution
+
+### Task 1: Document & Validate Clipboard Fail-Safes
+
+Research browser constraints surrounding the `navigator.clipboard` API within varied single-page app contexts.
+
+1. Validate that clipboard interactions strictly require a secure context (HTTPS or localhost).
+
+
+2. Code and evaluate an automated fallback utility using `document.execCommand` for legacy browser coverage or restricted iframe sandboxes.
+
+
+
+### Task 2: Profile Automated Testing Integrity
+
+Ensure that the "Full Preview, Partial Extraction" layout strategy doesn't block QA automated testing mechanisms.
+
+1. Run byte-fidelity diff tests (e.g., via a `verify_cutover.py` testing script) to confirm that full backend artifact generation is stable.
+
+
+2. Confirm that client-side parsing handles edge-case wrappers without breaking byte fidelity.
+
+
+
+### Task 3: Handle Token Lifecycle Transitions in the Viewer
+
+Investigate the intersection of short-lived user credentials and infinite stream view times.
+
+1. Build a custom React hook (`useAuthenticatedSSE`) to encapsulate the client-side viewer connection.
+
+
+2. Program a custom error trigger inside the `onopen` callback to capture `401 Unauthorized` responses when a token expires mid-view.
+
+
+3. Integrate a silent token refresh via the identity client SDK inside the catch block to restart connections cleanly.
+
+
+
+---
+
+## 4. Risks and Mitigation Strategies
+
+* **Risk 1: Third-Party Cookie Blocks on Default Domains.** Attempting to use ambient credentials (cookies) across disparate `.run.app` or `.web.app` origins triggers strict browser privacy flags due to the Public Suffix List.
+
+
+* *Mitigation:* Enforce authorization entirely via explicitly managed HTTP Headers in `fetch-event-source`, bypassing third-party cookie filters without requiring a Global External Load Balancer.
+
+
+
+
+* **Risk 2: Phantom Reconnection Storms.** If a mobile device backgrounds the browser tab, suspended JavaScript execution loop handlers can trigger heavy rate-limiting errors (`429 Too Many Requests`).
+
+
+* *Mitigation:* Utilize Page Visibility API hooks within the viewer shell to gracefully drop connections when backgrounded and refresh credentials only upon view resumption.
+
+
+
+
+
+---
+
+## 5. Next Steps
+
+Which specific area of the viewer configuration would you like to prioritize first for prototyping—the clipboard extraction script for WordPress or the real-time hook infrastructure for stream synchronization?
+
+
+To execute the research plan, I am prioritizing the real-time stream synchronization infrastructure and the WordPress clipboard extraction logic. Both are critical for integrating the live draft previews with the asynchronous processing pipeline.
+
+Per your standing directive, full code snippets are provided for all components.
+
+---
+
+### 1. Real-Time Stream Synchronization Hook (`useAuthenticatedSSE.ts`)
+
+This custom React hook replaces the native `EventSource` API with `@microsoft/fetch-event-source` to enable custom header injection for Firebase Identity tokens. It specifically addresses the one-hour token expiration lifecycle by implementing an `onopen` interceptor that catches HTTP 401 Unauthorized responses, cleanly aborts the connection, mints a fresh token via the client SDK, and seamlessly reconnects without exposing the drop to the UI.
+
+```typescript
+import { useState, useEffect, useRef } from 'react';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
+import { getAuth, getIdToken } from 'firebase/auth';
+
+interface SSEOptions {
+  url: string;
+  isEnabled?: boolean;
+}
+
+export const useAuthenticatedSSE = ({ url, isEnabled = true }: SSEOptions) => {
+  const [streamData, setStreamData] = useState<string>('');
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
+  const abortCtrl = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!isEnabled) {
+      setStatus('idle');
+      return;
+    }
+
+    const connect = async () => {
+      setStatus('connecting');
+      abortCtrl.current = new AbortController();
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      try {
+        // Fetch standard cached token; fallback to empty string if unauthenticated
+        let token = user ? await getIdToken(user, false) : '';
+
+        await fetchEventSource(url, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'text/event-stream',
+          },
+          signal: abortCtrl.current.signal,
+          
+          async onopen(response) {
+            // Intercept token expiration before the stream parses
+            if (response.status === 401) {
+              if (user) {
+                // Force a token refresh
+                await getIdToken(user, true);
+                throw new Error('401_UNAUTHORIZED'); 
+              }
+            }
+            if (response.ok) {
+              setStatus('connected');
+              return;
+            }
+            throw new Error(`Server responded with ${response.status}`);
+          },
+          
+          onmessage(msg) {
+            // Append incoming text chunks
+            setStreamData((prev) => prev + msg.data);
+          },
+          
+          onclose() {
+            setStatus('idle');
+          },
+          
+          onerror(err) {
+            if (err.message === '401_UNAUTHORIZED') {
+              // The outer catch block will handle the reconnect
+              throw err; 
+            }
+            // Stop retrying on other fatal infrastructure errors
+            throw err; 
+          }
+        });
+      } catch (error: any) {
+        if (error.message === '401_UNAUTHORIZED') {
+          // Abort the dead connection and immediately cycle a fresh one
+          abortCtrl.current?.abort();
+          connect(); 
+        } else {
+          console.error("SSE Connection Error:", error);
+          setStatus('error');
+        }
+      }
+    };
+
+    connect();
+
+    // Cleanup: gracefully terminate TCP connection on unmount or URL change
+    return () => {
+      abortCtrl.current?.abort();
+    };
+  }, [url, isEnabled]);
+
+  return { streamData, status };
+};
+
+```
+
+---
+
+### 2. WordPress Extraction Utility (`wordpressExtractor.ts`)
+
+This utility executes the "Full Preview, Partial Extraction" paradigm. It utilizes the native `DOMParser` to parse the complete HTML string generated by the Fast API backend, searches for the targeted `.entry-content` wrapper, and copies only the pure semantic inner content to the clipboard, allowing seamless integration with the Gutenberg block editor.
+
+```typescript
+/**
+ * Extracts clean, semantic HTML from a full HTML document string
+ * and copies it to the user's clipboard.
+ * * @param {string} fullHtmlString - The complete HTML document returned by the API
+ */
+export const copyWordpressReadyHtml = async (fullHtmlString: string): Promise<void> => {
+  try {
+    // 1. Parse the raw HTML string into a queryable DOM object
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(fullHtmlString, 'text/html');
+
+    // 2. Target the specific wrapper used by the NCADEMI WordPress theme.
+    // Fallback to <main> or <body> if the specific class isn't found.
+    const targetNode = doc.querySelector('.entry-content') 
+                    || doc.querySelector('main') 
+                    || doc.body;
+
+    if (!targetNode) {
+      throw new Error("Could not locate the primary content container.");
+    }
+
+    // 3. Extract ONLY the inner HTML (semantic content, no shell tags)
+    const cleanHtml = targetNode.innerHTML.trim();
+
+    // 4. Write to the clipboard securely
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(cleanHtml);
+    } else {
+      fallbackCopyTextToClipboard(cleanHtml);
+    }
+    
+    alert("WordPress-ready HTML copied to clipboard!");
+
+  } catch (error) {
+    console.error("Failed to extract and copy HTML:", error);
+    alert("Failed to extract HTML. Check console for details.");
+  }
+};
+
+/**
+ * Fallback for older browsers or insecure iframe contexts
+ * using the legacy document.execCommand
+ */
+const fallbackCopyTextToClipboard = (text: string) => {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  
+  // Prevent scrolling to bottom of page in MS Edge
+  textArea.style.position = "fixed";
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.width = "2em";
+  textArea.style.height = "2em";
+  textArea.style.padding = "0";
+  textArea.style.border = "none";
+  textArea.style.outline = "none";
+  textArea.style.boxShadow = "none";
+  textArea.style.background = "transparent";
+  
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  
+  try {
+    document.execCommand('copy');
+  } catch (err) {
+    console.error('Fallback: Oops, unable to copy', err);
+  }
+  
+  document.body.removeChild(textArea);
+};
+
+```
+
+---
+
+### 3. Integrated Static Artifact Viewer (`ncademi_viewer.tsx`)
+
+This is the fully integrated component layout, featuring the `copyWordpressReadyHtml` extraction logic bound to a new export button in the header.
+
+```tsx
+import React, { useState } from 'react';
+import { 
+  LayoutTemplate, 
+  SplitSquareHorizontal, 
+  FileCode2, 
+  Clock, 
+  CheckCircle2, 
+  AlertCircle, 
+  ChevronRight, 
+  Server, 
+  FileText,
+  ClipboardCopy
+} from 'lucide-react';
+import { copyWordpressReadyHtml } from './wordpressExtractor'; // Implemented above
+
+// ============================================================================
+// MOCK FILE SYSTEM & METADATA
+// ============================================================================
+
+const mockNerdCss = `
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; padding: 2rem; background: #fff; margin: 0; }
+    h1 { color: #0054a6; font-size: 2rem; margin-bottom: 0.5rem; margin-top: 0; }
+    h2 { font-size: 1.2rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; margin-top: 2rem; }
+    .vendor { font-weight: bold; color: #555; }
+    .link-list { list-style: none; padding: 0; }
+    .link-list li { margin-bottom: 0.5rem; }
+    .link-list a { color: #0054a6; text-decoration: none; }
+    .link-list a:hover { text-decoration: underline; }
+    .ai-insights { background: #f4f4f4; padding: 1.5rem; border-left: 4px solid #0054a6; margin-top: 2rem; border-radius: 4px; }
+    .badge-legacy { display: inline-block; padding: 4px 8px; background: #fee2e2; color: #991b1b; font-size: 12px; font-weight: 600; border-radius: 4px; margin-bottom: 1rem;}
+    .badge-new { display: inline-block; padding: 4px 8px; background: #dbeafe; color: #1e3a8a; font-size: 12px; font-weight: 600; border-radius: 4px; margin-bottom: 1rem;}
+  </style>
+`;
+
+const mockFileSystem = {
+  'canvas-lms': {
+    metadata: {
+      product_name: "Canvas LMS",
+      product_slug: "canvas-lms",
+      ncademi_url: "https://directory.ncademi.org/listing/canvas-lms",
+      vendor_url: "https://www.instructure.com/canvas",
+      last_captured: "2026-06-14T10:00:00Z",
+      nerd_status: "draft_complete",
+      version_history: [
+        { id: "v1", date: "2024-02-10", type: "initial_capture" },
+        { id: "v2", date: "2026-06-14", type: "nerd_update" }
+      ]
+    },
+    currentHtml: `
+      ${mockNerdCss}
+      <div class="entry-content">
+        <span class="badge-legacy">Legacy Version (2024)</span>
+        <h1>Canvas LMS</h1>
+        <p class="vendor">Vendor: Instructure</p>
+        <p>Canvas is a web-based learning management system, or LMS. It is used by learning institutions, educators, and students to access and manage online course learning materials.</p>
+        <h2>Vendor Resources</h2>
+        <ul class="link-list">
+          <li><a href="#">Canvas Accessibility Statement (Broken Link)</a></li>
+          <li><a href="#">Old VPAT 2.3 (2021)</a></li>
+        </ul>
+        <h2>Support</h2>
+        <p>Contact support@instructure.com</p>
+      </div>
+    `,
+    updatedHtml: `
+      ${mockNerdCss}
+      <div class="entry-content">
+        <span class="badge-new">N.E.R.D. Update (2026)</span>
+        <h1>Canvas LMS</h1>
+        <p class="vendor">Vendor: Instructure</p>
+        <p>Canvas is a web-based learning management system, or LMS. It is used by learning institutions, educators, and students to access and manage online course learning materials.</p>
+        <h2>Vendor Resources</h2>
+        <ul class="link-list">
+          <li><a href="#">Canvas Accessibility Standards (Verified 2026)</a></li>
+          <li><a href="#">Current WCAG 2.1 AA VPAT</a></li>
+        </ul>
+        <h2>Third-Party Insights</h2>
+        <ul class="link-list">
+          <li><a href="#">WebAIM: Canvas LMS Review</a></li>
+          <li><a href="#">Ohio State University Accessibility Audit</a></li>
+        </ul>
+        <div class="ai-insights">
+          <h3 style="margin-top: 0; margin-bottom: 0.5rem;">AI Generated Insights</h3>
+          <p style="margin: 0;">Canvas LMS demonstrates a mature approach to accessibility, providing updated WCAG 2.1 AA conformance reports. Third-party institutional audits confirm strong support for screen readers, though some complex interactive modules may require keyboard navigation workarounds. The vendor maintains an active accessibility community forum.</p>
+        </div>
+        <h2>Support</h2>
+        <p><a href="#">Canvas Accessibility Community</a></p>
+      </div>
+    `
+  },
+  'zoom-edu': {
+    metadata: {
+      product_name: "Zoom for Education",
+      product_slug: "zoom-edu",
+      ncademi_url: "https://directory.ncademi.org/listing/zoom-edu",
+      vendor_url: "https://zoom.us/education",
+      last_captured: "2026-06-13T15:30:00Z",
+      nerd_status: "pending_review",
+      version_history: [
+        { id: "v1", date: "2025-01-01", type: "initial_capture" },
+        { id: "v2", date: "2026-06-13", type: "nerd_update" }
+      ]
+    },
+    currentHtml: `${mockNerdCss}<div class="entry-content"><h1>Zoom for Education</h1><p>Legacy content pending...</p></div>`,
+    updatedHtml: `${mockNerdCss}<div class="entry-content"><h1>Zoom for Education</h1><p>Updated content pending review...</p><div class="ai-insights">Testing layout.</div></div>`
+  }
+};
+
+// ============================================================================
+// APP COMPONENT
+// ============================================================================
+
+export default function App() {
+  const [activeSlug, setActiveSlug] = useState('canvas-lms');
+  const [viewMode, setViewMode] = useState('split');
+
+  const activeData = mockFileSystem[activeSlug as keyof typeof mockFileSystem];
+  const meta = activeData.metadata;
+
+  return (
+    <div className="flex flex-col md:flex-row h-screen w-full bg-slate-50 font-sans text-slate-900 overflow-hidden">
+      
+      {/* SIDEBAR */}
+      <aside className="w-full md:w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 shadow-xl z-20">
+        <div className="p-5 border-b border-slate-800">
+          <div className="flex items-center text-white font-bold text-lg tracking-tight">
+            <Server className="mr-2 text-blue-500" size={20} />
+            NCADEMI Repo
+          </div>
+          <p className="text-xs text-slate-400 mt-1">Static Artifact Viewer</p>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 mt-2 px-3">Products</div>
+          {Object.entries(mockFileSystem).map(([slug, data]) => (
+            <button
+              key={slug}
+              onClick={() => setActiveSlug(slug)}
+              className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
+                activeSlug === slug 
+                  ? 'bg-blue-600 text-white font-medium shadow-md' 
+                  : 'hover:bg-slate-800 text-slate-300'
+              }`}
+            >
+              <div className="flex items-center truncate">
+                <FileText size={16} className={`mr-2.5 flex-shrink-0 ${activeSlug === slug ? 'text-blue-200' : 'text-slate-500'}`} />
+                <span className="truncate text-sm">{data.metadata.product_name}</span>
+              </div>
+              {activeSlug === slug && <ChevronRight size={16} className="text-blue-300" />}
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        
+        {/* TOP HEADER */}
+        <header className="bg-white border-b border-slate-200 px-6 py-5 flex-shrink-0 z-10 shadow-sm">
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+            
+            {/* Metadata Info */}
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
+                {meta.product_name}
+                {meta.nerd_status === 'draft_complete' ? (
+                  <span className="ml-4 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                    <CheckCircle2 size={14} className="mr-1.5" /> Update Ready
+                  </span>
+                ) : (
+                  <span className="ml-4 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                    <AlertCircle size={14} className="mr-1.5" /> Pending
+                  </span>
+                )}
+              </h1>
+              
+              <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                <span className="flex items-center bg-slate-100 px-2 py-1 rounded-md"><FileCode2 size={14} className="mr-1.5 text-slate-400"/> /{meta.product_slug}/</span>
+                <span className="flex items-center"><Clock size={14} className="mr-1.5 text-slate-400"/> Captured: {new Date(meta.last_captured).toLocaleDateString()}</span>
+                <span className="text-slate-300">•</span>
+                <a href={meta.ncademi_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline font-medium">Live Directory</a>
+              </div>
+            </div>
+
+            {/* Controls & Export */}
+            <div className="flex items-center gap-4">
+              <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200 shadow-inner">
+                <button
+                  onClick={() => setViewMode('current')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center ${
+                    viewMode === 'current' ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                  }`}
+                >
+                  Current Version
+                </button>
+                <button
+                  onClick={() => setViewMode('split')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center ${
+                    viewMode === 'split' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                  }`}
+                >
+                  <SplitSquareHorizontal size={16} className="mr-2" /> Split View
+                </button>
+                <button
+                  onClick={() => setViewMode('updated')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center ${
+                    viewMode === 'updated' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                  }`}
+                >
+                  <LayoutTemplate size={16} className="mr-2" /> N.E.R.D. Draft
+                </button>
+              </div>
+
+              {/* Extraction Trigger */}
+              <button
+                onClick={() => copyWordpressReadyHtml(activeData.updatedHtml)}
+                className="px-4 py-2.5 rounded-lg text-sm font-bold bg-blue-600 text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all flex items-center border border-blue-700"
+                title="Extract inner semantic HTML for WordPress"
+              >
+                <ClipboardCopy size={16} className="mr-2" /> Copy to WP
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* VIEWER AREA: Iframes */}
+        <div className="flex-1 bg-slate-200 p-6 overflow-hidden">
+          
+          {/* SINGLE VIEW (Current) */}
+          {viewMode === 'current' && (
+            <div className="w-full h-full bg-white rounded-xl shadow-md border border-slate-300 overflow-hidden flex flex-col transition-all">
+              <div className="bg-slate-100 border-b border-slate-200 px-4 py-2.5 text-xs font-mono text-slate-600 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2.5"></span> 
+                  {meta.product_slug}/current.html
+                </div>
+                <span className="bg-slate-200 px-2.5 py-1 rounded-md text-slate-700 font-sans font-semibold">Production</span>
+              </div>
+              <iframe className="w-full flex-1 border-0 bg-white" srcDoc={activeData.currentHtml} sandbox="allow-same-origin allow-scripts" />
+            </div>
+          )}
+
+          {/* SINGLE VIEW (Updated) */}
+          {viewMode === 'updated' && (
+            <div className="w-full h-full bg-white rounded-xl shadow-lg border-2 border-blue-400 overflow-hidden flex flex-col transition-all">
+              <div className="bg-blue-50 border-b border-blue-200 px-4 py-2.5 text-xs font-mono text-blue-800 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2.5 animate-pulse shadow-sm"></span> 
+                  {meta.product_slug}/updated.html
+                </div>
+                <span className="bg-blue-200 px-2.5 py-1 rounded-md text-blue-900 font-sans font-semibold shadow-sm">Draft Proposed</span>
+              </div>
+              <iframe className="w-full flex-1 border-0 bg-white" srcDoc={activeData.updatedHtml} sandbox="allow-same-origin allow-scripts" />
+            </div>
+          )}
+
+          {/* SPLIT VIEW (Side-by-Side) */}
+          {viewMode === 'split' && (
+            <div className="w-full h-full flex flex-col lg:flex-row gap-6">
+              
+              {/* Left Pane: Current */}
+              <div className="flex-1 bg-white rounded-xl shadow-md border border-slate-300 overflow-hidden flex flex-col transition-all">
+                <div className="bg-slate-100 border-b border-slate-200 px-4 py-2.5 text-xs font-mono text-slate-600 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2.5"></span> 
+                    current.html
+                  </div>
+                  <span className="bg-slate-200 px-2.5 py-1 rounded-md text-slate-700 font-sans font-semibold">Production</span>
+                </div>
+                <iframe className="w-full flex-1 border-0 bg-white" srcDoc={activeData.currentHtml} sandbox="allow-same-origin allow-scripts" />
+              </div>
+
+              {/* Right Pane: Updated */}
+              <div className="flex-1 bg-white rounded-xl shadow-lg border-2 border-blue-400 overflow-hidden flex flex-col transition-all">
+                <div className="bg-blue-50 border-b border-blue-200 px-4 py-2.5 text-xs font-mono text-blue-800 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2.5 animate-pulse shadow-sm"></span> 
+                    updated.html
+                  </div>
+                  <span className="bg-blue-200 px-2.5 py-1 rounded-md text-blue-900 font-sans font-semibold shadow-sm">Draft Proposed</span>
+                </div>
+                <iframe className="w-full flex-1 border-0 bg-white" srcDoc={activeData.updatedHtml} sandbox="allow-same-origin allow-scripts" />
+              </div>
+
+            </div>
+          )}
+
+        </div>
+      </main>
+    </div>
+  );
+}
+
+```
+import json
+from google.cloud import tasks_v2
+from urllib.parse import urlparse
+
+# ============================================================================
+# CLOUD TASKS OIDC ENQUEUER FOR PRIVATE CLOUD RUN WORKERS
+# ============================================================================
+
+def enqueue_secure_worker_task(
+    project_id: str,
+    location: str,
+    queue_id: str,
+    target_worker_url: str,
+    invoker_service_account_email: str,
+    payload: dict,
+    task_name: str = None
+) -> tasks_v2.Task:
+    """
+    Constructs and enqueues an HTTP Cloud Task with an OIDC token to invoke 
+    a private Cloud Run worker service.
+    
+    Adheres strictly to the "Audience Mismatch" and "Trailing Slash" rules 
+    identified in the Cloud Run Authentication Research.
+    """
+    
+    # Initialize the Cloud Tasks Client
+    client = tasks_v2.CloudTasksClient()
+
+    # Construct the fully qualified queue name
+    parent = client.queue_path(project_id, location, queue_id)
+
+    # Convert the dictionary payload to a JSON string, then encode to bytes
+    encoded_payload = json.dumps(payload).encode()
+
+    # CRITICAL: Prevent OIDC Audience Mismatches & Trailing Slash Vulnerabilities
+    # The audience MUST perfectly match the root .run.app URL without a trailing slash.
+    parsed_url = urlparse(target_worker_url)
+    clean_audience = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+    # Construct the base task definition
+    task = {
+        "http_request": {
+            "http_method": tasks_v2.HttpMethod.POST,
+            "url": target_worker_url,
+            "headers": {"Content-type": "application/json"},
+            "body": encoded_payload,
+            
+            # CRITICAL: OIDC Authorization Block
+            # This instructs the Cloud Tasks infrastructure to mint an identity token
+            "oidc_token": {
+                "service_account_email": invoker_service_account_email,
+                "audience": clean_audience
+            },
+        }
+    }
+
+    # Optional: Implement idempotency by specifying a specific task name
+    if task_name:
+        # Task names must be fully qualified
+        task["name"] = client.task_path(project_id, location, queue_id, task_name)
+
+    try:
+        # Enqueue the task
+        # NOTE: The API service account running this code must have:
+        # 1. roles/cloudtasks.enqueuer on the queue
+        # 2. roles/iam.serviceAccountUser on the 'invoker_service_account_email'
+        response = client.create_task(request={"parent": parent, "task": task})
+        print(f"Successfully enqueued task: {response.name}")
+        return response
+        
+    except Exception as e:
+        print(f"Failed to enqueue secure task: {str(e)}")
+        raise
+
+Phase 4: Zero-Trust Cloud Tasks Deployment MatrixTo successfully dispatch the payloads formatted by cloud_tasks_orchestrator.py to your private worker container, you must configure the following network and Identity & Access Management (IAM) parameters exactly as specified. Failure to align these will result in immediate 401/403 framing loops.1. Network Ingress ConfigurationThe Cloud Run worker service MUST be shielded from the public internet.Setting: Ensure the worker's network ingress is set to Internal and Cloud Load Balancing (ingress: internal-and-cloud-load-balancing).Why this works: Google Cloud's routing fabric inherently recognizes Cloud Tasks traffic as "internal" provided the task targets the default *.run.app URL and is in the same project. You do not need a VPC connector for this to work.2. The Identity Triad (IAM Bindings)Three distinct identities interact in this flow. Run these specific gcloud commands (or map them in your Terraform/Deployment Manager) to complete the trust chain:A. The Enqueuing API Service Account (FastAPI backend)The identity running your Next.js/FastAPI public endpoints needs permission to write to the queue AND attach the worker identity to the payload.# 1. Grant permission to create tasks
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:YOUR_API_SA@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/cloudtasks.enqueuer"
+
+# 2. Grant 'actAs' permission to attach the Worker Identity
+gcloud iam service-accounts add-iam-policy-binding YOUR_WORKER_SA@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+  --member="serviceAccount:YOUR_API_SA@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser"
+B. The Google-Managed Cloud Tasks Agent (The Cryptographic Minter)This is the most common failure point. Google's internal background service needs permission to impersonate your worker service account to generate the OIDC token.# Locate your project number (NOT the string ID) and grant actAs permission
+gcloud iam service-accounts add-iam-policy-binding YOUR_WORKER_SA@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+  --member="serviceAccount:service-YOUR_PROJECT_NUMBER@gcp-sa-cloudtasks.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser"
+C. The Task Invoker Service Account (The Actor Identity)This is the identity executing the HTTP request. The private Cloud Run worker must explicitly allow this identity through the --no-allow-unauthenticated barrier.# Grant execution access explicitly on the target worker service
+gcloud run services add-iam-policy-binding YOUR_WORKER_SERVICE_NAME \
+  --region=YOUR_REGION \
+  --member="serviceAccount:YOUR_WORKER_SA@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/run.invoker"
+3. Worker Service Header ConsumptionWhen the target Cloud Run worker receives the task, it can read the following system-injected headers for workflow logic:X-CloudTasks-TaskName: Use this for database idempotency locks (preventing duplicate processing).X-CloudTasks-TaskRetryCount: Use this to shunt payloads to a dead-letter queue if a worker fails to process the artifact after x retries.
+
+import os
+import json
+import logging
+from fastapi import FastAPI, Header, HTTPException, Request
+from pydantic import BaseModel
+import google.generativeai as genai
+
+# Configure logging for Cloud Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="NCADEMI Artifact Worker")
+
+# Initialize Gemini API (Expects GEMINI_API_KEY environment variable)
+# Using the standard gemini-1.5-pro or flash model for document processing
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+class ArtifactPayload(BaseModel):
+    product_slug: str
+    target_url: str
+    current_html: str
+
+@app.post("/process-artifact")
+async def process_artifact(
+    payload: ArtifactPayload,
+    request: Request,
+    x_cloudtasks_taskname: str = Header(None),
+    x_cloudtasks_taskretrycount: int = Header(0)
+):
+    """
+    Secure endpoint invoked by Cloud Tasks to process a website artifact
+    using the Gemini API and generate a N.E.R.D draft update.
+    """
+    
+    # 1. Zero-Trust Verification
+    # While IAM handles authentication, we ensure this route is ONLY hit by Cloud Tasks
+    # in a production environment by checking the presence of the system header.
+    is_prod = os.environ.get("ENVIRONMENT") == "production"
+    if is_prod and not x_cloudtasks_taskname:
+        logger.error("Unauthorized invocation attempt: Missing Cloud Tasks headers.")
+        raise HTTPException(status_code=403, detail="Direct invocation forbidden.")
+
+    logger.info(f"Received task: {x_cloudtasks_taskname} for slug: {payload.product_slug}")
+    logger.info(f"Retry count: {x_cloudtasks_taskretrycount}")
+
+    # 2. Dead-Letter Queue Logic
+    if x_cloudtasks_taskretrycount > 3:
+        logger.error(f"Task {x_cloudtasks_taskname} exceeded retry limits. Shunting to DLQ.")
+        # In a real app, write to a Firestore DLQ collection here
+        return {"status": "shunted_to_dlq"}
+
+    try:
+        # 3. Gemini Processing Pipeline
+        prompt = f"""
+        Analyze the following HTML content for the product '{payload.product_slug}'.
+        Generate an updated 'N.E.R.D.' (NCADEMI Educational Resource Database) accessibility 
+        draft in semantic HTML. 
+        
+        Rules:
+        1. Keep the output strictly within a <div class="entry-content"> wrapper.
+        2. Extract and preserve any existing vendor support links.
+        3. Add an <div class="ai-insights"> section summarizing the accessibility posture based on modern WCAG 2.1 AA standards.
+        
+        Raw HTML to analyze:
+        {payload.current_html}
+        """
+
+        logger.info("Invoking Gemini API...")
+        response = model.generate_content(prompt)
+        
+        updated_html = response.text
+
+        # 4. Save to Database (Mocked)
+        # Here you would use the Firebase Admin SDK to update the document,
+        # which subsequently triggers the Frontend SSE connection.
+        # db.collection('artifacts').document(payload.product_slug).update({
+        #     'updatedHtml': updated_html,
+        #     'metadata.nerd_status': 'draft_complete'
+        # })
+
+        logger.info(f"Successfully processed artifact for {payload.product_slug}")
+        
+        return {
+            "status": "success", 
+            "product": payload.product_slug, 
+            "bytes_generated": len(updated_html)
+        }
+
+    except Exception as e:
+        logger.error(f"Error processing task: {str(e)}")
+        # Raising a 500 signals Cloud Tasks to retry the payload with exponential backoff
+        raise HTTPException(status_code=500, detail="Internal processing error")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+
+#!/usr/bin/env python3
+import argparse
+import sys
+import json
+import os
+from pprint import pprint
+
+# Import the enqueue function from the previous research plan file
+# Assuming it was saved as `cloud_tasks_orchestrator.py`
+try:
+    from cloud_tasks_orchestrator import enqueue_secure_worker_task
+except ImportError:
+    # Stubbing for standalone demonstration if the module isn't present
+    def enqueue_secure_worker_task(*args, **kwargs):
+        print("Mock Enqueue: Task queued successfully.")
+        return type('TaskResponse', (object,), {'name': 'mock-task-id-12345'})()
+
+def cmd_enqueue(args):
+    """Command to manually dispatch a Cloud Task to the worker."""
+    if not all([args.project, args.location, args.queue, args.worker_url, args.service_account]):
+        print("Error: Missing required configuration arguments for enqueuing.")
+        sys.exit(1)
+
+    print(f"Reading payload from {args.payload_file}...")
+    try:
+        with open(args.payload_file, 'r') as f:
+            payload = json.load(f)
+    except Exception as e:
+        print(f"Failed to load payload: {e}")
+        sys.exit(1)
+
+    print(f"Dispatching task for product: {payload.get('product_slug', 'unknown')}")
+    
+    try:
+        response = enqueue_secure_worker_task(
+            project_id=args.project,
+            location=args.location,
+            queue_id=args.queue,
+            target_worker_url=args.worker_url,
+            invoker_service_account_email=args.service_account,
+            payload=payload
+        )
+        print(f"\nSuccess! Task ID: {response.name}")
+    except Exception as e:
+        print(f"\nFailed to enqueue task: {e}")
+        sys.exit(1)
+
+def cmd_analyze_local(args):
+    """Command to bypass Cloud Tasks and test the Gemini extraction locally."""
+    import google.generativeai as genai
+    
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("Error: GEMINI_API_KEY environment variable is missing.")
+        sys.exit(1)
+        
+    print(f"Reading target HTML from {args.html_file}...")
+    try:
+        with open(args.html_file, 'r') as f:
+            raw_html = f.read()
+    except Exception as e:
+        print(f"Failed to load HTML: {e}")
+        sys.exit(1)
+
+    print("Initializing local Gemini Model (gemini-1.5-flash)...")
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    prompt = f"""
+    Analyze this HTML layout. Extract ONLY the semantic core content (headings, paragraphs, lists)
+    and wrap it in <div class="entry-content">. Discard navigation, footers, and scripts.
+    
+    HTML:
+    {raw_html}
+    """
+    
+    print("Generating N.E.R.D draft...\n")
+    response = model.generate_content(prompt)
+    
+    print("--- RESULT ---")
+    print(response.text)
+    print("--------------")
+    
+    if args.output:
+        with open(args.output, 'w') as f:
+            f.write(response.text)
+        print(f"Result saved to {args.output}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Gemini CLI Agent for NCADEMI Artifact Processing")
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Subparser for 'enqueue'
+    parser_enqueue = subparsers.add_parser("enqueue", help="Enqueue a job to the Cloud Tasks worker")
+    parser_enqueue.add_argument("--project", required=True, help="Google Cloud Project ID")
+    parser_enqueue.add_argument("--location", required=True, help="Cloud Tasks Queue Location (e.g., us-central1)")
+    parser_enqueue.add_argument("--queue", required=True, help="Queue ID")
+    parser_enqueue.add_argument("--worker-url", required=True, help="Target Cloud Run URL (Must exactly match Audience)")
+    parser_enqueue.add_argument("--service-account", required=True, help="Invoker Service Account Email")
+    parser_enqueue.add_argument("--payload-file", required=True, help="Path to JSON payload file")
+
+    # Subparser for 'analyze-local'
+    parser_analyze = subparsers.add_parser("analyze-local", help="Test the Gemini extraction prompt locally")
+    parser_analyze.add_argument("--html-file", required=True, help="Path to raw HTML file to analyze")
+    parser_analyze.add_argument("--output", required=False, help="Path to save the output HTML")
+
+    args = parser.parse_args()
+
+    if args.command == "enqueue":
+        cmd_enqueue(args)
+    elif args.command == "analyze-local":
+        cmd_analyze_local(args)
+    else:
+        parser.print_help()
+
+if __name__ == "__main__":
+    main()
+
+Phase 5: Worker Service Deployment & Validation
+
+The worker_service.py acts as the secure terminus for your Cloud Tasks queue. It processes the HTML using the Gemini API.
+
+1. Deploy the Worker to Cloud Run
+
+Ensure you deploy the service with the --no-allow-unauthenticated flag to enforce the Zero-Trust configuration established in Phase 4.
+
+gcloud run deploy ncademi-artifact-worker \
+  --source . \
+  --region us-central1 \
+  --no-allow-unauthenticated \
+  --ingress internal-and-cloud-load-balancing \
+  --service-account YOUR_WORKER_SA@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+  --set-env-vars="ENVIRONMENT=production,GEMINI_API_KEY=your_secure_api_key"
+
+
+2. Verify Idempotency and Headers
+
+As established in the architectural plan, the worker reads X-CloudTasks-TaskName. Because Cloud Tasks guarantees "at least once" delivery, network partitions can cause a task to be delivered twice.
+
+Best Practice: Use the X-CloudTasks-TaskName as a Document ID in a Firebase/Firestore transactions collection. If the document already exists, return 200 OK immediately without calling the Gemini API to save inference costs.
+
+Phase 6: Utilizing the Gemini CLI Agent
+
+The gemini_cli_agent.py provides a command-line interface for QA testers, developers, and CI/CD pipelines to interact with the architecture without needing the full Next.js/React frontend.
+
+1. Local Extraction Testing
+
+Before dispatching a task to the live worker, you can test how the Gemini model will respond to a specific piece of raw HTML using the local analyze command. This requires the google-generativeai package and the GEMINI_API_KEY environment variable.
+
+export GEMINI_API_KEY="AIzaSyYourKeyHere..."
+
+# Run a local test on a mock artifact
+python gemini_cli_agent.py analyze-local \
+  --html-file ./tests/mock_zoom_page.html \
+  --output ./tests/output_draft.html
+
+
+2. Dispatching a Live Task
+
+To simulate the frontend triggering an asynchronous update, use the CLI agent to package a JSON payload and securely dispatch it through Cloud Tasks to your private worker.
+
+Example mock_payload.json:
+
+{
+  "product_slug": "zoom-edu",
+  "target_url": "[https://zoom.us/education](https://zoom.us/education)",
+  "current_html": "<html><body><div>Legacy Zoom Content</div></body></html>"
+}
+
+
+Execution:
+
+python gemini_cli_agent.py enqueue \
+  --project "ncademi-production" \
+  --location "us-central1" \
+  --queue "artifact-processing-queue" \
+  --worker-url "[https://ncademi-artifact-worker-hash-uc.a.run.app/process-artifact](https://ncademi-artifact-worker-hash-uc.a.run.app/process-artifact)" \
+  --service-account "worker-invoker@ncademi-production.iam.gserviceaccount.com" \
+  --payload-file "./mock_payload.json"
+
+
+Next Steps Complete
+
+You now have a complete, end-to-end blueprint encompassing the frontend React viewer, the secure Cloud Tasks orchestration, the FastAPI backend worker, and the CLI tooling necessary to build and test the NCADEMI N.E.R.D. update pipeline.

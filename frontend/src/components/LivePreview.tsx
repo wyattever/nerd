@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useWatch, useFormContext } from "react-hook-form";
 import type { ListingData } from "@/schemas/listing";
+import { useResearchContext } from "@/context/ResearchContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const DEBOUNCE_MS = 600;
@@ -17,6 +18,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export function LivePreview() {
+  const { isStreaming } = useResearchContext();
   const { control } = useFormContext<ListingData>();
   const formValues = useWatch({ control }) as ListingData;
   const debouncedValues = useDebounce(formValues, DEBOUNCE_MS);
@@ -25,7 +27,8 @@ export function LivePreview() {
   const [rendering, setRendering] = useState(false);
 
   useEffect(() => {
-    if (!debouncedValues?.product_name) return;
+    // Do not fire /render while SSE is in progress.
+    if (isStreaming || !debouncedValues?.product_name) return;
 
     let cancelled = false;
     setRendering(true);
@@ -61,21 +64,21 @@ export function LivePreview() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedValues]);
+  }, [debouncedValues, isStreaming]);
 
   const copyHtml = () => {
     if (lastHtml) navigator.clipboard.writeText(lastHtml);
   };
 
   return (
-    <div className="live-preview">
+    <section className="live-preview" aria-label="Research Result Preview">
       <div className="preview-toolbar">
         <span className="preview-label">
           Live Preview {rendering && <span className="preview-spinner" aria-label="Rendering" />}
         </span>
         <button
           type="button"
-          className="btn btn-ghost"
+          className="btn btn-ghost px-3 py-1 text-sm border rounded hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50"
           onClick={copyHtml}
           disabled={!lastHtml}
         >
@@ -84,11 +87,12 @@ export function LivePreview() {
       </div>
       <iframe
         ref={iframeRef}
-        title="Listing Preview"
+        title="NCADEMI Listing Preview"
         sandbox="allow-same-origin"
-        className="preview-frame"
-        srcDoc={lastHtml || "<p style='padding:1rem;color:#888'>Preview will appear here.</p>"}
+        className="preview-frame w-full border rounded mt-2"
+        style={{ minHeight: "500px" }}
+        srcDoc={lastHtml || "<p style='padding:1rem;color:#888'>Preview will appear here after research or manual edits.</p>"}
       />
-    </div>
+    </section>
   );
 }

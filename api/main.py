@@ -159,10 +159,11 @@ async def research_deep_dive(
 
 
 @app.get("/jobs/{job_id}")
-async def jobs_sse(job_id: str, uid: str = Depends(verify_token)):
-    # SSE auth strategy (Phase 4): Bearer token + capability URL.
+async def jobs_sse(request: Request, job_id: str, uid: str = Depends(verify_token)):
+    # SSE auth strategy (Phase 4): Bearer token + Last-Event-ID resume support.
+    last_event_id = request.headers.get("Last-Event-ID")
     return StreamingResponse(
-        stream_job_events(job_id), 
+        stream_job_events(job_id, last_event_id=last_event_id), 
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

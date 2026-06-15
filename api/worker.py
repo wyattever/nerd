@@ -8,6 +8,7 @@ Executes the long-running research tasks and reports status back to Firestore.
 import os
 import logging
 import asyncio
+import uuid
 from fastapi import FastAPI
 from typing import Dict, Any
 
@@ -21,7 +22,7 @@ from nerd_core.services import (
 from nerd_core.utils import resolve_and_validate_all, filter_broken_links
 from . import schemas
 from .conversions import dataclass_to_pydantic
-from .job_store import emit_event, complete_job, fail_job
+from .job_store import emit_event, complete_job, fail_job, claim_job
 
 logger = logging.getLogger("nerd.worker")
 ENABLE_AI_INSIGHTS = os.getenv("ENABLE_AI_INSIGHTS", "true").lower() == "true"
@@ -74,11 +75,18 @@ def _build_result_payload(
 @app.post("/worker/initial")
 async def worker_initial(req: WorkerInitialRequest):
     job_id = req.job_id
+    worker_id = str(uuid.uuid4())
+
+    # Phase 4 Hardening: Atomic Claim (Idempotency)
+    if not await claim_job(job_id, worker_id=worker_id):
+        print(f"[WORKER] Job {job_id} already claimed or missing. Skipping.")
+        return {"status": "already_processed"}
+
     url_cache: Dict[str, str] = {}
     print(f"[WORKER] Starting initial research for job {job_id} | URL: {req.product_url}")
     
     try:
-        await emit_event(job_id, "searching_initial")
+        # Note: claim_job already emitted 'searching_initial'
         draft, raw_urls = await asyncio.to_thread(
             run_initial_research, req.product_url, req.timeout_min
         )
@@ -111,6 +119,13 @@ async def worker_initial(req: WorkerInitialRequest):
 @app.post("/worker/deep-dive")
 async def worker_deep_dive(req: WorkerDeepDiveRequest):
     job_id = req.job_id
+    worker_id = str(uuid.uuid4())
+
+    # Phase 4 Hardening: Atomic Claim (Idempotency)
+    if not await claim_job(job_id, worker_id=worker_id):
+        print(f"[WORKER] Job {job_id} already claimed or missing. Skipping.")
+        return {"status": "already_processed"}
+
     url_cache = dict(req.url_cache)
     
     try:

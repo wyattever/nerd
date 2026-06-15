@@ -85,20 +85,15 @@ fi
 # ── 4. SECRET MANAGER ─────────────────────────────────────────────────────────
 
 echo "[4] Secret Manager..."
-# Store Firebase Web API Key for server-side use (e.g., firebase-admin in Phase 5)
-# The NEXT_PUBLIC_ keys are injected at build time via Cloud Run env vars.
-# Only truly secret values go into Secret Manager.
-
-# Example: create a placeholder secret for future firebase-admin service account key
-if ! gcloud secrets describe nerd-firebase-admin-key &>/dev/null; then
-  echo "  Secret 'nerd-firebase-admin-key' not found."
-  # echo "  Create it after downloading the Firebase Admin SDK service account JSON:"
-  # echo "  gcloud secrets create nerd-firebase-admin-key --data-file=firebase-admin-key.json"
+# GEMINI_API_KEY is used by both API and Worker for AI operations.
+if ! gcloud secrets describe gemini-api-key &>/dev/null; then
+  echo "  Creating placeholder 'gemini-api-key' secret..."
+  echo "PLACEHOLDER_KEY" | gcloud secrets create gemini-api-key --data-file=-
 else
-  echo "  Secret nerd-firebase-admin-key exists."
+  echo "  Secret 'gemini-api-key' already exists."
 fi
 
-# ── 5. BUILD AND DEPLOY WORKER ────────────────────────────────────────────────
+# Store Firebase Web API Key for server-side use (e.g., firebase-admin in Phase 5)
 
 echo "[5] Building and deploying WORKER..."
 cp Dockerfile.worker Dockerfile
@@ -116,7 +111,8 @@ gcloud run deploy nerd-worker \
   --min-instances 0 \
   --max-instances 10 \
   --timeout 300 \
-  --set-env-vars="ENABLE_AI_INSIGHTS=false,GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
+  --set-env-vars="ENABLE_AI_INSIGHTS=false,GOOGLE_CLOUD_PROJECT=${PROJECT_ID}" \
+  --set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
 
 WORKER_URL=$(gcloud run services describe nerd-worker \
   --platform managed --region "${REGION}" \
@@ -150,7 +146,8 @@ gcloud run deploy nerd-api \
   --platform managed \
   --region "${REGION}" \
   --allow-unauthenticated \
-  --set-env-vars="WORKER_URL=${WORKER_URL},QUEUE_NAME=${QUEUE_NAME},GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},TASKS_SA=${TASKS_SA}"
+  --set-env-vars="WORKER_URL=${WORKER_URL},QUEUE_NAME=${QUEUE_NAME},GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},TASKS_SA=${TASKS_SA}" \
+  --set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
 
 API_URL=$(gcloud run services describe nerd-api \
   --platform managed --region "${REGION}" \

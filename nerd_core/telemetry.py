@@ -17,7 +17,8 @@ logger = logging.getLogger("nerd") # Root project logger
 logger.setLevel(logging.DEBUG)
 logger.addHandler(file_handler)
 
-_TABLE = "edtech-agent-2026.telemetry.feedback_logs"
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "edtech-agent-2026")
+_TABLE = f"{PROJECT_ID}.telemetry.feedback_logs"
 
 try:
     _BQ = bigquery.Client()
