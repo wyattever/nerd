@@ -1,0 +1,37 @@
+{
+  "product_name": "SparkNotes",
+  "vendor_name": "Barnes & Noble Education",
+  "vendor_directory_url": "#",
+  "product_description": "SparkNotes provides comprehensive online study guides and educational resources for students across various subjects, including literature, history, and science. It offers summaries, critical analyses, and quizzes, alongside modern English translations of classic texts. The platform aims to help students understand complex schoolwork and prepare for tests.",
+  "product_website_url": "https://www.sparknotes.com/",
+  "vendor_resources": [],
+  "other_resources": [
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7kCrlhombCXhuQBFRqD59ujb_eehP6w1LlqWsfC7ygNaDGBrANR5NXUl5gFYcT85Rv3VzjbKv8vSgkurWcvD0=",
+      "text": "SparkNotes - Blueprint Supported Education"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE9xahcLACBOyCOamy5O5zrhullr-KzTeaynCqg-G_NpMvaT2kvZ5XBfLi0CjHrHeS9uYiSkOg2WsY8MDdpC4uBN3i8xfNP1bnNHUMa2W_tRxoddX3IYsGJZwU4Iw9AiA_4eetDjTDMHaxZDVXi_BQHKP5C3EZ47pUe7AvWfQ==",
+      "text": "SparkNotes Use and Attitudes Among High School English Language Arts Students"
+    }
+  ],
+  "ai_insights": "No explicit accessibility statement or Voluntary Product Accessibility Template (VPAT) was found directly from SparkNotes.com's vendor. While a related accessibility statement was identified, it pertained to a different product and domain, not SparkNotes.com. Third-party insights describe SparkNotes as an educational resource but do not focus on its technical accessibility compliance or adherence to standards like WCAG. The platform is, however, utilized by educational institutions that maintain their own accessibility policies, suggesting its use in contexts where accessibility is a concern. Features such as \"No Fear Shakespeare,\" which provides modern English translations, may inherently assist a wider range of learners. Clearer insights into SparkNotes' adherence to accessibility standards would require a formal accessibility statement or audit.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "custserv@bn.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "(Not found)",
+      "url": "#",
+      "version": "(Not found)",
+      "date": "(Not found)",
+      "auditor_name": "(Not found)",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

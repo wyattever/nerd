@@ -1,0 +1,78 @@
+{
+  "product_name": "Formative",
+  "vendor_name": "Formative",
+  "vendor_directory_url": "#",
+  "product_description": "Formative is an EdTech platform that empowers teachers to create and deliver interactive assignments, track student progress in real-time, and provide immediate feedback across diverse subjects and grade levels. The platform offers various question types and features designed to support differentiated instruction and student accommodations, aiming to accelerate learning and provide insights into student understanding. It supports individual teachers, schools, and districts in enhancing instruction and assessment practices.",
+  "product_website_url": "https://www.formative.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.formative.com/accessibility-statement",
+      "text": "Formative Accessibility Statement"
+    },
+    {
+      "url": "https://help.formative.com/en/articles/3860086-accessibility-on-formative",
+      "text": "Formative Help Center: Accessibility on Formative"
+    },
+    {
+      "url": "https://help.formative.com/en/collections/2691505-accommodations-for-inclusive-classrooms",
+      "text": "Formative Help Center: Accommodations for Inclusive Classrooms"
+    },
+    {
+      "url": "https://help.formative.com/en/articles/4513137-universal-accommodations-text-to-speech-school-district-license-feature",
+      "text": "Formative Help Center: Universal Accommodations: Text To Speech (School & District license Feature)"
+    },
+    {
+      "url": "https://help.formative.com/en/articles/8904812-formative-updates-october-2024",
+      "text": "Formative Help Center: Formative Updates October 2024"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://edtechimpact.com/blog/ultimate-guide-formative-assessment-tools",
+      "text": "EdTech Impact: The Ultimate Guide to Formative Assessment Tools"
+    },
+    {
+      "url": "https://schoolai.com/blog/using-edtech-for-real-time-formative-assessment",
+      "text": "SchoolAI: Using EdTech for real-time formative assessment"
+    },
+    {
+      "url": "https://www.researchgate.net/publication/262747120_A_Technology_Toolkit_to_support_accessibility_of_formative_e-assessment_for_disabled_students",
+      "text": "ResearchGate: A Technology Toolkit to support accessibility of formative e-assessment for disabled students"
+    },
+    {
+      "url": "https://edtechindex.com/formative-assessment-tools",
+      "text": "EdTech Index: Comparing Formative Assessment Tools"
+    },
+    {
+      "url": "https://www.avid.org/blog/accessibility-spotlight",
+      "text": "Accessibility Spotlight on Formative"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=Yf-02oY8u9c",
+      "text": "Flexible by Design: Formative and Accessibility Strategies for Every Learner (January 2026)"
+    },
+    {
+      "url": "https://www.cast.org/products-services/learning-modules/udl-guidelines/assessment/design-accessible-formative-assessment",
+      "text": "Design Accessible Formative Assessment"
+    }
+  ],
+  "ai_insights": "Formative is committed to fostering an accessible learning environment and continually improving its product to meet accessibility standards, striving to conform with WCAG 2.2 AA and Section 508. The platform leverages Level Access for vetting site flows to identify accessibility issues. Key accessibility features include text-to-speech, closed-captioned video, audio question types, audio student response, and keyboard navigation. Teachers can implement various accommodations for students with special needs, such as text-to-speech, time limit extensions, and answer choice reduction, especially for School & District license holders. While the platform emphasizes teacher guidelines for creating accessible assignments, direct third-party accessibility audits or comprehensive reviews of its accessibility posture were not readily available, though a VPAT completed by Level Access exists. Formative is recognized for its commitment to accessibility through features like multimodal response options and its focus on supporting diverse learning needs.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "support@formative.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "The Formative Accessibility Conformance Report - Voluntary Product Accessibility Template (VPAT)",
+      "url": "#",
+      "version": "Conformance to Web Content Accessibility Guidelines 2.2",
+      "date": "January 2026",
+      "auditor_name": "Level Access",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

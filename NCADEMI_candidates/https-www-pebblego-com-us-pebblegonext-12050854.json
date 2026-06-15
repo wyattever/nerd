@@ -1,0 +1,66 @@
+{
+  "product_name": "PebbleGo Next",
+  "vendor_name": "Capstone",
+  "vendor_directory_url": "#",
+  "product_description": "PebbleGo Next is a K\u20135+ digital learning platform that provides educators with resources to help students develop literacy skills and build knowledge in science and social studies. It offers developmentally appropriate content in English and Spanish, featuring read-aloud audio, rich vocabulary support, and multimodal learning tools. The platform aims to empower every student to read, learn, explore, and create independently.",
+  "product_website_url": "https://www.pebblego.com/us/pebblegonext",
+  "vendor_resources": [
+    {
+      "url": "https://www.pebblego.com/us/company/accessibility",
+      "text": "PebbleGo Accessibility Features & Support"
+    },
+    {
+      "url": "https://www.capstonepub.com/contact",
+      "text": "Contact Us | Capstone"
+    },
+    {
+      "url": "https://www.pebblego.com/us/support",
+      "text": "Support and Resource Articles | PebbleGo Help Center"
+    },
+    {
+      "url": "https://www.pebblego.com/us/company/accessibility-features-support",
+      "text": "PebbleGo Accessibility Features & Support"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPtlPRzDDztD85ts2snynyZJhAyxv3tmGbnKc5zxnh56z9qb7ncTZ_1Q37vij48m-J8D1z9Q7c8MkZyJQ93XHF9TmeNOrv-XiZVLGNPW_Od47XOXwZBumQQcePMyc10OJ877WKIwkoFi5JpWg5m6sLSTXAFgVGczqnZgFfOyXFRMzrxPydoCSPP2qr-VmFO9oxXnU7Hjr30uh5t8hU-npQ0Rk=",
+      "text": "Capstone's PebbleGo Relaunches This Fall With Accessibility for Children With Disabilities"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqZldWyH6HF-3PMwndZw4zFWIF-oUwgjIUZ4Z2lFaj9tG_kFozdDMeL7RXoSoWN1Gq-fx-OoZIYqHmY7rgBcy2ZvliunZju2KmqGs7XZdq6QDMEOXT4IRjb0-PmbJei0u9fzecf0SS7F2quDdp7zKsmSWfyil7-A4aUUKYavtit5IaZSAeC5r0zpE1c3UDo2KVxP-T9OhvJrE",
+      "text": "VOLUNTARY PRODUCT ACCESSIBILITY TEMPLATE - PebbleGo (January 2026)"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://www.railsinc.org/vendor-accessibility-privacy-documents",
+      "text": "Vendor Accessibility and Privacy Documents | Reaching Across Illinois Library System"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFUUtrjn0J_R1YzG5BO-gMMa596YiRz0tGscG8F8pCHiXs5DIse4a0zwD6uVTyFKsJVe2HZ6hcpTymOQ4YNGVhYl_V3dlm6P4PjnOFqyWN4v9qJV2whraaEapFe5tdEOMvjnsQXg3-M1rvwsocZMW99xeAwkrOzKqhwZj0DpJK_etJXN_DfqlM7IN1T_6Q_sB5yJLL0tQOTmc5KWsKKDK-eFKQ",
+      "text": "Change Notice Template - State of Michigan"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGWKilqWvbl3yoztJVo1eXERKKVwp23Wz61MwsfrH345uDJdtbHM1aZJpIRphz79F1ZG8yNIUUJeJGTTuWCzsI_8UdTQB2UE6OogD-5Riy4E81LQwL4kz2DJtfP-FrPPN3hXuVAo4O1Roik1IeICU2ApSRwvFSMiDb7sPzZYu8l0_5l8nkULOFpwDKL9QQid8yqBFMJ99Fi5dO9eD1rBjJ70oKai6a6uXyvigGKPC9s",
+      "text": "Curious kids welcome: Explore the world with PebbleGo & PebbleGo Next (grades K-5) - Oak Park Public Library"
+    }
+  ],
+  "ai_insights": "PebbleGo Next demonstrates a strong commitment to accessibility, striving to meet WCAG 2.2 Level AA, Section 508, and EN 301 549 standards. The platform offers robust features such as large fonts, text-to-speech with highlighting, screen reader support, alternative text for images, and video transcripts to support diverse learners. Regular accessibility testing, employee training, and available Voluntary Product Accessibility Templates (VPATs) confirm ongoing efforts and conformance levels. These VPATs, based on third-party audits and internal resolution, detail the product's accessibility posture. Continuous improvements are underway, with a target for full compliance by July 2026. This dedication ensures equitable access to educational content for all students.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "customerservice@capstonepub.com, accessibility@capstonepub.com, 800-747-4992",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "PebbleGo Accessibility Conformance Report",
+      "url": "https://www.railsinc.org/sites/default/files/accessibility/PebbleGo_PebbleGo_Next_VPAT_0.pdf",
+      "version": "2.5 (WCAG 2.2)",
+      "date": "January 1, 2026",
+      "auditor_name": "Third-party audit and internal issue resolution",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

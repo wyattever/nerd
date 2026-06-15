@@ -18,7 +18,8 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
+from pathlib import Path
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -275,6 +276,51 @@ async def validate_links(request: schemas.LinkValidationRequest, uid: str = Depe
     except Exception as e:
         logger.exception("Link validation failed")
         raise HTTPException(status_code=500, detail=f"Link validation engine failed: {str(e)}")
+
+
+@app.get("/admin/batch-report")
+async def get_batch_report():
+    """Serves the NCADEMI Candidates batch summary report."""
+    report_path = Path("NCADEMI_candidates_summary.html")
+    if not report_path.exists():
+        raise HTTPException(
+            status_code=404, 
+            detail="Batch report not found. Please run a batch process first."
+        )
+    return FileResponse(report_path)
+
+
+@app.get("/admin/candidates")
+async def list_candidates():
+    """Returns a list of all processed candidates in the storage folder."""
+    candidates_dir = Path("NCADEMI_candidates")
+    if not candidates_dir.exists():
+        return []
+    
+    results = []
+    for f in candidates_dir.glob("*.json"):
+        try:
+            with open(f, "r") as jf:
+                data = json.load(jf)
+                results.append({
+                    "name": data.get("product_name", f.stem),
+                    "slug": f.stem,
+                    "url": data.get("url", "")
+                })
+        except Exception:
+            continue
+    return sorted(results, key=lambda x: x["name"])
+
+
+@app.get("/admin/candidates/{slug}")
+async def get_candidate_data(slug: str):
+    """Retrieves the full JSON data for a specific candidate."""
+    file_path = Path("NCADEMI_candidates") / f"{slug}.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    with open(file_path, "r") as f:
+        return json.load(f)
 
 
 @app.get("/healthz")

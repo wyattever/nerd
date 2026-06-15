@@ -1,0 +1,66 @@
+{
+  "product_name": "PebbleGo Create",
+  "vendor_name": "Capstone",
+  "vendor_directory_url": "#",
+  "product_description": "PebbleGo Create is a digital workspace designed for K-5 students to demonstrate their understanding through engaging, age-appropriate creative projects. It allows students to add text, images, stickers, animations, and record audio, providing a versatile tool for formative assessments within the PebbleGo platform.",
+  "product_website_url": "https://www.pebblego.com/us/create",
+  "vendor_resources": [
+    {
+      "url": "https://www.pebblego.com/accessibility",
+      "text": "PebbleGo Accessibility Features & Support"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEl2PK4H1OR5iE2ZiAqiq_8_p71vk_siyH-P_RvsFe5w1Bb4oB_G9JUzBUBTtF60adV7O3-18ljrXz1Vqrv9oC21jtvzTAeL8sBtUi7vFVRDWgK-KOKFoyuEwjAWeZ2CDD6FopSPtpn9gPV_sWd94-HG1QwlqGcKCny7UrUBbZUJbjqPSUn4PbfyQU9gw07wqdBLLVRjswTT4=",
+      "text": "PebbleGo Create Accessibility Conformance Report (VPAT 2.5)"
+    },
+    {
+      "url": "https://www.pebblego.com/accessibility",
+      "text": "PebbleGo & PebbleGo Next VPAT"
+    },
+    {
+      "url": "https://www.pebblego.com/solutions/special-needs-education",
+      "text": "Empowering Students with Special Needs - PebbleGo"
+    },
+    {
+      "url": "https://www.pebblego.com/help-center",
+      "text": "Support and Resource Articles | PebbleGo Help Center"
+    },
+    {
+      "url": "https://www.pebblego.com/contact-us",
+      "text": "Support for Educators & Schools | Contact PebbleGo"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHIEK_AOnDjWR_1MLy9o_0LPPZOyTBT_--S52K99dY0dpeG4muWTD_P_oTr2uKdOkMvPxpKwBolh30prQweKtuSv7RUHzYIXtxJmKzY6udcVueKbpMVrdjm1xQ-2rOWW3lUg9LpjCbWO7ptgnVnItr4VCzcXs8xtyAmvmJKtAIU5JfD5RIKotYL2THYt_5dCRGKk6FWlxxx_ujt",
+      "text": "PebbleGo Create Accessibility Conformance Report (VPAT)"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHMaJti4zkKvq98vJrhxtYk2CXrlDXaw47kVdO2gUJrAbP90ahbEwktEiq2sMW07f2t71Yyo_2_iWkqs-kKermGuZvhUYVP_rw594cCk1zwANAsnqaFadZG9iBbtcBdyQ==",
+      "text": "Engaging Tools for K-5 Learners | PebbleGo & PebbleGo Next"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPfw-oqjtX4dP36nnfPnYQ1N5ppwLMFCAJv1neN9iWmcvWD6Qn2LJUQn2VIyb34DZQqEmaFLBZ_ZIB04U-pZbLcr3ihkjLIL53PFn6e_REZ-JL-Z3CGSw-6sJbmEpNsxOu-wXx6Ds7Q2MQ5I35A5BVwKhFS1ISE2s2Jg==",
+      "text": "PebbleGo from Capstone - EdTech Digest"
+    }
+  ],
+  "ai_insights": "PebbleGo Create prioritizes accessibility for K-5 learners, aiming for continuous compliance with WCAG 2.2 Level AA, Section 508, and EN 301 549 standards. Its robust features include simplified navigation, text-to-speech with highlighting, screen reader support, keyboard-only navigation, and appropriate color contrast ratios. A dedicated Accessibility Conformance Report from January 2026 details its adherence to these standards, reflecting ongoing improvements from internal and third-party evaluations. The platform is designed to support diverse learners, including those with special needs, offering multimodal creation tools, leveled texts, and bilingual options. It specifically addresses vision, cognitive, physical, and hearing disabilities through features like large fonts and read-aloud audio. The vendor is committed to achieving full compliance by December 2026.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "accessibility@capstonepub.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "PebbleGo Create Accessibility Conformance Report. International Edition. (Based on VPAT\u00ae Version 2.5)",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEl2PK4H1OR5iE2ZiAqiq_8_p71vk_siyH-P_RvsFe5w1Bb4oB_G9JUzBUBTtF60adV7O3-18ljrXz1Vqrv9oC21jtvzTAeL8sBtUi7vFVRDWgK-KOKFoyuEwjAWeZ2CDD6FopSPtpn9gPV_sWd94-HG1QwlqGcKCny7UrUBbZUJbjqPSUn4PbfyQU9gw07wqdBLLVRjswTT4=",
+      "version": "2.5",
+      "date": "January 1, 2026",
+      "auditor_name": "Internal (based on evaluation between September 1, 2024, and November 30, 2024)",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

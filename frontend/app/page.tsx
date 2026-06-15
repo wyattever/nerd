@@ -1,26 +1,170 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useResearch } from "@/hooks/useResearch";
 import { ListingCard } from "@/components/ListingCard";
 import { InvalidLinksModal } from "@/components/InvalidLinksModal";
 import { InvalidLink } from "@/lib/types";
 import { buildNcademiPreviewHtml } from "@/lib/ncademiPreview";
 
+interface CandidateRef {
+  name: string;
+  slug: string;
+  url: string;
+}
+
 export default function Home() {
-  const { state, startResearch, reset, updateListing } = useResearch();
+  const { state, startResearch, reset, updateListing, injectListing } = useResearch();
   const [url, setUrl] = useState("");
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [invalidLinks, setInvalidLinks] = useState<InvalidLink[]>([]);
   const [isValidating, setIsValidating] = useState(false);
+  const [candidates, setCandidates] = useState<CandidateRef[]>([]);
+  const [selectedSlug, setSelectedSlug] = useState("");
+  const [localLog, setLocalLog] = useState<string[]>([]);
+  const logRef = useRef<HTMLDivElement>(null);
+  const heartbeatTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const MICRO_MESSAGES = {
+    searching: [
+      "Initializing web crawler...",
+      "Analyzing robots.txt for compliance...",
+      "Traversing DOM tree...",
+      "Extracting meta tags and JSON-LD...",
+      "Following canonical redirects...",
+      "Filtering non-relevant scripts...",
+      "Snapshotting page content for parsing...",
+      "Resolving vendor directory paths...",
+      "Analyzing accessibility landmarks...",
+      "Scoping vendor support resources..."
+    ],
+    validating: [
+      "Checking SSL certificate validity...",
+      "Verifying server response headers...",
+      "Detecting soft-404 redirects...",
+      "Checking for broken anchor tags...",
+      "Validating CORS headers...",
+      "Testing link aria-labels...",
+      "Timing out slow responses...",
+      "Validating resource patterns...",
+      "Fetching remote screenshot...",
+      "Verifying content-type headers..."
+    ],
+    synthesizing: [
+      "Assembling research fragments...",
+      "Applying NCADEMI architectural constraints...",
+      "Deduplicating resource URLs...",
+      "Normalizing product description prose...",
+      "Synthesizing AI-generated insights...",
+      "Mapping ACR reports to standard schema...",
+      "Validating final JSON structure...",
+      "Formatting WordPress-ready fragments...",
+      "Calculating data fidelity metrics...",
+      "Finalizing research draft..."
+    ]
+  };
+
+  const heartbeatType = useRef<keyof typeof MICRO_MESSAGES | null>(null);
+
+  const logMessage = (msg: string) => {
+    setLocalLog(prev => [...prev, msg]);
+  };
+
+  const startHeartbeat = (type: keyof typeof MICRO_MESSAGES) => {
+    if (heartbeatType.current === type) return; // Already running this type
+    
+    stopHeartbeat();
+    heartbeatType.current = type;
+    let index = 0;
+    heartbeatTimer.current = setInterval(() => {
+      const msg = MICRO_MESSAGES[type][index % MICRO_MESSAGES[type].length];
+      logMessage(msg);
+      index++;
+    }, 1000);
+  };
+
+  const stopHeartbeat = () => {
+    if (heartbeatTimer.current) {
+      clearInterval(heartbeatTimer.current);
+      heartbeatTimer.current = null;
+    }
+    heartbeatType.current = null;
+  };
+
+  useEffect(() => {
+    if (state.status === "streaming") {
+      // Synchronize with the macro log (e.g. from SSE)
+      // We append the NEW macro messages that aren't in localLog yet
+      const lastMacroMsg = state.log[state.log.length - 1];
+      if (lastMacroMsg) {
+        setLocalLog(prev => {
+          // If the last message in localLog is already this macro message, do nothing
+          if (prev[prev.length - 1] === lastMacroMsg) return prev;
+          return [...prev, lastMacroMsg];
+        });
+      }
+
+      const msgLower = lastMacroMsg?.toLowerCase() || "";
+      if (msgLower.includes("queuing") || msgLower.includes("opening") || msgLower.includes("researching") || msgLower.includes("analyzing")) {
+        startHeartbeat("searching");
+      } else if (msgLower.includes("synthesizing") || msgLower.includes("insights")) {
+        startHeartbeat("synthesizing");
+      }
+    } else if (state.status === "complete") {
+      stopHeartbeat();
+      // Ensure final macro log is set
+      if (state.log.length > 0) {
+        const lastMsg = state.log[state.log.length - 1];
+        setLocalLog(prev => prev[prev.length - 1] === lastMsg ? prev : [...prev, lastMsg]);
+      }
+    } else if (state.status === "error") {
+      stopHeartbeat();
+      if (state.error) logMessage(`ERROR: ${state.error}`);
+    } else if (state.status === "idle") {
+      stopHeartbeat();
+    }
+  }, [state.log, state.status, state.error]);
+
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [localLog]);
+
+  useEffect(() => {
+    return () => stopHeartbeat();
+  }, []);
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/candidates`)
+      .then(res => res.json())
+      .then(data => setCandidates(data))
+      .catch(err => console.error("Failed to fetch candidates:", err));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim()) startResearch(url.trim());
+    
+    if (url.trim()) {
+      startResearch(url.trim());
+    }
+  };
+
+  const handleInject = async () => {
+    if (!selectedSlug) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/candidates/${selectedSlug}`);
+      const data = await res.json();
+      injectListing(data);
+      setSelectedSlug("");
+    } catch (err) {
+      console.error("Failed to fetch candidate data:", err);
+    }
   };
 
   const handleValidateLinks = async () => {
     if (!state.listing) return;
     setIsValidating(true);
+    logMessage("--- Link Validation Started ---");
 
     try {
       const listing = state.listing;
@@ -52,9 +196,13 @@ export default function Home() {
       const candidateUrls = candidateLinks.map(link => link.url);
 
       if (candidateUrls.length === 0) {
+        logMessage("No candidate URLs found for validation.");
         setIsValidating(false);
         return;
       }
+
+      logMessage(`Validating ${candidateUrls.length} unique URLs...`);
+      startHeartbeat("validating");
 
       // Step 2: Dispatch a single POST request to the new FastAPI endpoint
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links-async`, {
@@ -71,10 +219,13 @@ export default function Home() {
       }
 
       const { job_id } = await response.json();
+      logMessage(`Job queued: ${job_id}. Polling for results...`);
 
       // Step 3: Poll for completion
       let results = null;
+      let iterations = 0;
       while (true) {
+        iterations++;
         const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links/${job_id}`, {
           headers: { 'Authorization': 'Bearer local-bypass' }
         });
@@ -82,11 +233,16 @@ export default function Home() {
         
         if (statusData.status === 'complete') {
           results = statusData.results;
+          logMessage("Validation backend processing complete.");
+          stopHeartbeat();
           break;
         } else if (statusData.status === 'error') {
           throw new Error(statusData.error || "Validation job failed");
         }
         
+        if (iterations % 4 === 0) {
+           logMessage(`Polling validation status (Attempt ${iterations})...`);
+        }
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
@@ -99,17 +255,21 @@ export default function Home() {
               ...link,
               reason: res.reason,
               screenshot_path: res.screenshot_path ? `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}${res.screenshot_path}` : undefined
-            };
+            } as InvalidLink;
           }
           return null;
         })
         .filter((l): l is InvalidLink => l !== null);
+
+      logMessage(`Validation complete. Found ${brokenLinksToDisplay.length} broken links.`);
 
       // Step 5: Update the UI state with the final grouped/mapped invalid links
       setInvalidLinks(brokenLinksToDisplay);
       setShowValidationModal(true);
 
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      logMessage(`ERROR during validation: ${msg}`);
       console.error("Link validation encountered an error:", error);
     } finally {
       setIsValidating(false);
@@ -159,63 +319,128 @@ export default function Home() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <h1 className="text-xl font-bold text-gray-900">
-          N.E.R.D. — NCADEMI EdTech Research Tool
+          N.E.R.D. | NCADEMI EdTech Researcher for the Directory
         </h1>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-[90%] mx-auto px-6 py-8 space-y-8">
 
-        {/* Input — always visible when idle or errored */}
-        {(state.status === "idle" || state.status === "error") && (
-          <section aria-label="Research input">
-            <form onSubmit={handleSubmit} className="flex gap-3">
-              <label htmlFor="product-url" className="sr-only">Product URL</label>
-              <input
-                id="product-url"
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://vendor.com/product"
-                required
-                className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                className="bg-blue-700 text-white text-sm font-medium px-5 py-2
-                           rounded hover:bg-blue-800 focus:outline-none
-                           focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        {/* Input & Messages Section — Always visible */}
+        <section aria-label="Research input and messages">
+          <div className="flex gap-8 items-start">
+            
+            {/* Left Column: Messages (50%) */}
+            <div className="w-1/2 flex flex-col gap-1">
+              <label className="text-sm font-semibold text-gray-700">
+                Messages
+              </label>
+              <div
+                ref={logRef}
+                role="log"
+                aria-live="polite"
+                aria-label="System messages and progress log"
+                className="bg-gray-900 text-green-400 font-mono text-xs rounded p-4
+                           h-[130px] overflow-y-auto space-y-1 border border-gray-800"
               >
-                Generate Listing
-              </button>
-            </form>
-            {state.status === "error" && (
-              <p role="alert" className="mt-3 text-sm text-red-600">
-                {state.error}
-              </p>
-            )}
-          </section>
-        )}
-
-        {/* Streaming phase — terminal only, nothing else in DOM */}
-        {state.status === "streaming" && (
-          <section aria-label="Research progress">
-            <div
-              role="status"
-              aria-live="polite"
-              aria-label="Research progress log"
-              className="bg-gray-900 text-green-400 font-mono text-sm rounded p-4
-                         h-64 overflow-y-auto space-y-1"
-            >
-              {state.log.map((line, i) => (
-                <p key={i}>
-                  <span className="text-gray-500 select-none mr-2">›</span>
-                  {line}
-                </p>
-              ))}
+                {localLog.length === 0 ? (
+                  <p className="text-gray-600 italic">No activity to report.</p>
+                ) : (
+                  localLog.map((line, i) => {
+                    const isLast = i === localLog.length - 1;
+                    const isActive = isLast && (state.status === "streaming" || isValidating);
+                    return (
+                      <p key={i}>
+                        <span className="text-gray-600 select-none mr-2">›</span>
+                        {line}{isActive && <span className="ellipsis-animation"></span>}
+                      </p>
+                    );
+                  })
+                )}
+              </div>
             </div>
-          </section>
-        )}
+
+            {/* Right Column: URL & Buttons (50%) */}
+            <div className="w-1/2 flex flex-col gap-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="product-url" className="text-sm font-semibold text-gray-700">
+                    Product URL
+                  </label>
+                  <div className="flex gap-3">
+                    <input
+                      id="product-url"
+                      type="url"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="https://vendor.com/product"
+                      required
+                      disabled={state.status === "streaming" || isValidating}
+                      className="w-[45%] border border-gray-300 rounded px-3 py-2 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-blue-500
+                                 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!url.trim() || state.status === "streaming" || isValidating}
+                      className="w-44 bg-blue-700 text-white text-sm font-medium px-5 py-2
+                                 rounded hover:bg-blue-800 focus:outline-none
+                                 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                    >
+                      {state.status === "streaming" ? "Processing..." : "Generate Listing"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-semibold text-gray-700">
+                  Inject Saved Candidate
+                </label>
+                <div className="flex gap-3 items-center">
+                  <select 
+                    value={selectedSlug}
+                    onChange={(e) => setSelectedSlug(e.target.value)}
+                    disabled={state.status === "streaming" || isValidating}
+                    className="w-[45%] border border-gray-300 rounded px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-blue-500
+                               bg-white text-gray-700 disabled:bg-gray-100 
+                               disabled:cursor-not-allowed"
+                  >
+                    <option value="">NCADEMI Candidates</option>
+                    {candidates.map(c => (
+                      <option key={c.slug} value={c.slug}>{c.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleInject}
+                    disabled={!selectedSlug || state.status === "streaming" || isValidating}
+                    className="w-44 bg-[#333] text-white text-sm font-medium px-6 py-2 rounded
+                               hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500
+                               disabled:opacity-30 disabled:cursor-not-allowed transition-all
+                               whitespace-nowrap"
+                  >
+                    Inject Listing
+                  </button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/batch-report`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                      title="View Full Batch Report"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Results phase — static read-only listing */}
         {state.status === "complete" && state.listing && (

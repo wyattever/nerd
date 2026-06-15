@@ -1,0 +1,86 @@
+{
+  "product_name": "DreamBox",
+  "vendor_name": "DreamBox Learning",
+  "vendor_directory_url": "#",
+  "product_description": "DreamBox offers adaptive digital math and reading programs for students in grades K-8, designed to deliver personalized instruction within an engaging, gamified learning environment. The platform aims to build conceptual understanding, promote critical thinking, and support a variety of learning styles.",
+  "product_website_url": "https://www.dreambox.com/",
+  "vendor_resources": [
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQELcPiFvOwpdNzmpeZt8S79zjJzub8zZPORxEQAto5lwph7PnZ46Ghv45ahtGFoeT5_dZ0Yp431FeyemSLqmCx8U1HNhWPSezlqkmDUKGQXQzZYQ3IPopvB8avgP0LKHqJ8hLSmeaOEPlmhS7hLJmm-AdI547fRzTAROSJitGm1ndjedq_xr-A1xvbT8FwJZX6uYGghYhFgrTbiv01uFw==",
+      "text": "Discovery Education Accessibility Conformance Report WCAG Edition"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF35ZPUcpaoe8wWMm9Eu1eVuYqljxzAXVMjeguEc-s8EhzHWnkGNMGPKSL-Vo_6n6UapTjjzCcP7QV0ZjDgrQgdNSxBhmnnwu86Nq5lkwpDJYEoZy8BIWsu3hAtU2O4nuW6t6N3s8e-61HsmFWkpe9gCat2GL6RKtn_BSsnesQKARvlrLrrNoJnFitZH8E8Xw2MmWS4Kq-3LKNtI0yFxYrZBw==",
+      "text": "Closed-Captions in DreamBox Math"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFELFFoxJNf3UoIdsTq4qwdRXTyE0wqqQRwkk8cN9b3ytjsPMhNVMqw7Im6bwRu-RciRAyUM8ZBv8_3Of0D3igot6pcAwEky-zG0LAAbHRxO8ZJNmCaRpfFT1GArCydSwObl37mkHvNNhBrAYSm99Mo5RjxG26ZQQeYtNmVaAIlALbccDqXL9DpbS_WlrkiU1gyDXY2cwku98MaL4gezw==",
+      "text": "DreamBox: Get Help and Support"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEgPSw-dGqyuMXruMVGPCWT8CMg--QsQnxBAy3etkD5YxvvJ0VRyOyLMNJwCx5_5oxS91J0DNIF_KHqpEabqy0rjHYxnr7guvjfsFrKcGxAp-3_03iy1a7Xgg==",
+      "text": "DreamBox Terms of Use"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGWMRIvEEIsRdUFtRBqd7cn541F5AHCIhK6v_1_r5cMapvRJYAS-Ak_H_DFv5jytXCfVVY7rTkK19VFNn-ur-OYVTU_nXeseWthopX1Y_m8s2jXvmAaWvyUQ1H7NNvbPg0RZzvYt9JtBzA6eel8SRPm2MksMeAgrmiYv_FfX2x8hO0fzeDHGCw_pkwjV0IrEp97rNnNOyw4gvTdmMX1kw==",
+      "text": "DreamBox Website Privacy Notice"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEOEv14jdzRU6SNeRunk8MxkqItNmHiZHBRsoD5EogtLQvTyqyB36llV8roVVJd01all6AHGYMgB53W4sTKdsyaHUL_Ucp990ctSY7kaewmokXfQaWZztfic2dTG8n_fkAQT8n49VHpIpVSohkYyC75LuHM9NAhIy8dHtdlMJl8xbftWQkaHu00fyssePUPsQXAv7hkaUnefTixzIYMIA==",
+      "text": "Discovery Education Accessibility Conformance Report WCAG Edition"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF4KphAAH2zNZQNhSFN4ZqkoZMSXLGXmrOHdPqS8DNSSbWQ25y01HVxdvjVxTYwIdX6tK3TLy_15l3X8zO1bpMvIlymG20goHa5Bu8J9zzmxg9bjq_6a9tABLKXQXiBbjZcHkzRExG-XDadXBK79Hy4balOoNUBLKyZGx-GxglLgVODko4tg5WE53QCgGe1J4J-i4PIpIXdWXHiJ-h-OPpwSh6xukT1E_VEJ3q1EmBvuUJwj0wA0dtMcd_FtGuLuF6U0RMJVFzXD3qZHuOe9nI=",
+      "text": "New Enhancements to DreamBox Math by Discovery Education Improves Accessibility for Elementary Students"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGLObh4vVXHP2ArXVbzqhJQ9gQtwEpE29X_4CzHwvhFOrqGJBE64kHdzAuP18s0WE3BSc56Ky-S7DA_jSKCyZpuHlIQr5kLhuby1ETGccpVKnmeELJcO3DOS3dXXRfRocpi09HwZQuZXSJb-1aLhBgRtncTmNLBwibLqh04R8HbTRAfZIxxxK8Vd633_YTr1Z7vNZta6lxDgMEHQXojZzRZBw==",
+      "text": "Closed-Captions in DreamBox Math"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGfq5FcnuporqqSJJj2b1UzkRCU7zHlHTjQuNp3a_KiLo-obNqw-azctBtnqizlUUqC_Id8RNgb-OgCAVC445V8FQo_chOS9KbPjem6mCm_CxCjIEKj9Y84RUy0qgNX2fiOLECl0kqEIYlcFKlwTWsKZ5ljYOOAzjlxcWIoZCm9b9Nyz-5JBSLZc0eJpMvko9FDIacZoA==",
+      "text": "The Enhanced DreamBox Math by Discovery Education - EdTech Digest"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFKQpc8TibaieCGtpeDwDJZ_C8Csdhl78JjezAZDY3On5tKiHU8EcyV4rMINgNQvD0BZkHVAM1r5DFLYOL7aic5sjhxUk8t-QTnJLHz1mMFMDU-KN_nevyvax6OUffjz-GA7xgX52d33RSXHLD-ii5vnC7jLgxHHMvIvax8KK65eoLdKZcmImmJXZjhnlrRAZicvb7PZSLUW3TgOnQKGIQelW9npD4wZaW8O9KX8roiyppL3nBeIPa2QTsXxTY48cf6SBh7nGP7lMFJ9wI8zo=",
+      "text": "New Enhancements to DreamBox Math by Discovery Education Improves Accessibility for Elementary Students"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH1KVZLqKoHxiUZtj5RiQEsfrRqZw-t35ipHXR7nijdaeVX1ud3yS8PMBzL5BAWsWNO2tZISkqkswExLR6i3aNF0fSwhqLWJu-M2_rZXJdosDBFmOlj2aTSaE4OaiphU-dGZT9zqgM7byKjdlzks32oHd0TWQvNH0VZt5jxB-Kv-jGaqC1CT1OrHXLwWnW5nOeJCKhzkXK2r9TlauGIeGy0LrcIdCGkTUnrtatQVNBXOgvAz8jS",
+      "text": "Discovery Education Announces Accessibility Enhancements for DreamBox Math"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFHlnDAzdp8tJsxnI4hArv1pp6xtpu1SzXAdQhkMbNXk2jyX6UAr0uuT_uKYLUqNxcIaVbqDBZ3t3hz35SDS2OJA0Vv6aW3S4eREraE12tcaypXuQf6xGSQ5pygFhpT-1LsxnwPKpBq3N9lM6mUhk61fs3Y_ENhSLwNIyE=",
+      "text": "DreamBox Learning Program - Clara Barton Elementary - Lake Washington School District"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHLqlK9NRbJkD7xZEI1jDHiUlV5kq7yGHrZmvYtmKFFmLX4DE5lGacrLufC5Z3oU8DwBo4P3xbUHiYUAvJYlSrsjIvgboopQHroYp9sOykspo2Dmt3Srt4aMBeRf-Edq61bQvb4hYE85euaePGS1qK602KFADCPTF1DwErwUlSbOdHKb6qdceLFPagn3O4K9XTgI3pTMlYs9MkyHfLgfkAy0NjHykU5oky6ydqinNcRSotlMwLJeEi3DB5aahXXZ24STcA90s1OHV3mjw==",
+      "text": "School District Memorandum - April 20, 2021 - South Carolina Department of Education"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF9zMH7OacEDMAiBks-8f4zsZLR98QhGmLEV4gNsTlie013B-guzXQX9ZwlSfPR5dD1D6eRYydeBX_OLxeob5soWoBMyVsgXV1plzAVtiZX2U-LYq_KOaNXig8fOSUJMRsOibjOym5JEf50i2dzWkqG6yQ8wZk1qaLzjQgGtYi7cCX4SoC1tS1I",
+      "text": "Best Math Options for Inclusive Classrooms | SPED Lesson Planner"
+    }
+  ],
+  "ai_insights": "DreamBox Math, a Discovery Education product, has undergone significant accessibility enhancements, particularly for K-5 students, aiming to exceed Web Content Accessibility Guidelines. These improvements include enhanced compatibility with assistive technologies like screen readers and magnification tools, intuitive keyboard navigation, and clear visuals for users with low vision or color blindness. The platform also features an improved screen reader with alternative descriptions and offers closed captions for all K-8 math lessons and academic videos in both English and Spanish. While a Voluntary Product Accessibility Template for K-5 math generally indicates support for WCAG criteria, approximately five percent of K-5 lessons are noted as not yet meeting all requirements, with ongoing efforts to address these areas. Educational sources recommend DreamBox Math for inclusive classrooms due to its adaptive pathways and engaging visual interface.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "support@dreambox.com, 1 (877) 451-7845, or the DreamBox Learning Help Center linked via the DreamBox Support page.",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Discovery Education Accessibility Conformance Report WCAG Edition",
+      "url": "https://vertexaisearch.google.com/grounding-api-redirect/AUZIYQELcPiFvOwpdNzmpeZt8S79zjJzub8zZPORxEQAto5lwph7PnZ46Ghv45ahtGFoeT5_dZ0Yp431FeyemSLqmCx8U1HNhWPSezlqkmDUKGQXQzZYQ3IPopvB8avgP0LKHqJ8hLSmeaOEPlmhS7hLJmm-AdI547fRzTAROSJitGm1ndjedq_xr-A1xvbT8FwJZX6uYGghYhFgrTbiv01uFw==",
+      "version": "2.4Rev",
+      "date": "January 2025",
+      "auditor_name": "Internal and External Experts",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

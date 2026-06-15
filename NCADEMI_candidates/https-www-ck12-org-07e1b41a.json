@@ -1,0 +1,90 @@
+{
+  "product_name": "CK-12",
+  "vendor_name": "CK-12 Foundation",
+  "vendor_directory_url": "#",
+  "product_description": "CK-12 Foundation provides a comprehensive platform offering free online textbooks (FlexBooks), videos, adaptive practice, simulations, and real-world applications for K-12 students. The platform integrates AI to deliver personalized educational content and resources across various subjects, aiming to make quality education accessible.",
+  "product_website_url": "https://www.ck12.org/",
+  "vendor_resources": [
+    {
+      "url": "https://www.ck12.org/about/mission/",
+      "text": "CK-12 Foundation Mission Statement"
+    },
+    {
+      "url": "https://www.ck12.org/about/contact/",
+      "text": "Contact CK-12 Foundation"
+    },
+    {
+      "url": "https://www.ck12.org/legal/privacy-policy-2026/",
+      "text": "CK-12 Foundation Privacy Policy"
+    },
+    {
+      "url": "https://www.ck12.org/legal/terms-of-use-2026/",
+      "text": "CK-12 Foundation Terms of Use"
+    },
+    {
+      "url": "https://www.ck12.org/legal/attribution-guidelines/",
+      "text": "CK-12 Attribution Guidelines"
+    },
+    {
+      "url": "https://www.ck12.org/pages/adult-education/",
+      "text": "Adult Education | CK-12 Foundation"
+    },
+    {
+      "url": "https://www.ck12.org/college-access-readers/",
+      "text": "College Access Readers | CK-12 Foundation"
+    },
+    {
+      "url": "https://medium.com/@ck12foundation/a-new-way-to-access-ck-12-google-launches-add-ons-within-d6d744f4d2f8",
+      "text": "A New Way to Access CK-12. Google launches add-ons within\u2026"
+    },
+    {
+      "url": "https://www.ck12.org/help/how-is-ck-12-different-from-other-k-12-resources/",
+      "text": "How Is CK-12 Different from Other K-12 Resources? \u2013 Help Center"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://sde.ok.gov/sites/default/files/documents/files/Accessible%20Educational%20Materials%20Guidance%20Document_0.pdf",
+      "text": "Accessible Educational Materials (AEM) Guidance Document - Oklahoma State Department of Education"
+    },
+    {
+      "url": "https://aem.cast.org/publications/briefs/open-education-resources-inclusive-learning.html",
+      "text": "Open Education Resources: Ensuring Inclusive Learning in Uncertain Times - AEM Center"
+    },
+    {
+      "url": "https://www.edc.org/sites/default/files/uploads/distance-education-for-teacher-training.pdf",
+      "text": "DISTANCE EDUCATION FOR TEACHER TRAINING - EDC"
+    },
+    {
+      "url": "https://www.jccc.edu/files/pdf/about/board-of-trustees/agenda-minutes/agenda-packets/2016/12-22-16/IV-A-1-Canvas-LMS-Licensing-Agreement.pdf",
+      "text": "Board of Trustees Agenda Packet: Canvas LMS Licensing Agreement - Johnson County Community College"
+    },
+    {
+      "url": "https://www.sdccd.edu/docs/instruction/sdccd-online-learning-pathways-distance-education-handbook.pdf",
+      "text": "Distance Education Handbook SDCCD Online Learning Pathways 2021 - San Diego Community College District"
+    },
+    {
+      "url": "https://www.edc.org/sites/default/files/uploads/distance-education-for-teacher-training.pdf",
+      "text": "Resources for Using Technology to Enhance Professional Development, Technical Assistance, and Dissemination Activities - Brazelton Touchpoints Center (via edc.org)"
+    }
+  ],
+  "ai_insights": "CK-12 Foundation is dedicated to providing equal access to high-quality education globally, offering free digital textbooks, adaptive practice, and interactive simulations, enhanced by AI for personalized learning. While the platform provides extensive free resources and collaborates to broaden educational access, a dedicated accessibility statement or a Voluntary Product Accessibility Template (VPAT) detailing specific conformance to accessibility standards is not readily available. Educational institutions and state departments underscore the necessity of verifying open educational resources for accessibility, especially for individualized education programs. The platform's engagement in broader discussions concerning accessible educational materials and Section 508 standards, as noted by third parties, suggests an awareness of these requirements. However, explicit details on accessibility features for users with disabilities are not prominently featured in its public documentation, despite a clear commitment to broad usability.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "support@ck12.org, 650.353.4619",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "(Not Found)",
+      "url": "#",
+      "version": "(Not Found)",
+      "date": "(Not Found)",
+      "auditor_name": "(Not Found)",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

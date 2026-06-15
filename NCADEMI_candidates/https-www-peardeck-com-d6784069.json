@@ -1,0 +1,98 @@
+{
+  "product_name": "Pear Deck",
+  "vendor_name": "Pear Deck Learning",
+  "vendor_directory_url": "#",
+  "product_description": "Pear Deck is an interactive technology tool that transforms presentation slides into opportunities for formative assessment and active learning. It functions as an add-on to platforms like Google Slides, enabling teachers to create engaging lessons with various question types, provide real-time feedback, and differentiate instruction.",
+  "product_website_url": "https://www.peardeck.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.peardeck.com/policies/accessibility/",
+      "text": "Pear Deck Learning Website Accessibility Statement"
+    },
+    {
+      "url": "https://www.peardeck.com/blog/empowering-english-learners/",
+      "text": "Empowering English Learners: Strategies for Inclusive Education with Pear Deck"
+    },
+    {
+      "url": "https://www.peardeck.com/blog/5-tips-for-getting-started-with-immersive-reader/",
+      "text": "5 Tips for Getting Started With Pear Deck's Immersive Reader Feature"
+    },
+    {
+      "url": "https://www.peardeck.com/blog/solving-district-challenges-with-pear-deck-learning/",
+      "text": "Solving District Challenges with Pear Deck Learning"
+    },
+    {
+      "url": "https://www.peardeck.com/blog/pear-assessments-tools-for-inclusive-assessment-accommodations/",
+      "text": "Pear Assessment's Tools for Inclusive Assessment Accommodations"
+    },
+    {
+      "url": "https://www.goguardian.com/blog/beyond-compliance-why-goguardian-and-pear-deck-learning-lead-in-digital-accessibility",
+      "text": "Beyond Compliance: Why GoGuardian and Pear Deck Learning Lead in Digital Accessibility"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://edtechbooks.org/k12tech/pear_deck",
+      "text": "Pear Deck - EdTech Books Accessibility Review"
+    },
+    {
+      "url": "https://www.districtcheck.com/compare/nearpod-vs-pear-deck-ada-accessibility",
+      "text": "Nearpod vs Pear Deck: ADA Accessibility Comparison for K-12 Districts | DistrictCheck"
+    },
+    {
+      "url": "https://www.gwaea.org/news/detail/making-pear-deck-a-more-inclusive-experience",
+      "text": "Making Pear Deck a More Inclusive Experience - Grant Wood AEA"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=s5R_oVjV45Q",
+      "text": "Supporting Digital Text Accommodations in Pear Deck - YouTube"
+    },
+    {
+      "url": "https://next.ontariotechu.ca/tools/pear-deck.php",
+      "text": "Pear Deck | NEXTHub - Teaching and Learning Centre"
+    },
+    {
+      "url": "https://www.aims.edu/student/online-academic-resources/student-tools-and-resources.php",
+      "text": "Student Tools and Resources - Aims Community College"
+    },
+    {
+      "url": "https://www.hawaii.edu/offices/ovcaa/wp-content/uploads/sites/11/2022/10/Kapiolani-2022-Midterm-Report-10.15.22.pdf",
+      "text": "Kapi'olani Community College 2022 Midterm Report - University of Hawaii System"
+    },
+    {
+      "url": "https://www.edc.org/news/enhancing-digital-accessibility-deaf-or-hard-hearing-learners",
+      "text": "Enhancing Digital Accessibility for Deaf or Hard of Hearing Learners - Education Development Center (EDC)"
+    },
+    {
+      "url": "https://www.mdek12.org/sites/default/files/Offices/MDE/OAE/OAEDP/Instructional%20Technology/Pear%20Deck%20.pdf",
+      "text": "Pear Deck Overview - Mississippi Department of Education"
+    },
+    {
+      "url": "https://www.cde.ca.gov/ci/cr/cf/documents/digitallearning.pdf",
+      "text": "Digital Learning Integration and Standards Guidance - California Department of Education"
+    },
+    {
+      "url": "https://www.pgcps.org/offices/curriculum-instruction/online-academic-resources",
+      "text": "Online Academic Resources - Prince George's County Public Schools"
+    }
+  ],
+  "ai_insights": "Pear Deck demonstrates a commitment to accessibility, primarily through its integration with Microsoft's Immersive Reader, offering text-to-speech, translation, and adjustable text settings. The platform provides various accommodation features for assessments, including customizable text, high-contrast themes, and audio response options. A 2023 Voluntary Product Accessibility Template (VPAT) claims conformance with WCAG 2.1 Level AA, though analysis indicates partial conformance for freehand drawing and annotation tools, which could affect users of some assistive technologies. The vendor emphasizes a rigorous, human-led testing approach in developing its VPATs, indicating a proactive stance on digital accessibility. Educational institutions and government bodies consistently highlight Pear Deck's utility in creating inclusive learning environments and supporting diverse learners through its features.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "accessibility@goguardian.com, https://support.peardeck.com/hc/en-us",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Pear Deck Voluntary Product Accessibility Template (VPAT)",
+      "url": "#",
+      "version": "WCAG 2.1 Level AA",
+      "date": "2023",
+      "auditor_name": "Independent third-party vendors",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

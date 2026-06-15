@@ -1,0 +1,78 @@
+{
+  "product_name": "HMH (Houghton Mifflin Harcourt)",
+  "vendor_name": "Houghton Mifflin Harcourt",
+  "vendor_directory_url": "#",
+  "product_description": "Houghton Mifflin Harcourt (HMH) is a K-12 learning company that provides integrated curriculum, assessment, and professional learning solutions to educators globally. They deliver digital-first EdTech products designed to foster growth and support diverse learning needs across various subjects like literacy, math, science, and social studies.",
+  "product_website_url": "https://www.hmhco.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.hmhco.com/about/accessibility",
+      "text": "Accessibility - HMH"
+    },
+    {
+      "url": "https://support.hmhco.com/s/article/Accessibility-Support-for-Students-in-HMH-Ed",
+      "text": "Accessibility Support for Students in HMH Ed"
+    },
+    {
+      "url": "https://support.hmhco.com/s/article/Accessibility-Support-in-HMH-Ed-as-a-Teacher",
+      "text": "Accessibility Support in HMH Ed as a Teacher"
+    },
+    {
+      "url": "https://www.hmhco.com/blog/the-power-of-accessibility-for-all",
+      "text": "The Power of Accessibility for All - HMH"
+    },
+    {
+      "url": "https://support.hmhco.com/s/contactsupport",
+      "text": "Contact Support - HMH Support"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://www.learninglist.com/reviews/english-3d-houghton-mifflin-harcourt/",
+      "text": "New Review: Houghton Mifflin Harcourt's English 3D - Learning List"
+    },
+    {
+      "url": "https://aquila.usm.edu/dissertations/1629/",
+      "text": "The Impact of Houghton Mifflin Harcourt Read 180 Next Generation Program on Middle School Students with Disabilities - The Aquila Digital Community"
+    },
+    {
+      "url": "https://www.heard.org/academics/curriculum/hmh-into-reading",
+      "text": "HMH Into Reading - Heard Elementary School"
+    },
+    {
+      "url": "https://dash.hrecos.org/pdf/hmh-answer-key-3-pdf-full-version-download.pdf",
+      "text": "HMH Answer Key and Accessibility Challenges - Dash Hrecos Org"
+    },
+    {
+      "url": "https://www.garlandisd.net/our-schools/online-instructional-resources/hmh-houghton-mifflin-harcourt",
+      "text": "HMH (Houghton Mifflin Harcourt) - Garland Independent School District"
+    },
+    {
+      "url": "https://www.w3.org/2017/08/dp-aria-impl.html",
+      "text": "Digital Publishing WAI-ARIA Module 1.0: Test Results - W3C"
+    },
+    {
+      "url": "https://ataem.org/textbooks",
+      "text": "Supports for Struggling Readers - ATAEM"
+    }
+  ],
+  "ai_insights": "HMH demonstrates a strong commitment to accessibility, integrating Universal Design for Learning principles into its curriculum materials and learning tools. Content development practices align with Web Content Accessibility Guidelines (WCAG) and actively work to improve standardized practices. HMH Ed, a core platform, supports features like screen reader functionality, keyboard navigation, accessible video, alternative text, and magnification tools for both students and teachers. An Accessibility Advisory Board helps drive consistency across products. While detailed accessibility features and policy statements are provided, a comprehensive, publicly available Accessibility Conformance Report (ACR) or Voluntary Product Accessibility Template (VPAT) document was not explicitly found. Third-party insights from educational institutions and standards bodies frequently mention HMH products in the context of supporting diverse learners, affirming efforts in language development and reading intervention programs, and highlighting engagement with web accessibility standards.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "k12inquiries@hmhco.com or 800.225.5425 [cite: 3 from previous turn]",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Not explicitly found",
+      "url": "#",
+      "version": "Not explicitly found",
+      "date": "Not explicitly found",
+      "auditor_name": "Not explicitly found",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

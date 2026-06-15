@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ellipsis Animation for active log lines */
+@keyframes ellipsis {
+  0% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
+  100% { content: "."; }
+}
+
+.ellipsis-animation::after {
+  content: ".";
+  animation: ellipsis 1.5s infinite steps(1);
+  display: inline-block;
+  width: 1.5em;
+  text-align: left;
+}

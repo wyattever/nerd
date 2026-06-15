@@ -33,8 +33,22 @@ export function useResearch() {
     setState(prev => ({ ...prev, listing: updated }));
   }, []);
 
+  const injectListing = useCallback((data: ListingData) => {
+    setState({
+      status: "complete",
+      log: ["Injected data from saved candidate."],
+      listing: data,
+      error: null
+    });
+  }, []);
+
   const startResearch = useCallback(async (productUrl: string) => {
-    setState({ status: "streaming", log: ["Starting research..."], listing: null, error: null });
+    setState({ 
+      status: "streaming", 
+      log: [`--- Research Started for ${productUrl} ---`, "Queuing research job..."], 
+      listing: null, 
+      error: null 
+    });
 
     try {
       // Step 1: enqueue the job
@@ -46,6 +60,11 @@ export function useResearch() {
 
       if (!enqueueRes.ok) throw new Error(`Enqueue failed: ${enqueueRes.status}`);
       const { job_id } = await enqueueRes.json();
+      
+      setState(prev => ({ 
+        ...prev, 
+        log: [...prev.log, `Job queued: ${job_id}. Opening SSE stream...`] 
+      }));
 
       // Step 2: open SSE stream for this job
       const es = new EventSource(`${API_BASE}/jobs/${job_id}`);
@@ -65,6 +84,7 @@ export function useResearch() {
         setState((prev) => ({
           ...prev,
           status: "complete",
+          log: [...prev.log, "Research complete. Hydrating results..."],
           listing: data.parsed_listing,
         }));
       });
@@ -84,5 +104,5 @@ export function useResearch() {
     }
   }, []);
 
-  return { state, startResearch, reset, updateListing };
+  return { state, startResearch, reset, updateListing, injectListing };
 }

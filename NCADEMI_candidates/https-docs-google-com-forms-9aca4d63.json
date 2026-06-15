@@ -1,0 +1,118 @@
+{
+  "product_name": "Google Forms",
+  "vendor_name": "Google",
+  "vendor_directory_url": "#",
+  "product_description": "Google Forms is a web-based application that allows users to create surveys, quizzes, and questionnaires. It enables users to collect and organize information efficiently, offering various question types and customization options for different needs. Responses can be reviewed and analyzed within the application or exported to other tools like Google Sheets.",
+  "product_website_url": "https://docs.google.com/forms",
+  "vendor_resources": [
+    {
+      "url": "https://www.google.com/accessibility/compliance/",
+      "text": "Google Accessibility Conformance Reports"
+    },
+    {
+      "url": "https://support.google.com/a/answer/7049928",
+      "text": "Google Workspace admin guide to accessibility"
+    },
+    {
+      "url": "https://support.google.com/accessibility/answer/6209520",
+      "text": "Use Google Forms with a screen reader"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGGGRcDD1WVIoyi7WPVn0-pXcCaP3hZlFguONfoF3xjuTVKmqw99XQlJRaaDIO0D2c7bAGBeWBhDx2n1F5kAKcgrn8VEAVXJA_h7Hx8bvzXyTXBrYShHSSz2EojIbCjVVZRkug6U7FSl5-tOjtocIGgiKLE8L7y3qzQhTaC5fJiCw==",
+      "text": "Google Forms 2024 VPAT"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE_Ka73Y6Pz5bk_la7-UbJfdJjvyyYEDB2mBPEJQNL8V7KpFf7Ai5S7JkBYnRQhI7IWC8H_JLyLwB5bAvPzwrLTdRSKCadfnCThvrhOAypn8pSZRnB6SDflwn2lrZe5qnc2i5K5lJ5MC-aqYlKyd6CiwxvQXnh9Msdu4Q==",
+      "text": "Google Forms Accessibility Conformance Report"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH3-qOgTZRMUz6QIQ_JNT43emc22tZHK83cBTDGW1TR8xwEGi9ZNLg-zgig8s8ADAXC5EIkc95M3xpKsbYq8eb1va_TdeRxo4WWu0wGqZvJr1cT-PjWFqeL0J4hUI69pWL4YeG9MibPilAOZYDOvFTQPnoKYAb3eco=",
+      "text": "Use Google Forms with a screen reader - Google Accessibility Help"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEZOfhLvcurxe0uIyjzwgvvO0GS7wf9gM0JpBFSZ-eFfykT8WWjuj9PptszzicP5fo7bObha7PrKeY8XuN3D49sHSNXyjcKao2sKRXWnOPiBApgU_4lNxu_6v7kjQtiAOfcqXXsOZfkNN_Xgc9H_efNUXdq3DwafoEzEPEAIaZLxA==",
+      "text": "Publish and manage responders on the form - Google for Developers"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://wiki.diglib.org/Google_Forms_Accessibility",
+      "text": "Google Forms Accessibility - DLF Wiki"
+    },
+    {
+      "url": "https://www.amherst.edu/mm/533316",
+      "text": "Google Forms Accessibility | Assistive Technology - Amherst College"
+    },
+    {
+      "url": "https://accessibility.wfu.edu/google-forms-accessibility-tips-for-forms-and-surveys/",
+      "text": "Google Forms Accessibility: Tips for Forms and Surveys - Technology Accessibility at Wake"
+    },
+    {
+      "url": "https://accessibility.umich.edu/accessible-digital-content/make-google-forms-accessible",
+      "text": "Make Google Forms Accessible | accessibility.umich.edu"
+    },
+    {
+      "url": "https://digitalaccessibility.berkeley.edu/how-do-i-make-my-google-forms-accessible",
+      "text": "How do I make my Google Forms accessible? - Digital Accessibility"
+    },
+    {
+      "url": "https://willamette.edu/go/accessible-forms",
+      "text": "Accessible Forms | Accessibility Guidelines - My Willamette"
+    },
+    {
+      "url": "https://www.montclair.edu/media/montclairstate/it/accessibility/VPAT-Google-Forms.pdf",
+      "text": "Google Forms - Montclair State University"
+    },
+    {
+      "url": "https://www.montclair.edu/office-of-information-technology/accessibility/google-workspace-accessibility/google-forms/",
+      "text": "Google Workspace Accessibility - Forms - Office of Information Technology"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHd95PwvTP-eE3JRnqCiIu7vg72kRfZteBy0Lez-f2hcPBWj-0ZvL_8F-dPCoqp9Lfv_TlhlqmD0ExsYozSvnFy2n75XRtFBlTNHF8D_tgjaXuxdwy5FZ2YXOSpCjOsLgFZa3nWfWls6IjA_iUNFOBM",
+      "text": "Google Forms: Label issues - WebAIM List"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPAvS65HgnupHQ0yqSoTzTMjtI7XNfgN_rAP3ivJOA93O7tWqm0x34DcpR5BDZI9srHRlc0EXzofFMoarPx5z05sP-2qnC9b6ruaspHrw9oXbSwPJTJ7hVVdVJ6omElp6G3wA1lRCrdk3J544dUHiCzw==",
+      "text": "Example of an accessible Likert scale form question - WebAIM List"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEzV6QKhLuar7Co4_FXqh5t5UfRDMc_-S6NBHfU5IMNGDrzKE7nBnmjbx6COwcWOh6q-S6uYz_K8NrtIflb1J6omg2gNGh4rZ7yacbYOrtJLLvuZVJojX7ALxGenXw3TBpumnXF5zW4IpNYBOojni0W_ZN24P7MnmlKHIEjnWExJKmSIaowc-sbj50gIgpABoDsZjDqaTEftmQE",
+      "text": "Accessibility of Fillable Forms (Webinar Series 1 of 2) - AccessGA"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFX3kWv9dW1AzC19TDv8caBWs8PPaOjtQsqKwAbkM_P_jRJbWKoiwBfIBJrQEaza6YX22kZep1dR5HbKdlwwuni_SEt45JydgdcCpBgDVRnfLUvK5HswXcddDZqad1QlK9Tekb9h1kD08HCbZjg1MIROQjKhR-jexEo1DoUrSW_-Pu0jCR8F78T0Q==",
+      "text": "QUICK GUIDE ACCESSIBILITY"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEMhJZzs6-06hnayqFS5L0gdCyNHqSBrD16JT0G7dOmXuOlMemxn0QO3SJTFg2rIuB88flqDqg-Yirh8jua_jE356khXoCwbsx6nfiLYwPFV4Eqy0l3mEC_7AXmG8n9XRUtO6IaD1vX2bNsntyjrPzoAQ==",
+      "text": "Survey of Assistive technology and Device Usage on Mobile Devices by People with Different Abilities - WebAIM List"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHL567Z2Jac-Tt_m6Cmaa_y9wcItSU3eDAHIyOo7TQ_gsgaoPAVrzJ8lnDdoTEaEEKPzIbmz606vcVCMXR3zjbmMDyOFWQ_ATpBsDfnAMyu0dOn0TTUpFviLzyBCuGhr7vaUfSNQ7j_R8MBGPoW3cyA_bcSbeBiGN7pNUl34tzm07k_QxlR2W_r1JNcLgrdnbOf4n-2TqPgUZZdAam6",
+      "text": "How to embed a Google form into an existing webpage using iframes - Knowledge article KB00017433"
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEz94RMaLT-wnRcj0Sin3Az1-acdgrsjZgv4wTbDijAtMc6022GbmwLIiv0FNraxU8_KQ2DSPl940vhEYwMwrbJb4xlEvZJ94Tpvyg1CLOoAGICDjc-Fq3reZnBx0RD6CaT8LdD9bPsauKEXEz6CifUc0f6AXPJIfh2tg==",
+      "text": "Assessing the State of Publicly Available Library Accessibility Information: Guidelines Based on a Review of Policies at SUNY Li"
+    }
+  ],
+  "ai_insights": "Google Forms presents a mixed accessibility landscape, offering features like screen reader support and keyboard shortcuts for many users. However, significant challenges persist, including issues with image accessibility, color contrast, proper field labeling, and consistent focus order, particularly in complex forms. While official documentation exists, third-party insights frequently highlight these limitations and the cognitive load associated with intricate form creation. The platform's ease of use is beneficial, but creators bear substantial responsibility for implementing inclusive design principles. This includes using clear titles, providing meaningful image descriptions, and ensuring adequate color contrast to enhance usability. Ultimately, the accessibility of a Google Form largely depends on the creator's adherence to best practices, as direct code modification is not an option.",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://www.google.com/accessibility/get-in-touch/",
+      "label": "https://www.google.com/accessibility/get-in-touch/"
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Google Forms Accessibility Conformance Report",
+      "url": "https://www.montclair.edu/media/montclairstate/it/accessibility/VPAT-Google-Forms.pdf",
+      "version": "2.2 Revised Section 508 Edition Version 1.0",
+      "date": "19 July 2019",
+      "auditor_name": "Google",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

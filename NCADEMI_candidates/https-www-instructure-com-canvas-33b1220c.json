@@ -1,0 +1,134 @@
+{
+  "product_name": "Canvas",
+  "vendor_name": "Instructure",
+  "vendor_directory_url": "#",
+  "product_description": "Canvas is a comprehensive learning management system (LMS) developed by Instructure to facilitate teaching and learning. It provides tools for course content delivery, assignment management, student collaboration, and communication, aiming to create inclusive and engaging educational experiences.",
+  "product_website_url": "https://www.instructure.com/canvas",
+  "vendor_resources": [
+    {
+      "url": "https://www.instructure.com/accessibility",
+      "text": "Accessibility at Instructure | Inclusive & Equitable Learning"
+    },
+    {
+      "url": "https://community.canvaslms.com/t5/Canvas-Basics-Guide/What-are-the-Canvas-accessibility-standards/ta-p/262575",
+      "text": "What are the Canvas accessibility standards?"
+    },
+    {
+      "url": "https://www.instructure.com/trust-center",
+      "text": "Instructure Trust Center"
+    },
+    {
+      "url": "https://www.instructure.com/blog/designing-for-everyone-practical-ways-to-build-accessible-learning-experiences-canvas",
+      "text": "Designing for Everyone: Practical Ways to Build Accessible Learning Experiences in Canvas"
+    },
+    {
+      "url": "https://www.instructure.com/canvas/higher-education/resources/infographics/create-accessible-courses-canvas",
+      "text": "Create Accessible Courses with Canvas"
+    },
+    {
+      "url": "https://www.instructure.com/blog/accessibility-doesnt-wait-and-neither-do-we",
+      "text": "Accessibility Doesn't Wait and Neither Do We"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=5V96S13z4eM",
+      "text": "What's New in Accessibility at Instructure"
+    },
+    {
+      "url": "https://community.canvaslms.com/t5/Blog/Canvas-Catalog-Now-Fully-WCAG-2-2-AA-Accessible/ba-p/637731",
+      "text": "Canvas Catalog Now Fully WCAG 2.2 AA Accessible"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://www.colorado.edu/oit/services/accessibility/canvas",
+      "text": "Canvas - Accessibility - University of Colorado Boulder"
+    },
+    {
+      "url": "https://babbeducation.com/instructional-design-accessibility-tips-for-canvas-lms/",
+      "text": "Instructional Design: Accessibility Tips for Canvas LMS - Babb Education"
+    },
+    {
+      "url": "https://www.ctl.ox.ac.uk/canvas-accessibility-statement",
+      "text": "Canvas accessibility statement - Centre for Teaching and Learning - University of Oxford"
+    },
+    {
+      "url": "https://www.montclair.edu/media/montclairstate/otl/canvasvpat.pdf",
+      "text": "Canvas LMS Web Content Accessibility Guidelines (WCAG 2.0) Checklist - Montclair State University"
+    },
+    {
+      "url": "https://ati.gmu.edu/canvas-accessibility",
+      "text": "Canvas Accessibility - George Mason University"
+    },
+    {
+      "url": "https://cccaccessibility.org/resources/canvas-accessibility",
+      "text": "Canvas Accessibility - California Community Colleges (CCC) Technology Center"
+    },
+    {
+      "url": "https://www.york.ac.uk/teaching/celt/digital-learning/canvas-accessibility-statement/",
+      "text": "Accessibility Statement for Canvas - University of York"
+    },
+    {
+      "url": "https://edsccop.com/instructure-eases-accessibility-compliance-for-canvas-users-with-new-tool/",
+      "text": "Instructure eases accessibility compliance for Canvas users with new tool | EdScoop"
+    },
+    {
+      "url": "https://www.uiw.edu/otlt/digital-accessibility/vendor-compliance.html",
+      "text": "Vendor Compliance - University of the Incarnate Word"
+    },
+    {
+      "url": "https://fsw.teamdynamix.com/TDClient/1825/Portal/KB/ArticleDet?ID=144709",
+      "text": "Canvas Accessibility - TeamDynamix"
+    },
+    {
+      "url": "https://teach.usu.edu/canvas/accessibility/ally-report",
+      "text": "Canvas Course Accessibility Report | Teach - Utah State University"
+    },
+    {
+      "url": "https://yale.service-now.com/itc?id=kb_article_view&sys_id=c14e047c1b52a050d2bc43f8bd4bcb55",
+      "text": "General Canvas Accessibility Guidelines and Tips - Yale University"
+    },
+    {
+      "url": "https://u.osu.edu/jonfinkelstein/2024/08/14/general-accessibility-tips-for-canvas-course-creators/",
+      "text": "General accessibility tips for Canvas course creators - U.OSU - The Ohio State University"
+    },
+    {
+      "url": "https://www.hb.se/en/current/news/2023/november/accessibility-report--university-of-boras/",
+      "text": "Accessibility report \u2013 University of Bor\u00e5s"
+    },
+    {
+      "url": "https://pe.gatech.edu/blog/title-ii-web-accessibility-canvas-what-new-guidelines-mean-you",
+      "text": "Title II Web Accessibility & Canvas: What the New Guidelines Mean for You - Georgia Tech Professional Education"
+    },
+    {
+      "url": "https://oer.suny.edu/wp-content/uploads/2020/09/Waymaker-Accessibility-Conformance-Report-Revised-Section-508-Edition.pdf",
+      "text": "Lumen Learning - Waymaker Accessibility Conformance Report Revised Section 508 Edition"
+    },
+    {
+      "url": "https://apexinnovations.com/wp-content/uploads/2025/05/Apex-Innovations-Courseware-VPAT-05.09.2025.pdf",
+      "text": "WCAG 2.1 Accessibility Conformance Report (VPAT\u00ae) Product Information - Apex Innovations Courseware"
+    },
+    {
+      "url": "https://webaim.org/statement/instructure/canvas-mobile/",
+      "text": "Canvas Student and Canvas Teacher Mobile Applications on both iOS and Android platforms (Expired) - Verification of Substantial Conformance - WebAIM"
+    }
+  ],
+  "ai_insights": "Canvas, a comprehensive learning management system, demonstrates a strong commitment to accessibility, adhering to WCAG 2.1 AA guidelines and recently updating its Canvas Catalog and Voluntary Product Accessibility Templates to WCAG 2.2 AA standards. The platform integrates built-in accessibility features, such as a Rich Content Editor checker and user-configurable settings, reflecting a design philosophy that prioritizes accessibility beyond mere compliance, supported by regular third-party testing. While the platform provides robust tools and resources for creating accessible content, the ultimate accessibility of courses largely depends on the materials developed by individual educators. Institutional audits and evaluations of mobile applications further underscore the continuous need for both platform-level and user-generated content accessibility within the Canvas environment.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "info@instructure.com, accessibility@instructure.com, 1.801.869.5000",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Canvas VPAT",
+      "url": "https://www.instructure.com/trust-center",
+      "version": "WCAG 2.2 AA",
+      "date": "July 7, 2025 (latest refresh)",
+      "auditor_name": "Instructure (Internal, with third-party testing mentioned)",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}

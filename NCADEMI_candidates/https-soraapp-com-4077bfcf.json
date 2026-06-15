@@ -1,0 +1,90 @@
+{
+  "product_name": "Sora",
+  "vendor_name": "OverDrive",
+  "vendor_directory_url": "#",
+  "product_description": "Sora is a free digital reading app developed by OverDrive for K-12 students. It provides access to ebooks, audiobooks, and magazines from participating school and public libraries, enabling students to read on their devices.",
+  "product_website_url": "https://soraapp.com/",
+  "vendor_resources": [
+    {
+      "url": "https://resources.overdrive.com/k-12-schools/sora-accessibility/",
+      "text": "Sora & Accessibility - OverDrive's Resource Center"
+    },
+    {
+      "url": "https://company.overdrive.com/accessibility/",
+      "text": "OverDrive Accessibility Statement"
+    },
+    {
+      "url": "https://discoversora.com/make-reading-accessible/",
+      "text": "The Sora app makes reading accessible for your students"
+    },
+    {
+      "url": "https://help.soraapp.com/en-us/8040.htm",
+      "text": "Which screen readers work with Sora?"
+    },
+    {
+      "url": "https://resources.overdrive.com/k-12-schools/features-service-enhancements/",
+      "text": "Sora App Features & Service Enhancements - Overdrive's Resource Center"
+    },
+    {
+      "url": "https://help.soraapp.com/en-us/",
+      "text": "Sora Help: Home"
+    },
+    {
+      "url": "https://resources.overdrive.com/k-12-schools/sora-must-haves/?kit=Sora+for+Every+Reader+-+Accessibility+Kit",
+      "text": "Sora for Every Reader - Accessibility Kit"
+    },
+    {
+      "url": "https://resources.overdrive.com/wp-content/uploads/2020/09/Sora-Accessibility-Features.pdf",
+      "text": "Sora Accessibility Features (PDF)"
+    },
+    {
+      "url": "https://company.overdrive.com/wp-content/uploads/2021/05/Sora-vpat-WCAG-2.4-dated-5.4.21.pdf",
+      "text": "OVERDRIVE ACCESSIBILITY CONFORMANCE REPORT WCAG EDITION (PDF)"
+    },
+    {
+      "url": "https://resources.overdrive.com/k-12-schools/sora-content-bundles-feature/",
+      "text": "Sora \u201cContent Bundles\u201d Feature Empowers Educators to Easily Reserve Digital Books for Specific Students"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://www.veroniiiica.com/2023/06/02/sora-accessibility-features-for-low-vision/",
+      "text": "Sora Accessibility Features For Low Vision | Veroniiiica"
+    },
+    {
+      "url": "https://www.thelearningcounsel.com/article/sora-gives-students-age-appropriate-access-ebooks-audiobooks-read-alongs-magazines-and",
+      "text": "Sora gives students age-appropriate access to ebooks, audiobooks, Read-Alongs, magazines and more - the Learning Counsel"
+    },
+    {
+      "url": "https://www.bend.k12.or.us/tech-integration/bls-edtech-bytes/sora-access-and-tips/",
+      "text": "Sora \u2013 Access and Tips \u2013 BLS Educational Technology - Bend-La Pine Schools"
+    },
+    {
+      "url": "https://libraries.idaho.gov/event/litt-marketing/",
+      "text": "LITT: Marketing - Idaho Commission for Libraries"
+    },
+    {
+      "url": "https://tcea.org/blog/accessibility-library-formats/",
+      "text": "Accessible Library Formats \u2013 TCEA TechNotes Blog"
+    }
+  ],
+  "ai_insights": "Sora is designed with a strong commitment to accessibility, providing an inclusive digital reading experience for K-12 students. The platform adheres to WCAG 2.0 and 2.1 Level A and AA standards, with its conformance detailed in an Accessibility Conformance Report. It offers extensive screen reader support for popular tools like VoiceOver, NVDA, and JAWS, alongside keyboard navigation and accessible page structures. Key features include high contrast mode, dyslexic font, adjustable text sizes, and \"Read to Me\" text-to-speech functionality. Additionally, the \"Content Bundles\" feature empowers educators to provide differentiated access to digital books for specific student needs. These elements collectively demonstrate Sora's robust framework for supporting diverse learners within school library systems.",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "schools@overdrive.com, asksora@overdrive.com, techsupport@soraschools.com, (216) 573-6886",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "OVERDRIVE ACCESSIBILITY CONFORMANCE REPORT WCAG EDITION",
+      "url": "https://company.overdrive.com/accessibility/",
+      "version": "2.4",
+      "date": "May 4, 2021",
+      "auditor_name": "Internal",
+      "auditor_url": ""
+    }
+  ],
+  "last_updated": "June 15, 2026"
+}
