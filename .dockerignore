@@ -1,6 +1,9 @@
-venv/
-.git/
-.DS_Store
-agent_debug.log
-__pycache__/
-*.pyc
+node_modules
+.next
+.env.local
+.env.local.example
+npm-debug.log
+README.md
+.gitignore
+.dockerignore
+.gcloudignore
