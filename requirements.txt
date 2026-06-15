@@ -3,6 +3,7 @@
 # Phase 4: fastapi and uvicorn explicitly added (were implicit transitive deps)
 fastapi
 uvicorn[standard]
+crawlee[playwright]
 
 # Existing deps
 altair==5.5.0

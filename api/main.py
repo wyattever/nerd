@@ -18,13 +18,17 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from google.cloud import tasks_v2
 import firebase_admin
 from firebase_admin import auth as fb_auth
 
 from nerd_core.generators import render_listing_html
+from nerd_core.utils import resolve_and_validate_all
+from nerd_core.link_validator_engine import LinkValidatorEngine
 
 from . import schemas
 from .conversions import pydantic_to_dataclass
@@ -45,6 +49,16 @@ if not firebase_admin._apps:
 logger = logging.getLogger("nerd.api")
 
 app = FastAPI(title="N.E.R.D. API", version="0.4.0-bearer-auth")
+
+# ── Link Validation Engine & Artifacts ────────────────────────────────────────
+validator = LinkValidatorEngine()
+validation_jobs: dict[str, dict] = {}
+
+# Ensure artifacts directory exists and mount it
+os.makedirs("artifacts", exist_ok=True)
+app.mount("/artifacts", StaticFiles(directory="artifacts"), name="artifacts")
+
+templates = Jinja2Templates(directory="templates")
 
 # ── Auth Dependency ───────────────────────────────────────────────────────────
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -178,6 +192,89 @@ async def render(payload: schemas.RenderRequest):
     listing_dc = pydantic_to_dataclass(payload)
     html = render_listing_html(listing_dc)
     return schemas.RenderResponse(html=html)
+
+
+# ── Advanced Link Validation ──────────────────────────────────────────────────
+
+async def run_link_validation_background(job_id: str, urls: list[str]):
+    try:
+        validation_jobs[job_id]["status"] = "processing"
+        results = await validator.run(urls)
+        # Convert datetime objects to strings for JSON serialization
+        serialized_results = {}
+        for url, res in results.items():
+            serialized_results[url] = {
+                "url": res.url,
+                "is_valid": res.is_valid,
+                "status_code": res.status_code,
+                "reason": res.reason,
+                "screenshot_path": res.screenshot_path,
+                "timestamp": res.timestamp.isoformat()
+            }
+        validation_jobs[job_id]["results"] = serialized_results
+        validation_jobs[job_id]["status"] = "complete"
+    except Exception as e:
+        logger.error(f"Background validation failed for {job_id}: {e}")
+        validation_jobs[job_id]["status"] = "error"
+        validation_jobs[job_id]["error"] = str(e)
+
+@app.post("/research/validate-links-async", response_model=schemas.LinkValidationJobStatus)
+async def validate_links_async(
+    request: schemas.LinkValidationRequest, 
+    background_tasks: BackgroundTasks,
+    uid: str = Depends(verify_token)
+):
+    job_id = str(uuid.uuid4())
+    validation_jobs[job_id] = {"status": "queued", "results": None}
+    background_tasks.add_task(run_link_validation_background, job_id, request.urls)
+    return schemas.LinkValidationJobStatus(job_id=job_id, status="queued")
+
+@app.get("/research/validate-links/{job_id}", response_model=schemas.LinkValidationJobStatus)
+async def get_validation_status(job_id: str, uid: str = Depends(verify_token)):
+    if job_id not in validation_jobs:
+        raise HTTPException(status_code=404, detail="Validation job not found")
+    return schemas.LinkValidationJobStatus(job_id=job_id, **validation_jobs[job_id])
+
+@app.get("/admin/link-reviewer", response_class=HTMLResponse)
+async def link_reviewer_ui(request: Request):
+    """Simple UI for reviewing invalid links across all completed jobs."""
+    invalid_links = []
+    for job_id, data in validation_jobs.items():
+        if data["status"] == "complete" and data["results"]:
+            for url, res in data["results"].items():
+                if not res["is_valid"]:
+                    invalid_links.append({
+                        "job_id": job_id,
+                        **res
+                    })
+    
+    return templates.TemplateResponse("link_validator.html", {
+        "request": request, 
+        "invalid_links": invalid_links
+    })
+
+
+@app.post("/research/validate-links", response_model=schemas.LinkValidationResponse)
+async def validate_links(request: schemas.LinkValidationRequest, uid: str = Depends(verify_token)):
+    """
+    Server-side link validation.
+    Reuses resolve_and_validate_all to catch 404s and handle SSRF protection.
+    """
+    try:
+        # 1. Call the internal utility (FIXED: added await)
+        valid_links_dict = await resolve_and_validate_all(request.urls)
+        
+        # 2. Extract successfully validated URLs
+        valid_urls_set = set(valid_links_dict.keys())
+        
+        # 3. Identify unreachable URLs
+        unreachable = [url for url in request.urls if url not in valid_urls_set]
+        
+        return schemas.LinkValidationResponse(unreachable_urls=unreachable)
+        
+    except Exception as e:
+        logger.exception("Link validation failed")
+        raise HTTPException(status_code=500, detail=f"Link validation engine failed: {str(e)}")
 
 
 @app.get("/healthz")

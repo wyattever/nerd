@@ -111,3 +111,25 @@ class RenderRequest(ListingData):
 
 class RenderResponse(BaseModel):
     html: str
+
+
+# ── Link Validation ──────────────────────────────────────────────────────────
+class LinkValidationRequest(BaseModel):
+    urls: list[str]
+
+class LinkValidationDetailedResult(BaseModel):
+    url: str
+    is_valid: bool
+    status_code: Optional[int] = None
+    reason: Optional[str] = None
+    screenshot_path: Optional[str] = None
+    timestamp: Optional[str] = None
+
+class LinkValidationJobStatus(BaseModel):
+    job_id: str
+    status: Literal["queued", "processing", "complete", "error"]
+    results: Optional[dict[str, LinkValidationDetailedResult]] = None
+    error: Optional[str] = None
+
+class LinkValidationResponse(BaseModel):
+    unreachable_urls: list[str]

@@ -29,6 +29,10 @@ export function useResearch() {
     setState(INITIAL_STATE);
   }, []);
 
+  const updateListing = useCallback((updated: ListingData) => {
+    setState(prev => ({ ...prev, listing: updated }));
+  }, []);
+
   const startResearch = useCallback(async (productUrl: string) => {
     setState({ status: "streaming", log: ["Starting research..."], listing: null, error: null });
 
@@ -80,5 +84,5 @@ export function useResearch() {
     }
   }, []);
 
-  return { state, startResearch, reset };
+  return { state, startResearch, reset, updateListing };
 }
