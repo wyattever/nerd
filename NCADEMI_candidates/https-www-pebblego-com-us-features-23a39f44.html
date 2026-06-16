@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PebbleGo — NCADEMI EdTech Directory</title>
+
+<!-- Load exact NCADEMI theme CSS and WordPress blocks to mirror production -->
+<link rel="stylesheet" href="https://ncademi.org/wp-content/themes/ncademitheme/style.css">
+<link rel="stylesheet" href="https://ncademi.org/wp-includes/css/dist/block-library/style.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  /* Base reset for iframe isolation while inheriting WP styles */
+  body { 
+    background: #fff; 
+    margin: 0; 
+    padding: 20px; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; 
+  }
+  
+  /* Fallback gap for WP flex layout if block library CSS fails to load in iframe */
+  .wp-block-columns { gap: 2em; margin-bottom: 2em; }
+  
+  /* Retain any custom overrides if passed */
+  /* ── Reset & isolation ───────────────────────────────────────── */
+.nerd-artifact *, .nerd-artifact *::before, .nerd-artifact *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.nerd-artifact {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fff;
+  padding: 1.5rem 0 3rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ── Product header ─────────────────────────────────────────── */
+.nerd-artifact .product-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  line-height: 1.25;
+}
+.nerd-artifact .vendor-line {
+  font-size: 0.95rem;
+  margin-bottom: 0.65rem;
+}
+.nerd-artifact a { color: #0054a6; text-decoration: none; }
+.nerd-artifact a:hover { text-decoration: underline; }
+.nerd-artifact a:focus-visible { outline: 2px solid #0054a6; outline-offset: 2px; border-radius: 2px; }
+
+.nerd-artifact .product-desc {
+  font-size: 0.95rem;
+  color: #444;
+  margin-bottom: 0.5rem;
+  line-height: 1.65;
+}
+
+.nerd-artifact .product-website {
+  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
+}
+.nerd-artifact .product-website a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Section heading ────────────────────────────────────────── */
+.nerd-artifact h2.resources-heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Two-column grid (WP Block Columns mirror) ──────────────── */
+.nerd-artifact .resources-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.nerd-artifact .col-main {
+  flex: 2;
+  min-width: 300px;
+}
+
+.nerd-artifact .col-side {
+  flex: 1;
+  min-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .nerd-artifact .resources-grid { flex-direction: column; }
+  .nerd-artifact .col-main, .nerd-artifact .col-side { flex: 1 1 100%; }
+}
+
+/* ── h3 sub-section headings ────────────────────────────────── */
+.nerd-artifact h3.section-heading {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  margin-top: 1.5rem;
+  color: #333;
+}
+.nerd-artifact .col-main h3.section-heading:first-child { margin-top: 0; }
+
+/* ── Resource link lists ────────────────────────────────────── */
+.nerd-artifact ul.resource-list {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.nerd-artifact ul.resource-list li {
+  font-size: 1rem;
+  padding: 4px 0;
+  line-height: 1.5;
+}
+
+/* ── AI Generated Insights block ───────────────────────────── */
+.nerd-artifact .ai-insights {
+  background-color: #f4f4f4;
+  padding: 1.5rem;
+  border-left: 4px solid #0054a6;
+  margin-top: 2rem;
+  border-radius: 4px;
+}
+.nerd-artifact .ai-insights h3 {
+  margin-top: 0;
+  font-size: 1.1em;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+.nerd-artifact .ai-insights p {
+  margin-bottom: 0;
+  font-size: 0.95em;
+  color: #444;
+  line-height: 1.6;
+}
+
+/* ── Right column: support + ACR ───────────────────────────── */
+.nerd-artifact .product-support { margin-bottom: 2rem; }
+
+.nerd-artifact .edtech-acr { margin-bottom: 2rem; }
+
+.nerd-artifact .acr-report { margin-bottom: 1.5rem; }
+.nerd-artifact .acr-report h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.nerd-artifact .acr-report ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9em;
+  color: #555;
+}
+.nerd-artifact .acr-report ul li {
+  padding: 2px 0;
+}
+
+/* ── Last-updated footer ────────────────────────────────────── */
+.nerd-artifact .last-updated {
+  font-size: 0.9em;
+  color: #666;
+  text-align: right;
+  font-style: italic;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+  margin-top: 2rem;
+}
+
+</style>
+</head>
+<body class="wp-custom-logo wp-embed-responsive post-template-default single single-product has-blocks">
+
+<main id="primary" class="site-main">
+  <header class="entry-header alignwide">
+    <h1 class="entry-title">PebbleGo</h1>
+  </header>
+
+  <article class="product type-product status-publish hentry">
+    <div class="nerd-artifact">
+      <div class="entry-content">
+        
+        <header class="product-header">
+          <p class="vendor-line"><strong>Vendor:</strong> 
+<a href="#">Capstone</a>          </p>
+
+          <p class="product-desc">PebbleGo is a digital content learning hub designed for K-3 students, offering interactive informational articles, read-aloud audio, and ready-made activities to support research, reading, and learning in core subject areas. It aims to provide equitable access for all learners, including those with disabilities, through various accessibility features.</p>
+
+          <p class="product-website">
+            <a href="https://www.pebblego.com/us/features" target="_blank" rel="noopener noreferrer">
+              <i class="fa-solid fa-globe" aria-hidden="true"></i> PebbleGo Website
+            </a>
+          </p>
+        </header>
+
+        <h2 class="resources-heading">Accessibility Documentation &amp; Resources</h2>
+        
+        <!-- Exact WordPress block columns structure with NERD grid overrides -->
+        <div class="wp-block-columns is-layout-flex wp-container-core-columns-is-layout-1 wp-block-columns-is-layout-flex resources-grid">
+          
+          <!-- Left Column (approx 66%) -->
+          <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-main" style="flex-basis:66.66%">
+            
+            <h3 class="section-heading">From Capstone</h3>
+            <ul class="wp-block-list resource-list">
+              <li><a href="https://www.pebblego.com/us/company/accessibility" target="_blank" rel="noopener noreferrer">PebbleGo Accessibility Features &amp; Support</a></li>
+              <li><a href="https://www.pebblego.com/us/resources/empowering-students-with-special-needs" target="_blank" rel="noopener noreferrer">Empowering Students with Special Needs - PebbleGo</a></li>
+              <li><a href="https://www.pebblego.com/us/literacy-research-support" target="_blank" rel="noopener noreferrer">Equitable K–5 Literacy &amp; Research Support | PebbleGo</a></li>
+              <li><a href="https://www.pebblego.com/us/k-5-learners-tools" target="_blank" rel="noopener noreferrer">Engaging Tools for K-5 Learners | PebbleGo &amp; PebbleGo Next</a></li>
+              <li><a href="https://www.pebblego.com/content/dam/pebblegodev/help-center/accessibility/1.26_PG_PGN_VPAT.pdf" target="_blank" rel="noopener noreferrer">PebbleGo, PebbleGo Next Accessibility Conformance Report (VPAT 2.5) - Report Date: January 1, 2026</a></li>
+            </ul>
+
+            <h3 class="section-heading">From Other Sources</h3>
+            <ul class="wp-block-list resource-list">
+              <li><a href="https://www.prnewswire.com/news-releases/k-3-research-product-pebblego-relaunch-with-accessibility-for-children-with-disabilities-300903328.html" target="_blank" rel="noopener noreferrer">K-3 Research Product PebbleGo Relaunches With Accessibility for Children With Disabilities - PR Newswire</a></li>
+              <li><a href="https://www.slj.com/story/pebblego-capstone-reference-database-review" target="_blank" rel="noopener noreferrer">PebbleGo from Capstone | Reference Database Review - School Library Journal</a></li>
+              <li><a href="https://erintegration.com/2019/09/16/online-research-and-reading-using-pebblego-in-the-classroom/" target="_blank" rel="noopener noreferrer">Online Research and Reading Using PebbleGo in the Classroom - Erintegration</a></li>
+              <li><a href="https://www.edtechdigest.com/2024/07/25/cool-tool-award-winner-pebblego-from-capstone/" target="_blank" rel="noopener noreferrer">PebbleGo from Capstone - EdTech Digest</a></li>
+              <li><a href="https://www.railslibraries.info/for-libraries/vendor-accessibility-privacy-documents" target="_blank" rel="noopener noreferrer">Vendor Accessibility and Privacy Documents | Reaching Across Illinois Library System</a></li>
+              <li><a href="https://www.pebblego.com/resources/help-center/educator-support/california" target="_blank" rel="noopener noreferrer">Free PebbleGo Access for California Educators - California State Library</a></li>
+              <li><a href="https://www.michigan.gov/dtmb/-/media/Project/Websites/dtmb/Procurement/Contracts/010/190000000928.pdf" target="_blank" rel="noopener noreferrer">Change Notice Template - State of Michigan (PebbleGo 508 and WCAG 2.0 AA Compliance)</a></li>
+              <li><a href="https://www.pgcps.org/schools/william-wirt-middle/parents/online-academic-resources" target="_blank" rel="noopener noreferrer">Online Academic Resources - Prince George&#39;s County Public Schools (PebbleGo mention)</a></li>
+              <li><a href="https://www.oppl.org/news-events/kids/curious-kids-welcome-explore-the-world-with-pebblego-pebblego-next-grades-k-5/" target="_blank" rel="noopener noreferrer">Curious kids welcome: Explore the world with PebbleGo &amp; PebbleGo Next (grades K-5) - Oak Park Public Library (mentions Level Access partnership)</a></li>
+              <li><a href="https://warrenlibrary.net/resource-category/databases/" target="_blank" rel="noopener noreferrer">Databases Archives - Warren Libraries (PebbleGo accessibility mention)</a></li>
+              <li><a href="https://eastmeadow.info/electronic-resources/" target="_blank" rel="noopener noreferrer">Electronic Resources - East Meadow Public Library (PebbleGo accessibility mention)</a></li>
+            </ul>
+
+            <div class="ai-insights">
+              <h3>AI Generated Insights</h3>
+              <p>PebbleGo demonstrates a strong commitment to accessibility, aiming to comply with Web Content Accessibility Guidelines (WCAG) 2.2 Level AA, Section 508, and EN 301 549 standards. The platform incorporates robust features such as text-to-speech, screen reader support, keyboard navigation, alternative text, video transcripts, and careful color contrast design. Its Voluntary Product Accessibility Template (VPAT), along with consistent commendation from third-party reviews and educational institutions, validates these efforts. These features, combined with intuitive navigation and leveled texts, provide multimodal supports that benefit a diverse range of K-5 learners, including those with disabilities and English language learners. Designed to be mobile-responsive and optimized for various learning environments, PebbleGo ensures an equitable and inclusive learning experience for all students.</p>
+            </div>
+            
+          </div>
+
+          <!-- Right Column (approx 33%) -->
+          <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-side" style="flex-basis:33.33%">
+            
+            <div class="product-support">
+              <h3 class="section-heading">Support</h3>
+              <ul class="wp-block-list resource-list">
+                <li>
+                  <a href="mailto:accessibility@capstonepub.com">accessibility@capstonepub.com</a>
+                </li>
+              </ul>
+            </div>
+
+            <div class="edtech-acr">
+              <h3 class="section-heading">Accessibility Conformance Reports</h3>
+              <div class="acr-report">
+                <h4><a href="https://www.pebblego.com/content/dam/pebblegodev/help-center/accessibility/1.26_CI_VPAT.pdf" target="_blank" rel="noopener noreferrer">VOLUNTARY PRODUCT ACCESSIBILITY TEMPLATE - PebbleGo</a></h4>
+                <ul>
+<li><strong>Version:</strong> 2.5</li><li><strong>Date:</strong> January 1, 2026</li>                  <li>
+                    <strong>Completed by:</strong>
+Third-party audit and Internal                  </li>
+                </ul>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+        <p class="last-updated">Product information last updated June 15, 2026</p>
+
+      </div>
+    </div>
+  </article>
+</main>
+
+</body>
+</html>

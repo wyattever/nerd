@@ -16,9 +16,12 @@ import json
 import time
 import hashlib
 import logging
+import asyncio
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any
+from dataclasses import asdict
 
 # Path Bootstrap
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -27,6 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from nerd_core.services import run_initial_research, run_deep_dive, synthesize_insights
 from nerd_core.generators import parse_markdown_to_listing, render_listing_html
+from nerd_core.utils import resolve_and_validate_all
 from jinja2 import Environment, FileSystemLoader
 
 # Configure Logging
@@ -57,8 +61,6 @@ def get_slug(url: str) -> str:
     # Limit length
     return f"{slug[:50]}-{url_hash}"
 
-import re
-
 def validate_listing(data: Any) -> List[str]:
     """Check for missing or suspicious data in a ListingData object."""
     issues = []
@@ -78,7 +80,7 @@ def validate_listing(data: Any) -> List[str]:
         issues.append("No Accessibility Conformance Reports (ACRs) found")
     return issues
 
-def process_url(url: str, force: bool = False):
+async def process_url(url: str, force: bool = False):
     """Run the complete research pipeline for a single URL."""
     slug = get_slug(url)
     json_path = OUTPUT_DIR / f"{slug}.json"
@@ -93,23 +95,32 @@ def process_url(url: str, force: bool = False):
     try:
         # 1. Initial Research
         logger.info("  Phase 1: Initial Research...")
-        initial_draft, _ = run_initial_research(url, timeout_min=4)
+        initial_draft, raw_urls = run_initial_research(url, timeout_min=4)
         
         # 2. Deep Dive
         listing = parse_markdown_to_listing(initial_draft)
         logger.info(f"  Phase 2: Deep Dive for {listing.product_name}...")
-        deep_dive_draft, _ = run_deep_dive(url, listing.product_name, initial_draft, timeout_min=4)
+        deep_dive_draft, dd_urls = run_deep_dive(url, listing.product_name, initial_draft, timeout_min=4)
         
         # 3. AI Insights Synthesis
         logger.info("  Phase 3: Synthesizing Insights...")
         full_markdown = f"{initial_draft}\n\n## Additional Research\n\n{deep_dive_draft}"
         final_insights = synthesize_insights(full_markdown)
         
-        # 4. Final Parse & Render
+        # 4. Resolve Proxy URLs
+        logger.info("  Phase 4: Resolving Redirects...")
+        all_proxies = list(set(raw_urls + dd_urls))
+        url_map = await resolve_and_validate_all(all_proxies)
+        
+        # Apply resolution to markdown
+        for proxy, resolved in url_map.items():
+            full_markdown = full_markdown.replace(proxy, resolved)
+        
+        # 5. Final Parse & Render
         final_listing = parse_markdown_to_listing(full_markdown)
         final_listing.ai_insights = final_insights
         
-        # 5. Save Artifacts
+        # 6. Save Artifacts
         # Prepare pure ListingData for JSON
         pure_listing = {
             "product_name": final_listing.product_name,
@@ -146,13 +157,11 @@ def process_url(url: str, force: bool = False):
         error_path = OUTPUT_DIR / f"{slug}.error"
         error_path.write_text(f"URL: {url}\nError: {str(e)}\nTimestamp: {datetime.now()}")
 
-from dataclasses import asdict
-
-def run_batch(input_file: str):
+async def run_batch(input_file: str):
     """Read URLs from file and process them sequentially."""
     input_path = Path(input_file)
     if not input_path.exists():
-        logger.error(f"Input file not found: {input_file}")
+        logger.error(f"Input file not found: {input_path}")
         return
 
     urls = [line.strip() for line in input_path.read_text().splitlines() if line.strip()]
@@ -160,7 +169,7 @@ def run_batch(input_file: str):
 
     for i, url in enumerate(urls):
         logger.info(f"Progress: [{i+1}/{len(urls)}]")
-        process_url(url)
+        await process_url(url)
         # Polite delay to prevent quota spikes
         time.sleep(5)
 
@@ -216,7 +225,7 @@ if __name__ == "__main__":
     if args.report_only:
         generate_summary()
     elif args.input:
-        run_batch(args.input)
+        asyncio.run(run_batch(args.input))
         generate_summary()
     else:
         parser.print_help()

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DreamBox — NCADEMI EdTech Directory</title>
+
+<!-- Load exact NCADEMI theme CSS and WordPress blocks to mirror production -->
+<link rel="stylesheet" href="https://ncademi.org/wp-content/themes/ncademitheme/style.css">
+<link rel="stylesheet" href="https://ncademi.org/wp-includes/css/dist/block-library/style.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  /* Base reset for iframe isolation while inheriting WP styles */
+  body { 
+    background: #fff; 
+    margin: 0; 
+    padding: 20px; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; 
+  }
+  
+  /* Fallback gap for WP flex layout if block library CSS fails to load in iframe */
+  .wp-block-columns { gap: 2em; margin-bottom: 2em; }
+  
+  /* Retain any custom overrides if passed */
+  /* ── Reset & isolation ───────────────────────────────────────── */
+.nerd-artifact *, .nerd-artifact *::before, .nerd-artifact *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.nerd-artifact {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fff;
+  padding: 1.5rem 0 3rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ── Product header ─────────────────────────────────────────── */
+.nerd-artifact .product-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  line-height: 1.25;
+}
+.nerd-artifact .vendor-line {
+  font-size: 0.95rem;
+  margin-bottom: 0.65rem;
+}
+.nerd-artifact a { color: #0054a6; text-decoration: none; }
+.nerd-artifact a:hover { text-decoration: underline; }
+.nerd-artifact a:focus-visible { outline: 2px solid #0054a6; outline-offset: 2px; border-radius: 2px; }
+
+.nerd-artifact .product-desc {
+  font-size: 0.95rem;
+  color: #444;
+  margin-bottom: 0.5rem;
+  line-height: 1.65;
+}
+
+.nerd-artifact .product-website {
+  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
+}
+.nerd-artifact .product-website a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Section heading ────────────────────────────────────────── */
+.nerd-artifact h2.resources-heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Two-column grid (WP Block Columns mirror) ──────────────── */
+.nerd-artifact .resources-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.nerd-artifact .col-main {
+  flex: 2;
+  min-width: 300px;
+}
+
+.nerd-artifact .col-side {
+  flex: 1;
+  min-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .nerd-artifact .resources-grid { flex-direction: column; }
+  .nerd-artifact .col-main, .nerd-artifact .col-side { flex: 1 1 100%; }
+}
+
+/* ── h3 sub-section headings ────────────────────────────────── */
+.nerd-artifact h3.section-heading {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  margin-top: 1.5rem;
+  color: #333;
+}
+.nerd-artifact .col-main h3.section-heading:first-child { margin-top: 0; }
+
+/* ── Resource link lists ────────────────────────────────────── */
+.nerd-artifact ul.resource-list {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.nerd-artifact ul.resource-list li {
+  font-size: 1rem;
+  padding: 4px 0;
+  line-height: 1.5;
+}
+
+/* ── AI Generated Insights block ───────────────────────────── */
+.nerd-artifact .ai-insights {
+  background-color: #f4f4f4;
+  padding: 1.5rem;
+  border-left: 4px solid #0054a6;
+  margin-top: 2rem;
+  border-radius: 4px;
+}
+.nerd-artifact .ai-insights h3 {
+  margin-top: 0;
+  font-size: 1.1em;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+.nerd-artifact .ai-insights p {
+  margin-bottom: 0;
+  font-size: 0.95em;
+  color: #444;
+  line-height: 1.6;
+}
+
+/* ── Right column: support + ACR ───────────────────────────── */
+.nerd-artifact .product-support { margin-bottom: 2rem; }
+
+.nerd-artifact .edtech-acr { margin-bottom: 2rem; }
+
+.nerd-artifact .acr-report { margin-bottom: 1.5rem; }
+.nerd-artifact .acr-report h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.nerd-artifact .acr-report ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9em;
+  color: #555;
+}
+.nerd-artifact .acr-report ul li {
+  padding: 2px 0;
+}
+
+/* ── Last-updated footer ────────────────────────────────────── */
+.nerd-artifact .last-updated {
+  font-size: 0.9em;
+  color: #666;
+  text-align: right;
+  font-style: italic;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+  margin-top: 2rem;
+}
+
+</style>
+</head>
+<body class="wp-custom-logo wp-embed-responsive post-template-default single single-product has-blocks">
+
+<main id="primary" class="site-main">
+  <header class="entry-header alignwide">
+    <h1 class="entry-title">DreamBox</h1>
+  </header>
+
+  <article class="product type-product status-publish hentry">
+    <div class="nerd-artifact">
+      <div class="entry-content">
+        
+        <header class="product-header">
+          <p class="vendor-line"><strong>Vendor:</strong> 
+<a href="#">DreamBox Learning</a>          </p>
+
+          <p class="product-desc">DreamBox offers adaptive digital math and reading programs for students in grades K-8, designed to deliver personalized instruction within an engaging, gamified learning environment. The platform aims to build conceptual understanding, promote critical thinking, and support a variety of learning styles.</p>
+
+          <p class="product-website">
+            <a href="https://www.dreambox.com/" target="_blank" rel="noopener noreferrer">
+              <i class="fa-solid fa-globe" aria-hidden="true"></i> DreamBox Website
+            </a>
+          </p>
+        </header>
+
+        <h2 class="resources-heading">Accessibility Documentation &amp; Resources</h2>
+        
+        <!-- Exact WordPress block columns structure with NERD grid overrides -->
+        <div class="wp-block-columns is-layout-flex wp-container-core-columns-is-layout-1 wp-block-columns-is-layout-flex resources-grid">
+          
+          <!-- Left Column (approx 66%) -->
+          <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-main" style="flex-basis:66.66%">
+            
+            <h3 class="section-heading">From DreamBox Learning</h3>
+            <ul class="wp-block-list resource-list">
+              <li><a href="https://example.com/broken-link?reason=redirect_expired" target="_blank" rel="noopener noreferrer">Discovery Education Accessibility Conformance Report WCAG Edition</a></li>
+              <li><a href="https://dreamboxlearning.zendesk.com/hc/en-us/articles/28340239247891-Closed-Captions-in-DreamBox-Math" target="_blank" rel="noopener noreferrer">Closed-Captions in DreamBox Math</a></li>
+              <li><a href="https://example.com/broken-link?reason=redirect_expired" target="_blank" rel="noopener noreferrer">DreamBox: Get Help and Support</a></li>
+              <li><a href="https://www.dreambox.com/terms" target="_blank" rel="noopener noreferrer">DreamBox Terms of Use</a></li>
+              <li><a href="https://www.dreambox.com/wp-content/uploads/2025/06/DreamBox-Website-Privacy-Notice-May-15-2025.pdf" target="_blank" rel="noopener noreferrer">DreamBox Website Privacy Notice</a></li>
+              <li><a href="https://software.psdschools.org/ApplicationsPublic/GetDocument/27f6c49f-0a17-439e-8c5a-0db8fd0e8b17" target="_blank" rel="noopener noreferrer">Discovery Education Accessibility Conformance Report WCAG Edition</a></li>
+              <li><a href="https://example.com/broken-link?reason=redirect_expired" target="_blank" rel="noopener noreferrer">New Enhancements to DreamBox Math by Discovery Education Improves Accessibility for Elementary Students</a></li>
+              <li><a href="https://dreamboxlearning.zendesk.com/hc/en-us/articles/28340239247891-Closed-Captions-in-DreamBox-Math" target="_blank" rel="noopener noreferrer">Closed-Captions in DreamBox Math</a></li>
+            </ul>
+
+            <h3 class="section-heading">From Other Sources</h3>
+            <ul class="wp-block-list resource-list">
+              <li><a href="https://www.edtechdigest.com/2025/01/27/the-enhanced-dreambox-math-by-discovery-education/" target="_blank" rel="noopener noreferrer">The Enhanced DreamBox Math by Discovery Education - EdTech Digest</a></li>
+              <li><a href="https://example.com/broken-link?reason=redirect_expired" target="_blank" rel="noopener noreferrer">New Enhancements to DreamBox Math by Discovery Education Improves Accessibility for Elementary Students</a></li>
+              <li><a href="https://thejournal.com/articles/2025/01/29/discovery-education-announces-accessibility-enhancements-for-dreambox-math.aspx" target="_blank" rel="noopener noreferrer">Discovery Education Announces Accessibility Enhancements for DreamBox Math</a></li>
+              <li><a href="https://clarabarton.lwsd.org/academics/dreambox-learning-program" target="_blank" rel="noopener noreferrer">DreamBox Learning Program - Clara Barton Elementary - Lake Washington School District</a></li>
+              <li><a href="https://ed.sc.gov/newsroom/school-district-resources/weekly-school-district-memorandum-communications/school-district-memorandum-april-20-2021/" target="_blank" rel="noopener noreferrer">School District Memorandum - April 20, 2021 - South Carolina Department of Education</a></li>
+              <li><a href="https://www.spedlessonplanner.com/learn/compare/math-for-inclusive-classrooms" target="_blank" rel="noopener noreferrer">Best Math Options for Inclusive Classrooms | SPED Lesson Planner</a></li>
+            </ul>
+
+            <div class="ai-insights">
+              <h3>AI Generated Insights</h3>
+              <p>DreamBox Math, a Discovery Education product, has undergone significant accessibility enhancements, particularly for K-5 students, aiming to exceed Web Content Accessibility Guidelines. These improvements include enhanced compatibility with assistive technologies like screen readers and magnification tools, intuitive keyboard navigation, and clear visuals for users with low vision or color blindness. The platform also features an improved screen reader with alternative descriptions and offers closed captions for all K-8 math lessons and academic videos in both English and Spanish. While a Voluntary Product Accessibility Template for K-5 math generally indicates support for WCAG criteria, approximately five percent of K-5 lessons are noted as not yet meeting all requirements, with ongoing efforts to address these areas. Educational sources recommend DreamBox Math for inclusive classrooms due to its adaptive pathways and engaging visual interface.</p>
+            </div>
+            
+          </div>
+
+          <!-- Right Column (approx 33%) -->
+          <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-side" style="flex-basis:33.33%">
+            
+            <div class="product-support">
+              <h3 class="section-heading">Support</h3>
+              <ul class="wp-block-list resource-list">
+                <li>
+                  <a href="mailto:support@dreambox.com, 1 (877) 451-7845, or the DreamBox Learning Help Center linked via the DreamBox Support page.">support@dreambox.com, 1 (877) 451-7845, or the DreamBox Learning Help Center linked via the DreamBox Support page.</a>
+                </li>
+              </ul>
+            </div>
+
+            <div class="edtech-acr">
+              <h3 class="section-heading">Accessibility Conformance Reports</h3>
+              <div class="acr-report">
+                <h4><a href="https://example.com/broken-link?reason=redirect_expired" target="_blank" rel="noopener noreferrer">Discovery Education Accessibility Conformance Report WCAG Edition</a></h4>
+                <ul>
+<li><strong>Version:</strong> 2.4Rev</li><li><strong>Date:</strong> January 2025</li>                  <li>
+                    <strong>Completed by:</strong>
+Internal and External Experts                  </li>
+                </ul>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+        <p class="last-updated">Product information last updated June 15, 2026</p>
+
+      </div>
+    </div>
+  </article>
+</main>
+
+</body>
+</html>

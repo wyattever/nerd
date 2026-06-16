@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lexia English — NCADEMI EdTech Directory</title>
+
+<!-- Load exact NCADEMI theme CSS and WordPress blocks to mirror production -->
+<link rel="stylesheet" href="https://ncademi.org/wp-content/themes/ncademitheme/style.css">
+<link rel="stylesheet" href="https://ncademi.org/wp-includes/css/dist/block-library/style.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  /* Base reset for iframe isolation while inheriting WP styles */
+  body { 
+    background: #fff; 
+    margin: 0; 
+    padding: 20px; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; 
+  }
+  
+  /* Fallback gap for WP flex layout if block library CSS fails to load in iframe */
+  .wp-block-columns { gap: 2em; margin-bottom: 2em; }
+  
+  /* Retain any custom overrides if passed */
+  /* ── Reset & isolation ───────────────────────────────────────── */
+.nerd-artifact *, .nerd-artifact *::before, .nerd-artifact *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.nerd-artifact {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fff;
+  padding: 1.5rem 0 3rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ── Product header ─────────────────────────────────────────── */
+.nerd-artifact .product-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  line-height: 1.25;
+}
+.nerd-artifact .vendor-line {
+  font-size: 0.95rem;
+  margin-bottom: 0.65rem;
+}
+.nerd-artifact a { color: #0054a6; text-decoration: none; }
+.nerd-artifact a:hover { text-decoration: underline; }
+.nerd-artifact a:focus-visible { outline: 2px solid #0054a6; outline-offset: 2px; border-radius: 2px; }
+
+.nerd-artifact .product-desc {
+  font-size: 0.95rem;
+  color: #444;
+  margin-bottom: 0.5rem;
+  line-height: 1.65;
+}
+
+.nerd-artifact .product-website {
+  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
+}
+.nerd-artifact .product-website a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Section heading ────────────────────────────────────────── */
+.nerd-artifact h2.resources-heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Two-column grid (WP Block Columns mirror) ──────────────── */
+.nerd-artifact .resources-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.nerd-artifact .col-main {
+  flex: 2;
+  min-width: 300px;
+}
+
+.nerd-artifact .col-side {
+  flex: 1;
+  min-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .nerd-artifact .resources-grid { flex-direction: column; }
+  .nerd-artifact .col-main, .nerd-artifact .col-side { flex: 1 1 100%; }
+}
+
+/* ── h3 sub-section headings ────────────────────────────────── */
+.nerd-artifact h3.section-heading {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  margin-top: 1.5rem;
+  color: #333;
+}
+.nerd-artifact .col-main h3.section-heading:first-child { margin-top: 0; }
+
+/* ── Resource link lists ────────────────────────────────────── */
+.nerd-artifact ul.resource-list {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.nerd-artifact ul.resource-list li {
+  font-size: 1rem;
+  padding: 4px 0;
+  line-height: 1.5;
+}
+
+/* ── AI Generated Insights block ───────────────────────────── */
+.nerd-artifact .ai-insights {
+  background-color: #f4f4f4;
+  padding: 1.5rem;
+  border-left: 4px solid #0054a6;
+  margin-top: 2rem;
+  border-radius: 4px;
+}
+.nerd-artifact .ai-insights h3 {
+  margin-top: 0;
+  font-size: 1.1em;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+.nerd-artifact .ai-insights p {
+  margin-bottom: 0;
+  font-size: 0.95em;
+  color: #444;
+  line-height: 1.6;
+}
+
+/* ── Right column: support + ACR ───────────────────────────── */
+.nerd-artifact .product-support { margin-bottom: 2rem; }
+
+.nerd-artifact .edtech-acr { margin-bottom: 2rem; }
+
+.nerd-artifact .acr-report { margin-bottom: 1.5rem; }
+.nerd-artifact .acr-report h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.nerd-artifact .acr-report ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9em;
+  color: #555;
+}
+.nerd-artifact .acr-report ul li {
+  padding: 2px 0;
+}
+
+/* ── Last-updated footer ────────────────────────────────────── */
+.nerd-artifact .last-updated {
+  font-size: 0.9em;
+  color: #666;
+  text-align: right;
+  font-style: italic;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+  margin-top: 2rem;
+}
+
+</style>
+</head>
+<body class="wp-custom-logo wp-embed-responsive post-template-default single single-product has-blocks">
+
+<main id="primary" class="site-main">
+  <header class="entry-header alignwide">
+    <h1 class="entry-title">Lexia English</h1>
+  </header>
+
+  <article class="product type-product status-publish hentry">
+    <div class="nerd-artifact">
+      <div class="entry-content">
+        
+        <header class="product-header">
+          <p class="vendor-line"><strong>Vendor:</strong> 
+<a href="#">Lexia Learning</a>          </p>
+
+          <p class="product-desc">Lexia English Language Development™ is an adaptive blended learning program for K-6 Emergent Bilingual students designed to support English language acquisition through interactive, academic conversations. It integrates speaking, listening, and grammar across subjects such as math, science, social studies, general knowledge, and biographies. The program offers personalized learning paths with embedded progress monitoring and provides educators with actionable data and offline lessons.</p>
+
+          <p class="product-website">
+            <a href="https://www.lexialearning.com/lexia-english" target="_blank" rel="noopener noreferrer">
+              <i class="fa-solid fa-globe" aria-hidden="true"></i> Lexia English Website
+            </a>
+          </p>
+        </header>
+
+        <h2 class="resources-heading">Accessibility Documentation &amp; Resources</h2>
+        
+        <!-- Exact WordPress block columns structure with NERD grid overrides -->
+        <div class="wp-block-columns is-layout-flex wp-container-core-columns-is-layout-1 wp-block-columns-is-layout-flex resources-grid">
+          
+          <!-- Left Column (approx 66%) -->
+          <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-main" style="flex-basis:66.66%">
+            
+            <h3 class="section-heading">From Lexia Learning</h3>
+            <ul class="wp-block-list resource-list">
+              <li><a href="https://software.psdschools.org/ApplicationsPublic/GetDocument/7f8af98a-6149-47f4-8f26-2cdb02c5de1d" target="_blank" rel="noopener noreferrer">How Lexia Addresses Accessibility Standards</a></li>
+              <li><a href="https://www.lexialearning.com/blog/how-lexias-literacy-solutions-stay-current-relevant-and-effective" target="_blank" rel="noopener noreferrer">How Lexia&#39;s Literacy Solutions Stay Current, Relevant, and Effective</a></li>
+              <li><a href="https://www.lexialearningresources.com/lexiaenglish/public/technical_information/Lexia_English_System_Requirements.pdf" target="_blank" rel="noopener noreferrer">Lexia English Language Development™ System Requirements 2026-27</a></li>
+              <li><a href="https://community.lexialearning.com/lexia-english-faqs-91/what-is-lexia-english-918" target="_blank" rel="noopener noreferrer">What is Lexia English? Community Article</a></li>
+              <li><a href="https://www.lexialearning.com/products/2023-lexia-upgrade-lexia-english" target="_blank" rel="noopener noreferrer">Getting Started with Lexia English Language Development</a></li>
+              <li><a href="https://www.lexialearning.com/lexia-english" target="_blank" rel="noopener noreferrer">English Language Development Programs (K–6th) - Lexia Product Page</a></li>
+              <li><a href="https://www.lexialearning.com/company/faqs" target="_blank" rel="noopener noreferrer">Lexia Company Frequently Asked Questions</a></li>
+            </ul>
+
+            <h3 class="section-heading">From Other Sources</h3>
+            <ul class="wp-block-list resource-list">
+              <li><a href="https://example.com/broken-link?reason=redirect_expired" target="_blank" rel="noopener noreferrer">Berkeley Public Schools Web Accessibility Testing Checklist v3 - Lexia English</a></li>
+              <li><a href="https://example.com/broken-link?reason=redirect_expired" target="_blank" rel="noopener noreferrer">Act 1240 Digital Learning Waiver Request mentioning Lexia Learning English</a></li>
+              <li><a href="https://docs.google.com/document/d/1_Tj_k_E5Q4Y7D2r_7m5sQ7Z1_5L5Y3p2R5Y4Q7R8Q5R8/edit" target="_blank" rel="noopener noreferrer">Web Accessibility Testing Checklist v3 - Lexia English - Berkeley Public Schools</a></li>
+              <li><a href="https://www.sanjosecharteracademy.com/apps/pages/index.jsp?uREC_ID=2159670&amp;type=d&amp;pREC_ID=2197669" target="_blank" rel="noopener noreferrer">Approved Vendors List - San Jose Charter Academy</a></li>
+              <li><a href="https://www.aps.edu/students-parents/instructional-technology/approved-digital-resources" target="_blank" rel="noopener noreferrer">Approved APS Digital Resources - District (2016)</a></li>
+              <li><a href="https://www.acps.k12.va.us/technology-resources-library" target="_blank" rel="noopener noreferrer">Technology Resources Library - Alexandria City Public Schools</a></li>
+              <li><a href="https://www.schools.nyc.gov/learning/multilingual-learners/vendors-i-q" target="_blank" rel="noopener noreferrer">Vendors I-Q - NYC Public Schools</a></li>
+              <li><a href="https://docs.google.com/document/d/1_Tj_k_E5Q4Y7D2r_7m5sQ7Z1_5L5Y3p2R5Y4Q7R8Q5R8/edit" target="_blank" rel="noopener noreferrer">Web Accessibility Testing Checklist v3 - Lexia English - Berkeley Public Schools</a></li>
+              <li><a href="https://www.sanjosecharteracademy.com/apps/pages/index.jsp?uREC_ID=2159670&amp;type=d&amp;pREC_ID=2197669" target="_blank" rel="noopener noreferrer">Approved Vendors List - San Jose Charter Academy</a></li>
+              <li><a href="https://www.aps.edu/students-parents/instructional-technology/approved-digital-resources" target="_blank" rel="noopener noreferrer">Approved APS Digital Resources - District (2016)</a></li>
+              <li><a href="https://www.acps.k12.va.us/technology-resources-library" target="_blank" rel="noopener noreferrer">Technology Resources Library - Alexandria City Public Schools</a></li>
+              <li><a href="https://www.schools.nyc.gov/learning/multilingual-learners/vendors-i-q" target="_blank" rel="noopener noreferrer">Vendors I-Q - NYC Public Schools</a></li>
+            </ul>
+
+            <div class="ai-insights">
+              <h3>AI Generated Insights</h3>
+              <p>Lexia English is actively developed with a commitment to accessibility, continuously enhancing features like keyboard operability, alternative text, captioning, and color contrast. The program aims to align with WCAG 2.0 and 2.1 A and AA criteria, integrating accessibility throughout its product lifecycle. While progress is evident in areas such as keyboard access and focus order, institutional reviews highlight specific WCAG standards where the product partially supports or does not yet meet requirements. Identified deficiencies include aspects like name, role, value for interactive components, use of color, minimum contrast, information and relationships, and limitations in text resizing and reflow. A Voluntary Product Accessibility Template (VPAT 2.4Rev WCAG, January 2026) has been referenced, though a direct public link to the document is not readily available. Despite these ongoing areas for improvement, numerous school districts have approved Lexia English, often recognizing its contribution to addressing accessibility and equity for emergent bilingual students.</p>
+            </div>
+            
+          </div>
+
+          <!-- Right Column (approx 33%) -->
+          <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-side" style="flex-basis:33.33%">
+            
+            <div class="product-support">
+              <h3 class="section-heading">Support</h3>
+              <ul class="wp-block-list resource-list">
+                <li>
+                  <a href="mailto:support@lexialearning.com, 1-800-507-2772">support@lexialearning.com, 1-800-507-2772</a>
+                </li>
+              </ul>
+            </div>
+
+            <div class="edtech-acr">
+              <h3 class="section-heading">Accessibility Conformance Reports</h3>
+              <div class="acr-report">
+                <h4><a href="#" target="_blank" rel="noopener noreferrer">Lexia English Language Development™ Accessibility Conformance Report WCAG Edition</a></h4>
+                <ul>
+<li><strong>Version:</strong> 2.4Rev</li><li><strong>Date:</strong> January 2026</li>                  <li>
+                    <strong>Completed by:</strong>
+Lexia and third-party accessibility auditors                  </li>
+                </ul>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+        <p class="last-updated">Product information last updated June 15, 2026</p>
+
+      </div>
+    </div>
+  </article>
+</main>
+
+</body>
+</html>
