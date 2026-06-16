@@ -6,7 +6,7 @@ ROOT_ID="15GjL2xX5JIX2S8CgUgmIh79xcFqlbcqC"
 
 echo "🚀 Syncing broad reference to Drive (Restricted Root)..."
 
-rclone sync ./ gdrive:edtech-agent \
+rclone sync ./ gdrive:nerd \
     --drive-root-folder-id "$ROOT_ID" \
     --exclude "/venv*/" \
     --exclude "/.pytest_cache/" \
