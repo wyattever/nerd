@@ -10,6 +10,7 @@ Phase 4 changes:
 from __future__ import annotations
 
 import os
+import re
 import uuid
 import json
 import logging
@@ -35,10 +36,24 @@ from . import schemas
 from .conversions import pydantic_to_dataclass
 from .job_store import create_job, stream_job_events
 
+def slugify(text: str) -> str:
+    """Creates a URL-friendly slug from a string."""
+    text = text.lower()
+    return re.sub(r'[^a-z0-9]+', '-', text).strip('-')
+
 # ── Local Mode Config ─────────────────────────────────────────────────────────
 LOCAL_MODE = os.getenv("LOCAL_MODE", "false").lower() == "true"
 if LOCAL_MODE:
     from .worker import worker_initial, worker_deep_dive, WorkerInitialRequest, WorkerDeepDiveRequest
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Storage Config ────────────────────────────────────────────────────────────
+BASE_DIR = Path(__file__).parent.parent
+CANDIDATES_DIR = BASE_DIR / "NCADEMI_candidates"
+PRODUCTS_DIR = BASE_DIR / "NCADEMI_products"
+# Ensure directories exist
+CANDIDATES_DIR.mkdir(exist_ok=True)
+PRODUCTS_DIR.mkdir(exist_ok=True)
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Firebase Admin Init ───────────────────────────────────────────────────────
@@ -88,7 +103,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
@@ -281,7 +296,7 @@ async def validate_links(request: schemas.LinkValidationRequest, uid: str = Depe
 @app.get("/admin/batch-report")
 async def get_batch_report():
     """Serves the NCADEMI Candidates batch summary report."""
-    report_path = Path("NCADEMI_candidates_summary.html")
+    report_path = BASE_DIR / "NCADEMI_candidates_summary.html"
     if not report_path.exists():
         raise HTTPException(
             status_code=404, 
@@ -293,19 +308,18 @@ async def get_batch_report():
 @app.get("/admin/candidates")
 async def list_candidates():
     """Returns a list of all processed candidates in the storage folder."""
-    candidates_dir = Path("NCADEMI_candidates")
-    if not candidates_dir.exists():
+    if not CANDIDATES_DIR.exists():
         return []
     
     results = []
-    for f in candidates_dir.glob("*.json"):
+    for f in CANDIDATES_DIR.glob("*.json"):
         try:
             with open(f, "r") as jf:
                 data = json.load(jf)
                 results.append({
                     "name": data.get("product_name", f.stem),
                     "slug": f.stem,
-                    "url": data.get("url", "")
+                    "url": data.get("product_website_url", data.get("url", ""))
                 })
         except Exception:
             continue
@@ -315,12 +329,92 @@ async def list_candidates():
 @app.get("/admin/candidates/{slug}")
 async def get_candidate_data(slug: str):
     """Retrieves the full JSON data for a specific candidate."""
-    file_path = Path("NCADEMI_candidates") / f"{slug}.json"
+    file_path = CANDIDATES_DIR / f"{slug}.json"
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Candidate not found")
     
     with open(file_path, "r") as f:
         return json.load(f)
+
+
+@app.get("/admin/products")
+async def list_products():
+    """Returns a list of all transformed products in the storage folder."""
+    if not PRODUCTS_DIR.exists():
+        return []
+    
+    results = []
+    for f in PRODUCTS_DIR.glob("*.json"):
+        try:
+            with open(f, "r") as jf:
+                data = json.load(jf)
+                results.append({
+                    "name": data.get("product_name", f.stem),
+                    "slug": f.stem,
+                    "url": data.get("product_website_url", data.get("url", ""))
+                })
+        except Exception:
+            continue
+    return sorted(results, key=lambda x: x["name"])
+
+
+@app.get("/admin/products/{slug}")
+async def get_product_data(slug: str):
+    """Retrieves the full JSON data for a specific published product."""
+    file_path = PRODUCTS_DIR / f"{slug}.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    with open(file_path, "r") as f:
+        return json.load(f)
+
+
+@app.post("/admin/candidates")
+async def save_candidate(data: schemas.ListingData):
+    """Saves or updates a candidate in the NCADEMI_candidates folder."""
+    slug = slugify(data.product_name)
+    file_path = CANDIDATES_DIR / f"{slug}.json"
+    
+    with open(file_path, "w") as f:
+        json.dump(data.model_dump(), f, indent=2)
+    
+    return {"message": "Candidate saved successfully", "slug": slug}
+
+
+@app.post("/admin/products")
+async def save_product(data: schemas.ListingData):
+    """Saves or updates a product in the NCADEMI_products folder."""
+    slug = slugify(data.product_name)
+    file_path = PRODUCTS_DIR / f"{slug}.json"
+    
+    with open(file_path, "w") as f:
+        json.dump(data.model_dump(), f, indent=2)
+    
+    return {"message": "Product saved successfully", "slug": slug}
+
+
+@app.delete("/admin/candidates/{slug}")
+async def delete_candidate(slug: str):
+    """Deletes a candidate file from the NCADEMI_candidates folder."""
+    file_path = CANDIDATES_DIR / f"{slug}.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    file_path.unlink()
+    return {"message": "Candidate deleted successfully"}
+
+
+@app.put("/admin/candidates/{slug}")
+async def update_candidate(slug: str, data: schemas.ListingData):
+    """Explicitly overwrites an existing candidate JSON file."""
+    file_path = CANDIDATES_DIR / f"{slug}.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    with open(file_path, "w") as f:
+        json.dump(data.model_dump(), f, indent=2)
+    
+    return {"message": "Candidate updated successfully", "slug": slug}
 
 
 @app.get("/healthz")

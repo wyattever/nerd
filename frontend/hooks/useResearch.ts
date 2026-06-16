@@ -33,10 +33,10 @@ export function useResearch() {
     setState(prev => ({ ...prev, listing: updated }));
   }, []);
 
-  const injectListing = useCallback((data: ListingData) => {
+  const injectListing = useCallback((data: ListingData, message?: string) => {
     setState({
       status: "complete",
-      log: ["Injected data from saved candidate."],
+      log: [message ?? "Injected data from saved candidate."],
       listing: data,
       error: null
     });

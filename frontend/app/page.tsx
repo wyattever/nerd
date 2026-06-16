@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useResearch } from "@/hooks/useResearch";
 import { ListingCard } from "@/components/ListingCard";
 import { InvalidLinksModal } from "@/components/InvalidLinksModal";
@@ -19,10 +19,37 @@ export default function Home() {
   const [invalidLinks, setInvalidLinks] = useState<InvalidLink[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [candidates, setCandidates] = useState<CandidateRef[]>([]);
+  const [products, setProducts] = useState<{ name: string, slug: string }[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("");
+  const [selectedProductSlug, setSelectedProductSlug] = useState("");
+  const [activeCandidateSlug, setActiveCandidateSlug] = useState<string | null>(null);
+  const [processHeading, setProcessHeading] = useState("");
+  const [saveStatus, setSaveStatus] = useState<{ [key: string]: string }>({});
+  const [isDirty, setIsDirty] = useState(false);
   const [localLog, setLocalLog] = useState<string[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
   const heartbeatTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const refreshLists = useCallback(async () => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+    try {
+      const [candRes, prodRes] = await Promise.all([
+        fetch(`${baseUrl}/admin/candidates`),
+        fetch(`${baseUrl}/admin/products`)
+      ]);
+      
+      const [candData, prodData] = await Promise.all([
+        candRes.json(),
+        prodRes.json()
+      ]);
+      
+      setCandidates(candData);
+      setProducts(prodData);
+      console.log(`Refreshed: ${candData.length} candidates, ${prodData.length} products`);
+    } catch (err) {
+      console.error("Failed to refresh lists:", err);
+    }
+  }, []);
 
   const MICRO_MESSAGES = {
     searching: [
@@ -135,29 +162,157 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/candidates`)
-      .then(res => res.json())
-      .then(data => setCandidates(data))
-      .catch(err => console.error("Failed to fetch candidates:", err));
-  }, []);
+    refreshLists();
+  }, [refreshLists]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (url.trim()) {
+      setProcessHeading("Generating Listing");
+      setLocalLog([]);
+      setIsDirty(false);
+      setActiveCandidateSlug(null);
       startResearch(url.trim());
     }
   };
 
   const handleInject = async () => {
     if (!selectedSlug) return;
+    setProcessHeading("Viewing Candidate");
+    setLocalLog([]);
+    setIsDirty(false);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/candidates/${selectedSlug}`);
       const data = await res.json();
       injectListing(data);
+      setActiveCandidateSlug(selectedSlug);
+      console.log(`Active candidate slug set to: ${selectedSlug}`);
       setSelectedSlug("");
     } catch (err) {
       console.error("Failed to fetch candidate data:", err);
+    }
+  };
+
+  const handleInjectProduct = async () => {
+    if (!selectedProductSlug) return;
+    setProcessHeading("Viewing Product");
+    setLocalLog([]);
+    setIsDirty(false);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/products/${selectedProductSlug}`);
+      const data = await res.json();
+      injectListing(data, "Injected data from saved product.");
+      setActiveCandidateSlug(null);
+      setSelectedProductSlug("");
+    } catch (err) {
+      console.error("Failed to fetch product data:", err);
+    }
+  };
+
+  const handleSave = async (target: "candidates" | "products") => {
+    if (!state.listing) return;
+    const label = target === "candidates" ? "Candidate" : "Product";
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/${target}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state.listing),
+      });
+      if (!res.ok) throw new Error(`Failed to save ${label}`);
+      
+      const resData = await res.json();
+      if (target === "candidates" && resData.slug) {
+        setActiveCandidateSlug(resData.slug);
+        console.log(`Active candidate slug updated to: ${resData.slug}`);
+      } else if (target === "products") {
+        setActiveCandidateSlug(null);
+      }
+
+      setSaveStatus(prev => ({ ...prev, [target]: "Saved!" }));
+      logMessage(`Successfully saved to NCADEMI ${label} repository.`);
+      setIsDirty(false);
+      
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setSaveStatus(prev => ({ ...prev, [target]: "" }));
+      }, 3000);
+
+      // Refresh both lists to be sure
+      await refreshLists();
+
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      logMessage(`ERROR saving ${label}: ${msg}`);
+    }
+  };
+
+  const handleUpdateCandidate = async () => {
+    if (!state.listing || !activeCandidateSlug) return;
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+      const res = await fetch(`${baseUrl}/admin/candidates/${activeCandidateSlug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state.listing),
+      });
+      if (!res.ok) throw new Error("Failed to update candidate");
+
+      setSaveStatus(prev => ({ ...prev, update: "Updated!" }));
+      logMessage("Candidate listing has been updated.");
+      setIsDirty(false);
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setSaveStatus(prev => ({ ...prev, update: "" }));
+      }, 3000);
+
+      await refreshLists();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      logMessage(`ERROR updating candidate: ${msg}`);
+    }
+  };
+
+  const handleDeleteCandidate = async () => {
+    if (!activeCandidateSlug) {
+      logMessage("ERROR: No active candidate slug found for deletion.");
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete the candidate "${activeCandidateSlug}"?`)) {
+      return;
+    }
+
+    logMessage(`Attempting to delete candidate: ${activeCandidateSlug}...`);
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+      const url = `${baseUrl}/admin/candidates/${activeCandidateSlug}`;
+      const res = await fetch(url, {
+        method: "DELETE",
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || "Failed to delete candidate");
+      }
+
+      logMessage(`Successfully deleted candidate from repository.`);
+      
+      // Sequential Cleanup
+      reset();
+      setLocalLog([]);
+      setProcessHeading("");
+      setActiveCandidateSlug(null);
+      
+      await refreshLists();
+      logMessage("UI cleared and dropdowns refreshed.");
+
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      logMessage(`ERROR deleting candidate: ${msg}`);
+      console.error("Deletion failure:", err);
     }
   };
 
@@ -193,10 +348,12 @@ export default function Home() {
         })),
       ];
 
-      const candidateUrls = candidateLinks.map(link => link.url);
+      const candidateUrls = candidateLinks
+        .map(link => link.url)
+        .filter(url => url && url !== "#" && url.startsWith("http"));
 
       if (candidateUrls.length === 0) {
-        logMessage("No candidate URLs found for validation.");
+        logMessage("No valid candidate URLs found for validation.");
         setIsValidating(false);
         return;
       }
@@ -310,7 +467,18 @@ export default function Home() {
       }
     });
 
+    // 1. First update the listing data
     updateListing(updated);
+    
+    // 2. Log the completion of the data transformation
+    logMessage(`Validation applied: ${toDelete.length} link(s) removed, ${toAdd.length} link(s) added.`);
+    
+    // 3. Activate the Update button only after a tiny delay to ensure React state batching 
+    // and re-renders are prioritized.
+    setTimeout(() => {
+      setIsDirty(true);
+      logMessage("Ready to update candidate repository.");
+    }, 100);
   };
 
   return (
@@ -338,24 +506,26 @@ export default function Home() {
                 ref={logRef}
                 role="log"
                 aria-live="polite"
+                aria-atomic="false"
                 aria-label="System messages and progress log"
                 className="bg-gray-900 text-green-400 font-mono text-xs rounded p-4
-                           h-[130px] overflow-y-auto space-y-1 border border-gray-800"
+                           h-[190px] overflow-y-auto space-y-1 border border-gray-800"
               >
-                {localLog.length === 0 ? (
-                  <p className="text-gray-600 italic">No activity to report.</p>
-                ) : (
-                  localLog.map((line, i) => {
-                    const isLast = i === localLog.length - 1;
-                    const isActive = isLast && (state.status === "streaming" || isValidating);
-                    return (
-                      <p key={i}>
-                        <span className="text-gray-600 select-none mr-2">›</span>
-                        {line}{isActive && <span className="ellipsis-animation"></span>}
-                      </p>
-                    );
-                  })
+                {processHeading && (
+                  <div className="text-white font-bold mb-3 pb-1 border-b border-gray-800 uppercase tracking-wider">
+                    {processHeading}
+                  </div>
                 )}
+                {localLog.map((line, i) => {
+                  const isLast = i === localLog.length - 1;
+                  const isActive = isLast && (state.status === "streaming" || isValidating);
+                  return (
+                    <p key={i}>
+                      <span className="text-gray-600 select-none mr-2">›</span>
+                      {line}{isActive && <span className="ellipsis-animation"></span>}
+                    </p>
+                  );
+                })}
               </div>
             </div>
 
@@ -375,7 +545,7 @@ export default function Home() {
                       placeholder="https://vendor.com/product"
                       required
                       disabled={state.status === "streaming" || isValidating}
-                      className="w-[45%] border border-gray-300 rounded px-3 py-2 text-sm
+                      className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                  focus:outline-none focus:ring-2 focus:ring-blue-500
                                  disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
@@ -395,19 +565,52 @@ export default function Home() {
 
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-semibold text-gray-700">
-                  Inject Saved Candidate
+                  NCADEMI Products
+                </label>
+                <div className="flex gap-3 items-center">
+                  <select 
+                    value={selectedProductSlug}
+                    onChange={(e) => setSelectedProductSlug(e.target.value)}
+                    disabled={state.status === "streaming" || isValidating}
+                    className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-blue-500
+                               bg-white text-gray-700 disabled:bg-gray-100 
+                               disabled:cursor-not-allowed"
+                  >
+                    <option value="">select Product</option>
+                    {products.map(p => (
+                      <option key={p.slug} value={p.slug}>{p.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleInjectProduct}
+                    disabled={!selectedProductSlug || state.status === "streaming" || isValidating}
+                    className="w-44 bg-[#333] text-white text-sm font-medium px-6 py-2 rounded
+                               hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500
+                               disabled:opacity-30 disabled:cursor-not-allowed transition-all
+                               whitespace-nowrap"
+                  >
+                    View Product
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-semibold text-gray-700">
+                  NCADEMI Candidate
                 </label>
                 <div className="flex gap-3 items-center">
                   <select 
                     value={selectedSlug}
                     onChange={(e) => setSelectedSlug(e.target.value)}
                     disabled={state.status === "streaming" || isValidating}
-                    className="w-[45%] border border-gray-300 rounded px-3 py-2 text-sm
+                    className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
                                bg-white text-gray-700 disabled:bg-gray-100 
                                disabled:cursor-not-allowed"
                   >
-                    <option value="">NCADEMI Candidates</option>
+                    <option value="">select Candidate</option>
                     {candidates.map(c => (
                       <option key={c.slug} value={c.slug}>{c.name}</option>
                     ))}
@@ -421,7 +624,7 @@ export default function Home() {
                                disabled:opacity-30 disabled:cursor-not-allowed transition-all
                                whitespace-nowrap"
                   >
-                    Inject Listing
+                    View Candidate
                   </button>
                   <div className="ml-auto flex items-center gap-2">
                     <a
@@ -504,20 +707,77 @@ export default function Home() {
                 {isValidating ? "Validating..." : "Validate Links"}
               </button>
               <button
-                onClick={reset}
+                onClick={() => {
+                  reset();
+                  setLocalLog([]);
+                  setProcessHeading("");
+                  setIsDirty(false);
+                  setActiveCandidateSlug(null);
+                }}
                 className="border border-gray-300 text-sm px-4 py-2 rounded
                            hover:bg-gray-50 focus:outline-none focus:ring-2
                            focus:ring-blue-500 focus:ring-offset-2"
               >
-                New Research
+                Clear
               </button>
             </div>
 
             <section aria-label="Research results">
               <div className="relative bg-white border border-gray-200 rounded-lg p-6">
 
-                {/* Preview button — top-right corner of the card */}
-                <div className="absolute top-4 right-4">
+                {/* Preview and Save buttons — top-right corner of the card */}
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <button
+                    onClick={() => handleSave("products")}
+                    className="inline-flex items-center gap-1.5 text-xs text-black
+                               border border-black rounded px-2.5 py-1.5
+                               hover:bg-gray-50 focus:outline-none focus:ring-2
+                               focus:ring-gray-500 focus:ring-offset-2 transition-all"
+                  >
+                    <span aria-live="assertive">
+                      {saveStatus["products"] || "Save Product"}
+                    </span>
+                  </button>
+
+                  {!activeCandidateSlug ? (
+                    <button
+                      onClick={() => handleSave("candidates")}
+                      className="inline-flex items-center gap-1.5 text-xs text-black
+                                 border border-black rounded px-2.5 py-1.5
+                                 hover:bg-gray-50 focus:outline-none focus:ring-2
+                                 focus:ring-gray-500 focus:ring-offset-2 transition-all"
+                    >
+                      <span aria-live="assertive">
+                        {saveStatus["candidates"] || "Save Candidate"}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleUpdateCandidate}
+                      disabled={!isDirty || isValidating || state.status === "streaming"}
+                      className="inline-flex items-center gap-1.5 text-xs text-black
+                                 border border-black rounded px-2.5 py-1.5
+                                 hover:bg-gray-50 focus:outline-none focus:ring-2
+                                 focus:ring-gray-500 focus:ring-offset-2 transition-all
+                                 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <span aria-live="assertive">
+                        {saveStatus["update"] || "Update Candidate"}
+                      </span>
+                    </button>
+                  )}
+
+                  {activeCandidateSlug && (
+                    <button
+                      onClick={handleDeleteCandidate}
+                      className="inline-flex items-center gap-1.5 text-xs text-red-600
+                                 border border-red-600 rounded px-2.5 py-1.5
+                                 hover:bg-red-50 focus:outline-none focus:ring-2
+                                 focus:ring-red-500 focus:ring-offset-2 transition-all"
+                    >
+                      Delete Candidate
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       const html = buildNcademiPreviewHtml(state.listing!);
@@ -529,12 +789,12 @@ export default function Home() {
                     }}
                     aria-label="Preview as NCADEMI product page (opens in new tab)"
                     title="Preview as NCADEMI product page"
-                    className="inline-flex items-center gap-1.5 text-xs text-gray-600
-                               border border-gray-300 rounded px-2.5 py-1.5
+                    className="inline-flex items-center gap-1.5 text-xs text-black
+                               border border-black rounded px-2.5 py-1.5
                                hover:bg-gray-50 focus:outline-none focus:ring-2
-                               focus:ring-blue-500 focus:ring-offset-2"
+                               focus:ring-gray-500 focus:ring-offset-2"
                   >
-                    Preview
+                    <span aria-live="assertive">Preview</span>
                     {/* External link / open in new tab icon */}
                     <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12"
                       fill="none" stroke="currentColor" strokeWidth="1.5">

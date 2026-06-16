@@ -40,6 +40,21 @@ class LinkValidatorEngine:
         """
         self.results = {}
         
+        # Filter for valid URL patterns to prevent Pydantic/Crawler crashes
+        valid_urls = [u for url in urls if (u := str(url).strip()) and u.startswith("http")]
+        
+        # Record skipped placeholders as invalid but with a clear reason
+        for skipped in set(urls) - set(valid_urls):
+            self.results[skipped] = LinkValidationResult(
+                url=skipped,
+                is_valid=False,
+                reason="Invalid or placeholder URL",
+                timestamp=datetime.now()
+            )
+
+        if not valid_urls:
+            return self.results
+
         crawler = PlaywrightCrawler(
             concurrency_settings=ConcurrencySettings(
                 max_concurrency=3,
