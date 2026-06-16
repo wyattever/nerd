@@ -32,9 +32,10 @@ function LoginContent() {
         const from = searchParams.get("from") || "/";
         router.replace(from);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login failed:", err);
-      setError(err.message || "Sign-in failed. Please try again.");
+      const message = err instanceof Error ? err.message : "Sign-in failed. Please try again.";
+      setError(message);
     } finally {
       setIsLoggingIn(false);
     }

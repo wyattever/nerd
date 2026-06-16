@@ -124,6 +124,9 @@ export default function Home() {
       // We append the NEW macro messages that aren't in localLog yet
       const lastMacroMsg = state.log[state.log.length - 1];
       if (lastMacroMsg) {
+        // This effect intentionally syncs external SSE-driven state into local display
+        // state, and message order must be preserved for the aria-live log.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLocalLog(prev => {
           // If the last message in localLog is already this macro message, do nothing
           if (prev[prev.length - 1] === lastMacroMsg) return prev;
@@ -163,7 +166,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    refreshLists();
+    const init = async () => {
+      await refreshLists();
+    };
+    init();
   }, [refreshLists]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -458,7 +464,7 @@ export default function Home() {
 
     const toDeleteUrls = new Set(toDelete.map(l => l.url));
 
-    let updated = {
+    const updated = {
       ...state.listing,
       vendor_resources: state.listing.vendor_resources.filter(
         r => !toDeleteUrls.has(r.url)

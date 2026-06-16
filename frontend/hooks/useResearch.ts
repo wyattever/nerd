@@ -54,7 +54,7 @@ export function useResearch() {
 
     try {
       // Get the token (handles local bypass via getIdToken)
-      let token = await getIdToken();
+      const token = await getIdToken();
       if (!token && process.env.NEXT_PUBLIC_DISABLE_AUTH !== "true") {
         window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`;
         return;
