@@ -9,6 +9,22 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
   },
+  webServer: [
+    {
+      command: 'cd .. && source venv312/bin/activate && export PYTHONPATH=$PYTHONPATH:. && LOCAL_MODE=true ENABLE_AI_INSIGHTS=false uvicorn api.main:app --port 8000',
+      port: 8000,
+      reuseExistingServer: !process.env.CI,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'npm run dev',
+      port: 3000,
+      reuseExistingServer: !process.env.CI,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+  ],
   projects: [
     {
       name: 'chromium',

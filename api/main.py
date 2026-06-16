@@ -57,6 +57,20 @@ PRODUCTS_DIR = BASE_DIR / "NCADEMI_products"
 _local_candidates: dict[str, dict] = {}
 _local_products: dict[str, dict] = {}
 
+if LOCAL_MODE:
+    # Seed from filesystem for local testing
+    for directory, store in [(CANDIDATES_DIR, _local_candidates), (PRODUCTS_DIR, _local_products)]:
+        if directory.exists():
+            for f in directory.glob("*.json"):
+                try:
+                    with open(f, "r") as json_file:
+                        data = json.load(json_file)
+                        slug = slugify(data.get("product_name", f.stem))
+                        store[slug] = data
+                except Exception as e:
+                    print(f"Failed to seed {f}: {e}")
+    print(f"[LOCAL_MODE] Seeded {len(_local_candidates)} candidates and {len(_local_products)} products.")
+
 # Firestore collections (production)
 CANDIDATES_COLLECTION = "nerd_candidates"
 PRODUCTS_COLLECTION = "nerd_products"
