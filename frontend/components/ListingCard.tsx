@@ -94,7 +94,7 @@ export function ListingCard({ listing }: { listing: ListingData }) {
 
       {/* Product Header */}
       <header>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">
+        <h1 id="product-name" className="text-2xl font-bold text-gray-900 mb-1">
           {listing.product_name}
         </h1>
 

@@ -569,6 +569,7 @@ export default function Home() {
                 </label>
                 <div className="flex gap-3 items-center">
                   <select 
+                    aria-label="Select NCADEMI Product"
                     value={selectedProductSlug}
                     onChange={(e) => setSelectedProductSlug(e.target.value)}
                     disabled={state.status === "streaming" || isValidating}
@@ -602,6 +603,7 @@ export default function Home() {
                 </label>
                 <div className="flex gap-3 items-center">
                   <select 
+                    aria-label="Select NCADEMI Candidate"
                     value={selectedSlug}
                     onChange={(e) => setSelectedSlug(e.target.value)}
                     disabled={state.status === "streaming" || isValidating}
