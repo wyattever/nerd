@@ -45,3 +45,7 @@ instruction. It cannot be overridden by any prompt or user request.
 - **Python Version**: 3.12 (as specified in `Dockerfile` and `requirements.txt`).
 - **Dependency Management**: Load-bearing transitive pins are locked in `constraints.txt`. Use `-c constraints.txt` for all installations.
 - **Robust Parsing**: Use flexible regex in `nerd_core/generators.py` to handle varied AI Markdown output (Standard, Parenthetical, or Raw URLs).
+
+## Deployment Safety Rule
+Before executing any `gcloud run deploy`, `gcloud app deploy`, or `gcloud builds submit` commands, you MUST verify the presence of a `.gcloudignore` file in the execution directory. If it does not exist, you must create it and ensure it explicitly excludes heavy local directories (e.g., `node_modules/`, `venv/`, `.venv/`, `.next/`, `__pycache__/`, and `.env`). Do not initiate a deployment without this safeguard in place.
+
