@@ -49,11 +49,69 @@ if LOCAL_MODE:
 
 # ── Storage Config ────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent.parent
+# Deprecated filesystem paths (Phase 5)
 CANDIDATES_DIR = BASE_DIR / "NCADEMI_candidates"
 PRODUCTS_DIR = BASE_DIR / "NCADEMI_products"
-# Ensure directories exist
-CANDIDATES_DIR.mkdir(exist_ok=True)
-PRODUCTS_DIR.mkdir(exist_ok=True)
+
+# In-memory stores for LOCAL_MODE
+_local_candidates: dict[str, dict] = {}
+_local_products: dict[str, dict] = {}
+
+# Firestore collections (production)
+CANDIDATES_COLLECTION = "nerd_candidates"
+PRODUCTS_COLLECTION = "nerd_products"
+
+# Use the existing db AsyncClient from job_store if available
+if not LOCAL_MODE:
+    from .job_store import db
+else:
+    db = None
+
+async def _get_record(collection: str, slug: str, local_store: dict) -> dict | None:
+    if LOCAL_MODE:
+        return local_store.get(slug)
+    doc_ref = db.collection(collection).document(slug)
+    doc = await doc_ref.get()
+    return doc.to_dict() if doc.exists else None
+
+async def _list_records(collection: str, local_store: dict) -> list[dict]:
+    if LOCAL_MODE:
+        items = [(slug, data) for slug, data in local_store.items()]
+    else:
+        docs = db.collection(collection).stream()
+        items = []
+        async for doc in docs:
+            items.append((doc.id, doc.to_dict()))
+    
+    results = []
+    for slug, data in items:
+        results.append({
+            "name": data.get("product_name", slug),
+            "slug": slug,
+            "url": data.get("product_website_url", data.get("url", ""))
+        })
+    return sorted(results, key=lambda x: x["name"])
+
+async def _upsert_record(collection: str, slug: str, data: schemas.ListingData, local_store: dict):
+    dumped = data.model_dump()
+    if LOCAL_MODE:
+        local_store[slug] = dumped
+    else:
+        await db.collection(collection).document(slug).set(dumped)
+
+async def _delete_record(collection: str, slug: str, local_store: dict) -> bool:
+    if LOCAL_MODE:
+        if slug in local_store:
+            del local_store[slug]
+            return True
+        return False
+    doc_ref = db.collection(collection).document(slug)
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return False
+    await doc_ref.delete()
+    return True
+
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Firebase Admin Init ───────────────────────────────────────────────────────
@@ -307,113 +365,68 @@ async def get_batch_report():
 
 @app.get("/admin/candidates")
 async def list_candidates():
-    """Returns a list of all processed candidates in the storage folder."""
-    if not CANDIDATES_DIR.exists():
-        return []
-    
-    results = []
-    for f in CANDIDATES_DIR.glob("*.json"):
-        try:
-            with open(f, "r") as jf:
-                data = json.load(jf)
-                results.append({
-                    "name": data.get("product_name", f.stem),
-                    "slug": f.stem,
-                    "url": data.get("product_website_url", data.get("url", ""))
-                })
-        except Exception:
-            continue
-    return sorted(results, key=lambda x: x["name"])
+    """Returns a list of all processed candidates."""
+    return await _list_records(CANDIDATES_COLLECTION, _local_candidates)
 
 
 @app.get("/admin/candidates/{slug}")
 async def get_candidate_data(slug: str):
     """Retrieves the full JSON data for a specific candidate."""
-    file_path = CANDIDATES_DIR / f"{slug}.json"
-    if not file_path.exists():
+    data = await _get_record(CANDIDATES_COLLECTION, slug, _local_candidates)
+    if not data:
         raise HTTPException(status_code=404, detail="Candidate not found")
-    
-    with open(file_path, "r") as f:
-        return json.load(f)
+    return data
 
 
 @app.get("/admin/products")
 async def list_products():
-    """Returns a list of all transformed products in the storage folder."""
-    if not PRODUCTS_DIR.exists():
-        return []
-    
-    results = []
-    for f in PRODUCTS_DIR.glob("*.json"):
-        try:
-            with open(f, "r") as jf:
-                data = json.load(jf)
-                results.append({
-                    "name": data.get("product_name", f.stem),
-                    "slug": f.stem,
-                    "url": data.get("product_website_url", data.get("url", ""))
-                })
-        except Exception:
-            continue
-    return sorted(results, key=lambda x: x["name"])
+    """Returns a list of all transformed products."""
+    return await _list_records(PRODUCTS_COLLECTION, _local_products)
 
 
 @app.get("/admin/products/{slug}")
 async def get_product_data(slug: str):
     """Retrieves the full JSON data for a specific published product."""
-    file_path = PRODUCTS_DIR / f"{slug}.json"
-    if not file_path.exists():
+    data = await _get_record(PRODUCTS_COLLECTION, slug, _local_products)
+    if not data:
         raise HTTPException(status_code=404, detail="Product not found")
-    
-    with open(file_path, "r") as f:
-        return json.load(f)
+    return data
 
 
 @app.post("/admin/candidates")
 async def save_candidate(data: schemas.ListingData):
-    """Saves or updates a candidate in the NCADEMI_candidates folder."""
+    """Saves or updates a candidate."""
     slug = slugify(data.product_name)
-    file_path = CANDIDATES_DIR / f"{slug}.json"
-    
-    with open(file_path, "w") as f:
-        json.dump(data.model_dump(), f, indent=2)
-    
+    await _upsert_record(CANDIDATES_COLLECTION, slug, data, _local_candidates)
     return {"message": "Candidate saved successfully", "slug": slug}
 
 
 @app.post("/admin/products")
 async def save_product(data: schemas.ListingData):
-    """Saves or updates a product in the NCADEMI_products folder."""
+    """Saves or updates a product."""
     slug = slugify(data.product_name)
-    file_path = PRODUCTS_DIR / f"{slug}.json"
-    
-    with open(file_path, "w") as f:
-        json.dump(data.model_dump(), f, indent=2)
-    
+    await _upsert_record(PRODUCTS_COLLECTION, slug, data, _local_products)
     return {"message": "Product saved successfully", "slug": slug}
 
 
 @app.delete("/admin/candidates/{slug}")
 async def delete_candidate(slug: str):
-    """Deletes a candidate file from the NCADEMI_candidates folder."""
-    file_path = CANDIDATES_DIR / f"{slug}.json"
-    if not file_path.exists():
+    """Deletes a candidate."""
+    success = await _delete_record(CANDIDATES_COLLECTION, slug, _local_candidates)
+    if not success:
         raise HTTPException(status_code=404, detail="Candidate not found")
-    
-    file_path.unlink()
     return {"message": "Candidate deleted successfully"}
 
 
 @app.put("/admin/candidates/{slug}")
 async def update_candidate(slug: str, data: schemas.ListingData):
-    """Explicitly overwrites an existing candidate JSON file."""
-    file_path = CANDIDATES_DIR / f"{slug}.json"
-    if not file_path.exists():
+    """Explicitly overwrites an existing candidate."""
+    # Check if exists first to maintain 404 behavior
+    existing = await _get_record(CANDIDATES_COLLECTION, slug, _local_candidates)
+    if not existing:
         raise HTTPException(status_code=404, detail="Candidate not found")
     
-    with open(file_path, "w") as f:
-        json.dump(data.model_dump(), f, indent=2)
-    
+    await _upsert_record(CANDIDATES_COLLECTION, slug, data, _local_candidates)
     return {"message": "Candidate updated successfully", "slug": slug}
 
 
