@@ -202,7 +202,9 @@ gcloud run deploy nerd-frontend \
   --platform managed \
   --region "${REGION}" \
   --allow-unauthenticated \
-  --set-env-vars="NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}"
+  --set-env-vars="NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}" \
+  --no-traffic \
+  --tag=candidate
 
 FRONTEND_URL=$(gcloud run services describe nerd-frontend \
   --platform managed --region "${REGION}" \
