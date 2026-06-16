@@ -385,11 +385,22 @@ export default function Home() {
       // Step 3: Poll for completion
       let results = null;
       let iterations = 0;
-      while (true) {
+      // 10s is a placeholder per-URL budget pending real p95 timing data.
+      const maxAttempts = Math.ceil((candidateUrls.length * 10000 + 30000) / 2000);
+
+      while (iterations < maxAttempts) {
         iterations++;
         const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links/${job_id}`, {
           headers: { 'Authorization': authHeader }
         });
+
+        if (!statusRes.ok) {
+          const detail = statusRes.status === 404
+            ? "Validation job not found (may have been lost to an instance restart)"
+            : `Server error (${statusRes.status})`;
+          throw new Error(detail);
+        }
+
         const statusData = await statusRes.json();
         
         if (statusData.status === 'complete') {
@@ -402,8 +413,13 @@ export default function Home() {
         }
         
         if (iterations % 4 === 0) {
-           logMessage(`Polling validation status (Attempt ${iterations})...`);
+           logMessage(`Polling validation status (Attempt ${iterations}/${maxAttempts})...`);
         }
+
+        if (iterations === maxAttempts) {
+          throw new Error(`Validation timed out after ${maxAttempts} attempts`);
+        }
+
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
 

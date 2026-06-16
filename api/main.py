@@ -139,7 +139,6 @@ logger = logging.getLogger("nerd.api")
 app = FastAPI(title="N.E.R.D. API", version="0.4.0-bearer-auth")
 
 # ── Link Validation Engine & Artifacts ────────────────────────────────────────
-validator = LinkValidatorEngine()
 validation_jobs: dict[str, dict] = {}
 
 # Ensure artifacts directory exists and mount it
@@ -287,6 +286,7 @@ async def render(payload: schemas.RenderRequest):
 async def run_link_validation_background(job_id: str, urls: list[str]):
     try:
         validation_jobs[job_id]["status"] = "processing"
+        validator = LinkValidatorEngine()
         results = await validator.run(urls)
         # Convert datetime objects to strings for JSON serialization
         serialized_results = {}
