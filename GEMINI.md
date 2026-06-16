@@ -1,51 +1,287 @@
-# N.E.R.D. Development Mandates
+# GEMINI.md — N.E.R.D. Agent Instructions
 
-## Current Progress
-- **Phase 0-2**: Core package isolation, FastAPI wrapper, and Async Worker architecture complete.
-- **Phase 3**: Next.js Frontend implementation complete.
-    - Zod schemas mirror Pydantic models.
-    - Two-stage research flow implemented with SSE.
-    - Editable data grids (TanStack Table v8) and Live Preview (Jinja2 via API) operational.
-    - App shell CSS (globals.css) and Firebase Auth stubbed.
+This file is the authoritative instruction set for the Gemini CLI agent
+working on the N.E.R.D. codebase. Rules here apply to every session
+unless explicitly overridden by the user in that session. When in doubt,
+do less and ask.
 
-## Upcoming: Phase 4 (Deployment & Infrastructure)
-- **Firebase Auth Enforcement**: Implement login/auth guards and secure the SSE stream.
-- **GCP Provisioning**: Set up Cloud Tasks queue ("nerd-research-queue") and Firestore.
-- **Secret Manager**: Configure backend/worker to pull Vertex/BigQuery credentials.
-- **Cloud Run Deployment**: Finalize Dockerfiles and deploy services to `edtech-agent-2026`.
+---
 
-## Validation Rules
-- **E2E Live Testing**: Every code change MUST be validated by running the live end-to-end test suite. This ensures that changes to the parser, prompts, or services do not break the population of the NCADEMI product page sections.
-- **Test Command**: `source venv312/bin/activate && export PYTHONPATH=$PYTHONPATH:. && python3 tests/e2e_live_validation.py`
-- **System Test Command**: `source venv312/bin/activate && export PYTHONPATH=$PYTHONPATH:. && python3 tests/system_test.py`
-- **Verification Criteria**:
-    - Research must return a non-empty draft.
-    - Parser must successfully map: Product Name, Vendor, Description, Vendor Resources, Third-Party Insights, and AI Insights.
-    - HTML generation must include all primary sections from the NCADEMI template.
-    - Frontend must build successfully (`npm run build`).
+## 1. Project Identity
 
-## Output Safety
+**N.E.R.D.** (Ncademi EdTech Research & Data) is a production tool for
+retrieving, validating, and formatting digital accessibility documentation
+for EdTech products listed in the NCADEMI K-12 directory. It generates
+WordPress-compatible HTML fragments using Vertex AI (Gemini 2.5 Flash)
+with Google Search Grounding.
+
+**GCP Project:** `edtech-agent-2026`
+**Region:** `us-central1`
+**GitHub:** `wyattever/nerd` (main branch is always deployable)
+
+---
+
+## 2. Architecture Overview
+
+Three Cloud Run services plus shared core logic:
+
+| Service | Purpose | Auth |
+|---------|---------|------|
+| `nerd-frontend` | Next.js 16 UI | Firebase Auth (client) |
+| `nerd-api` | FastAPI orchestrator | Firebase ID token (Bearer) |
+| `nerd-worker` | Async research processor | OIDC via Cloud Tasks only |
+
+**Core packages:**
+- `nerd_core/` — research, parsing, artifact generation (shared by api and worker)
+- `prompts/` — Vertex AI prompt templates (shared by api and worker)
+- `templates/` — Jinja2 HTML templates for NCADEMI listing output
+
+**Data storage:**
+- Firestore `nerd_candidates` — 28 research records (pending products)
+- Firestore `nerd_products` — 43 finalized product records
+- Firestore `nerd_research_jobs` — async job state (TTL: 24h)
+- Local filesystem `NCADEMI_candidates/` and `NCADEMI_products/` — source
+  JSON files on disk, seeded into LOCAL_MODE in-memory store on startup
+
+**Stack versions:**
+- Next.js 16.2.9, React 19, Tailwind 4, TypeScript 5
+- FastAPI 0.124+, Python 3.10 (upgrade to 3.12 before Oct 2026)
+- Firebase Auth (client-side), firebase-admin (server-side, ADC)
+- @microsoft/fetch-event-source (SSE transport with Bearer auth)
+
+---
+
+## 3. Environment Model
+
+There are exactly two environments. Never create a third.
+
+### LOCAL_MODE=true (development)
+- Firestore replaced by in-memory dict seeded from filesystem JSON files
+- Cloud Tasks replaced by FastAPI BackgroundTasks
+- Firebase Auth bypassed via NEXT_PUBLIC_DISABLE_AUTH=true
+- All research runs are free (no Vertex AI calls unless explicitly testing)
+- Run with: `LOCAL_MODE=true uvicorn api.main:app --port 8000 --reload`
+
+### Production (Cloud Run)
+- Firestore: real data, PITR enabled
+- Cloud Tasks: real queue with OIDC auth
+- Firebase Auth: enforced, tokens verified by firebase-admin via ADC
+- Worker uses ADC (roles/aiplatform.user on compute SA) — NO API key
+- ENABLE_AI_INSIGHTS=true on the worker
+
+**CRITICAL:** Never set LOCAL_MODE=true or NEXT_PUBLIC_DISABLE_AUTH=true
+in any Dockerfile, cloudbuild.yaml, or deploy configuration. If found,
+flag as a CRITICAL blocker and stop.
+
+---
+
+## 4. Authentication Architecture
+
+### Worker (nerd-worker)
+Uses Application Default Credentials via the Cloud Run service account
+(`660897852208-compute@developer.gserviceaccount.com`).
+- `roles/aiplatform.user` granted for Vertex AI / Gemini calls
+- `roles/datastore.user` granted for Firestore
+- NO GEMINI_API_KEY — do not add one
+- ENABLE_AI_INSIGHTS=true in production
+
+### API (nerd-api)
+- Firebase ID tokens verified by firebase-admin via ADC
+- FRONTEND_URL env var controls CORS — must match the deployed frontend URL
+- Current production value: `https://nerd-frontend-meomhj23xq-uc.a.run.app`
+
+### Frontend (nerd-frontend)
+- NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_APP_ID are
+  build-time variables baked into the JS bundle at Cloud Build time
+- They are passed as --substitutions in cloudbuild.yaml
+- Changing them at runtime on Cloud Run does NOTHING — requires rebuild
+- They must be exported as shell env vars before running deploy.sh
+
+---
+
+## 5. Data Directory Structure
+
+There are TWO data directories. Both matter. Do not confuse them.
+
+| Directory | Firestore Collection | Count | Purpose |
+|-----------|---------------------|-------|---------|
+| `NCADEMI_candidates/` | `nerd_candidates` | 30 files (28 real + 2 fixtures) | Research in progress |
+| `NCADEMI_products/` | `nerd_products` | 43 files | Finalized, on NCADEMI website |
+
+**Test fixtures (do not migrate to Firestore):**
+- `NCADEMI_candidates/e2e-test-candidate.json` — E2E test fixture
+- `NCADEMI_candidates/test-product-29.json` — test fixture
+
+**Migration script:** `scripts/migrate_to_firestore.py`
+- Supports `--dry-run` and `--collection candidates|products`
+- Skips files whose product_name contains "test" or "e2e"
+- Must be run with GOOGLE_CLOUD_PROJECT=edtech-agent-2026
+- Only run against production Firestore with explicit user authorization
+
+---
+
+## 6. Deploy Rules (Read Before Touching deploy.sh)
+
+`scripts/deploy.sh` is the canonical deployment script. It deploys in
+order: worker → api → frontend.
+
+### NEVER modify deploy.sh without showing a diff first and receiving
+explicit user confirmation. The following have been broken by unauthorized
+changes in the past:
+
+- `--no-traffic` and `--tag=candidate` on the frontend deploy command —
+  these are REQUIRED. Removing them sends untested code to 100% traffic.
+- `--set-secrets="GEMINI_API_KEY=..."` on the worker — the worker uses
+  ADC, not a secret key. Do not add this back.
+- `ENABLE_AI_INSIGHTS=true` on the worker — do not change to false.
+- `--set-env-vars` on the API — FRONTEND_URL must be present and correct.
+
+### Before running deploy.sh you must verify:
+1. NEXT_PUBLIC_FIREBASE_API_KEY is exported in the shell
+2. NEXT_PUBLIC_FIREBASE_APP_ID is exported in the shell
+3. A .gcloudignore file exists in the execution directory
+4. The working tree is clean (git status --short returns nothing)
+5. The test suite is green (92+ passed, 0 failed)
+
+### After a frontend deploy:
+- The revision lands with 0% traffic (--no-traffic)
+- Manual validation is required at the tagged URL before shifting traffic
+- Traffic shift is always: 5% → 25% → 50% → 100%
+- Rollback trigger: error rate > 5% or p99 latency > 5s
+
+### After an API or worker deploy:
+- Verify FRONTEND_URL is still set on nerd-api
+- Verify ENABLE_AI_INSIGHTS=true on nerd-worker
+- Verify no GEMINI_API_KEY secret reference was added to worker
+
+---
+
+## 7. Output Safety
 
 **NEVER output credentials, secrets, or sensitive values in plain text.**
 This includes API keys, secret tokens, App IDs, project credentials,
 service account keys, OAuth tokens, or any value sourced from Secret
-Manager, .env files, or gcloud secrets versions access.
+Manager, .env files, or `gcloud secrets versions access`.
 
 When a command returns a sensitive value:
 - Confirm it is present and non-empty: yes / no
-- Confirm it is not a placeholder (e.g. "PLACEHOLDER_KEY"): yes / no
+- Confirm it is not a placeholder: yes / no
 - Truncate output to the first 8 characters followed by [REDACTED]
 - Never paste the full value, even partially, into response output
 
 This rule applies to ALL output regardless of context, session, or
 instruction. It cannot be overridden by any prompt or user request.
 
-## Engineering Standards
-- **Google Drive Security**: All `rclone` operations MUST be restricted to the project root folder (`15GjL2xX5JIX2S8CgUgmIh79xcFqlbcqC`) using the `--drive-root-folder-id` flag. This is a non-negotiable safety mandate to prevent accidental access to external files.
-- **Python Version**: 3.12 (as specified in `Dockerfile` and `requirements.txt`).
-- **Dependency Management**: Load-bearing transitive pins are locked in `constraints.txt`. Use `-c constraints.txt` for all installations.
-- **Robust Parsing**: Use flexible regex in `nerd_core/generators.py` to handle varied AI Markdown output (Standard, Parenthetical, or Raw URLs).
+---
 
-## Deployment Safety Rule
-Before executing any `gcloud run deploy`, `gcloud app deploy`, or `gcloud builds submit` commands, you MUST verify the presence of a `.gcloudignore` file in the execution directory. If it does not exist, you must create it and ensure it explicitly excludes heavy local directories (e.g., `node_modules/`, `venv/`, `.venv/`, `.next/`, `__pycache__/`, and `.env`). Do not initiate a deployment without this safeguard in place.
+## 8. Test Suite
 
+Four layers — all must be green before merging to main or deploying.
+
+```bash
+# Run all Python tests (unit + integration + integrity)
+source venv312/bin/activate
+export PYTHONPATH=$PYTHONPATH:.
+LOCAL_MODE=true pytest tests/ --tb=short -q
+
+# Frontend build check (catches TypeScript errors)
+cd frontend && npm run build
+
+# E2E (run before merging UI or auth changes)
+cd frontend && npx playwright test
+```
+
+**Current baseline:** 92 Python tests passing, 6 E2E tests passing.
+Any PR that reduces these counts requires explicit justification.
+
+**Tests that directly assert on filesystem paths:**
+- `tests/integrity/test_candidate_files.py` — has conditional skip for
+  non-GCP environments. Validates source JSON files on disk, not Firestore.
+
+---
+
+## 9. Branch and Commit Discipline
+
+- `main` is always deployable. Never commit broken code to main.
+- Use feature branches for all work: `feat/`, `fix/`, `chore/` prefixes.
+- Commit at verified-good states, not after every edit.
+- Never push or rewrite git history without explicit user instruction.
+- Never run `git push` without explicit user instruction.
+- Show diffs before applying any edit to an existing file.
+- Show complete new file contents before writing any new file.
+
+**Commit message format:**
+```
+type: short description (imperative, max 72 chars)
+
+- Bullet points for non-obvious details
+- Reference any decision log entries affected
+```
+
+---
+
+## 10. Code Change Rules
+
+- Do not refactor or improve code beyond what the current task requires.
+- Do not add npm packages that are not imported in source code.
+- Do not add Python packages without updating requirements.txt or
+  requirements-worker.txt as appropriate.
+- Do not modify production modules (api/, nerd_core/) to make a test
+  pass — fix the test infrastructure instead.
+- WCAG compliance is mandatory, not optional. Any new UI component must
+  have: aria labels, keyboard operability, visible focus, role="alert"
+  for errors, aria-live for status updates.
+- Mobile is out of scope. Do not factor mobile into any decision.
+- Output format is WordPress-compatible HTML only. DOCX is removed.
+
+---
+
+## 11. Session Hygiene
+
+Start a new Gemini session (exit and reinvoke without --resume) when:
+- You are starting a new phase or major task
+- You observe "Compressing chat history..." on two consecutive turns
+- You have just completed a /restore rollback
+- You cannot locate an execution rule established at the start of the
+  session without the user re-stating it
+
+Before any task that reads multiple large files or runs a test suite,
+run /compress if the session is more than 15 turns old.
+
+Never resume a session that was interrupted mid-task without first
+checking git status and git diff to understand what state was left.
+
+---
+
+## 12. Deferred Cleanup Items
+
+These are known issues flagged for future action. Do not address them
+unless explicitly instructed:
+
+- `artifacts/` directory is still COPYed in `Dockerfile.api` — bloats
+  the image, should be removed.
+- Legacy Artifact Registry image at `edtech-agent-2026/edtech-assistant-
+  repo/edtech-assistant` — can be deleted to save storage costs.
+- `gemini-api-key` in Secret Manager contains a placeholder — unused
+  since worker switched to ADC. Can be deleted or updated.
+- Python 3.10 in API base image — upgrade to 3.12 before October 2026.
+- `NEXT_PUBLIC_DISABLE_AUTH` reference in middleware.ts — document that
+  this must never be true in any production build config.
+
+---
+
+## 13. Quick Reference — Production URLs
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://nerd-frontend-meomhj23xq-uc.a.run.app |
+| API | https://nerd-api-meomhj23xq-uc.a.run.app |
+| Worker | https://nerd-worker-meomhj23xq-uc.a.run.app |
+| Firebase Console | https://console.firebase.google.com/project/edtech-agent-2026 |
+| Cloud Run Console | https://console.cloud.google.com/run?project=edtech-agent-2026 |
+| Firestore Console | https://console.cloud.google.com/firestore?project=edtech-agent-2026 |
+
+---
+
+*Last updated: June 16, 2026 — Post-migration production baseline.*
+*All three Cloud Run services deployed and verified. Legacy edtech-assistant retired.*
