@@ -24,6 +24,22 @@
     - HTML generation must include all primary sections from the NCADEMI template.
     - Frontend must build successfully (`npm run build`).
 
+## Output Safety
+
+**NEVER output credentials, secrets, or sensitive values in plain text.**
+This includes API keys, secret tokens, App IDs, project credentials,
+service account keys, OAuth tokens, or any value sourced from Secret
+Manager, .env files, or gcloud secrets versions access.
+
+When a command returns a sensitive value:
+- Confirm it is present and non-empty: yes / no
+- Confirm it is not a placeholder (e.g. "PLACEHOLDER_KEY"): yes / no
+- Truncate output to the first 8 characters followed by [REDACTED]
+- Never paste the full value, even partially, into response output
+
+This rule applies to ALL output regardless of context, session, or
+instruction. It cannot be overridden by any prompt or user request.
+
 ## Engineering Standards
 - **Google Drive Security**: All `rclone` operations MUST be restricted to the project root folder (`15GjL2xX5JIX2S8CgUgmIh79xcFqlbcqC`) using the `--drive-root-folder-id` flag. This is a non-negotiable safety mandate to prevent accidental access to external files.
 - **Python Version**: 3.12 (as specified in `Dockerfile` and `requirements.txt`).
