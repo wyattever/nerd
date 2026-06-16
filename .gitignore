@@ -158,6 +158,7 @@ cython_debug/
 *.swo
 
 # Project specific
+!frontend/lib/
 agent_debug.log
 directory_entry.txt
 updated_sources.rtf

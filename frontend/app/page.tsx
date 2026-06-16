@@ -5,6 +5,7 @@ import { ListingCard } from "@/components/ListingCard";
 import { InvalidLinksModal } from "@/components/InvalidLinksModal";
 import { InvalidLink } from "@/lib/types";
 import { buildNcademiPreviewHtml } from "@/lib/ncademiPreview";
+import { getIdToken } from "@/lib/firebase";
 
 interface CandidateRef {
   name: string;
@@ -361,12 +362,15 @@ export default function Home() {
       logMessage(`Validating ${candidateUrls.length} unique URLs...`);
       startHeartbeat("validating");
 
+      const token = await getIdToken();
+      const authHeader = `Bearer ${token ?? "local-bypass"}`;
+
       // Step 2: Dispatch a single POST request to the new FastAPI endpoint
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links-async`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer local-bypass'
+          'Authorization': authHeader
         },
         body: JSON.stringify({ urls: candidateUrls }),
       });
@@ -384,7 +388,7 @@ export default function Home() {
       while (true) {
         iterations++;
         const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links/${job_id}`, {
-          headers: { 'Authorization': 'Bearer local-bypass' }
+          headers: { 'Authorization': authHeader }
         });
         const statusData = await statusRes.json();
         
@@ -756,7 +760,7 @@ export default function Home() {
                   ) : (
                     <button
                       onClick={handleUpdateCandidate}
-                      disabled={!isDirty || isValidating || state.status === "streaming"}
+                      disabled={!isDirty || isValidating}
                       className="inline-flex items-center gap-1.5 text-xs text-black
                                  border border-black rounded px-2.5 py-1.5
                                  hover:bg-gray-50 focus:outline-none focus:ring-2
