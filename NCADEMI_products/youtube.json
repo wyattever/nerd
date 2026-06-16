@@ -1,0 +1,66 @@
+{
+  "product_name": "YouTube",
+  "vendor_name": "Google",
+  "vendor_directory_url": "#",
+  "product_description": "YouTube is a video-sharing platform that allows users to upload, view, and share video content across a wide range of topics, including educational material.",
+  "product_website_url": "https://www.youtube.com/",
+  "vendor_resources": [
+    {
+      "url": "https://support.google.com/youtube/topic/9257112",
+      "text": "YouTube Accessibility Resources"
+    },
+    {
+      "url": "https://support.google.com/youtube/answer/189278?hl=en",
+      "text": "Use YouTube with a screen reader"
+    },
+    {
+      "url": "https://dustinwhisman.com/writing/accessibility-top-100/youtube/",
+      "text": "How accessible is YouTube?"
+    },
+    {
+      "url": "https://edu.google.com/intl/ALL_us/our-values/accessibility/",
+      "text": "Accessibility features in Google for Education"
+    },
+    {
+      "url": "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "text": "Make your document, presentation, sheets & videos more accessible"
+    },
+    {
+      "url": "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC",
+      "text": "Use Google Docs Editors with a screen reader"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://accessible.org/how-to-make-youtube-video-ada-compliant/",
+      "text": "How To Make Youtube Videos ADA Compliant"
+    },
+    {
+      "url": "https://afb.org/aw/20/4/16406",
+      "text": "AccessWorld Asks the Experts: YouTube Accessibility"
+    },
+    {
+      "url": "https://support.google.com/accessibility/answer/7641084?sjid=17911664697938960395-NC",
+      "text": "Contact the Google Disability Support team"
+    },
+    {
+      "url": "mailto:apps-accessibility@google.com",
+      "text": "apps-accessibility@google.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://support.google.com/accessibility/answer/7641084?sjid=17911664697938960395-NC",
+      "label": "Contact the Google Disability Support team"
+    },
+    {
+      "type": "email",
+      "value": "apps-accessibility@google.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 6, 2026"
+}

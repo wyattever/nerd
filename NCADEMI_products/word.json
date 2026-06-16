@@ -1,0 +1,78 @@
+{
+  "product_name": "Word",
+  "vendor_name": "Microsoft",
+  "vendor_directory_url": "#",
+  "product_description": "Microsoft Word is a word processing application that allows users to create, edit, format, and manage text-based documents for print and digital use.",
+  "product_website_url": "https://www.microsoft.com/en-us/microsoft-365/word",
+  "vendor_resources": [
+    {
+      "url": "https://support.microsoft.com/en-us/office/make-your-word-documents-accessible-to-people-with-disabilities-d9bf3683-87ac-47ea-b91a-78dcacb3c66d",
+      "text": "Make your Word documents accessible to people with disabilities"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/office/accessibility-tools-for-word-5fa2c21f-0ef4-4d4a-ae2d-451fb7003518",
+      "text": "Accessibility tools for Word"
+    },
+    {
+      "url": "https://www.microsoft.com/en-us/accessibility",
+      "text": "Accessibility at Microsoft"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/office/set-up-your-device-to-work-with-accessibility-in-microsoft-365-a0ca81c1-fa3e-417e-9d3b-78b8816fce58#PickTab=Windows",
+      "text": "Set up your device to work with accessibility in Microsoft 365"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/office/improve-accessibility-with-the-accessibility-checker-a16f6de0-2f39-4a2b-8bd8-5ad801426c7f",
+      "text": "Improve accessibility with the Accessibility Checker"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/accessibility",
+      "text": "Accessibility help & learning"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://webaim.org/techniques/word/",
+      "text": "Microsoft Word: Creating Accessible Documents"
+    },
+    {
+      "url": "https://a11y.canada.ca/en/accessible-word-documents-in-microsoft-365/",
+      "text": "Accessible Word documents in Microsoft 365"
+    },
+    {
+      "url": "https://www.microsoft.com/en-us/accessibility/disability-answer-desk",
+      "text": "Disability Answer Desk"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://www.microsoft.com/en-us/accessibility/disability-answer-desk",
+      "label": "Disability Answer Desk"
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Word Online Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/48c687ed-6a28-40e1-9ffa-609ca076c6e2/a/8a783cbe-ff2b-4e0a-9cca-66fa3da5d6c3/f/Word%20Online.Web.WCAG_22.docx"
+    },
+    {
+      "title": "Word Mac Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/6e7dc618-8ebe-46fb-9541-864806a319e9/a/263af99b-8d02-467c-8f40-c5f39c4aefee/f/Word.Mac.WCAG_22.docx"
+    },
+    {
+      "title": "Word Android Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/df8c6c5a-511f-4740-8ad3-0f189d89587d/a/853acd12-95b5-473c-a9aa-04d199235285/f/Word%20-%20Android.Android.WCAG_22.docx"
+    },
+    {
+      "title": "Word iOS Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/9defbc35-1403-41a5-83f9-c8159db1e97a/a/d1ef3b6f-58ce-461b-b606-7f64b2313e75/f/Word%20iOS.iOS.WCAG_22.docx"
+    },
+    {
+      "title": "Word Windows Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/34effb00-7509-4b0d-b8b9-fa9a3bfe7c86/a/3e2dcdaa-6cbb-46c3-9357-d808dd608317/f/Word.Win32.WCAG_22.docx"
+    }
+  ],
+  "last_updated": "March 6, 2026"
+}

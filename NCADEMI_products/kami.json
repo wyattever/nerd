@@ -1,0 +1,47 @@
+{
+  "product_name": "Kami",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Kami is a collaborative learning platform that transforms static documents into interactive, engaging content with annotation tools, AI-powered assessments, and real-time feedback, enhancing accessibility and collaboration for students and educators.",
+  "product_website_url": "https://www.kamiapp.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.kamiapp.com/solutions/accessibility/",
+      "text": "Accessible learning for all"
+    },
+    {
+      "url": "https://help.kamiapp.com/en/articles/3007110-kami-for-special-education",
+      "text": "Kami for Special Education"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://help.kamiapp.com/en/",
+      "text": "Kami Help Center"
+    },
+    {
+      "url": "mailto:support@kamiapp.com",
+      "text": "support@kamiapp.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://help.kamiapp.com/en/",
+      "label": "Kami Help Center"
+    },
+    {
+      "type": "email",
+      "value": "support@kamiapp.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Kami Digital Classroom Application Accessibility Conformance Report (PDF)",
+      "url": "https://www.kamiapp.com/wp-content/uploads/2025/03/Jan-2025-VPAT2.5.pdf"
+    }
+  ],
+  "last_updated": "March 10, 2026"
+}

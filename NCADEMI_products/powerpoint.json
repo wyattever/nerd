@@ -1,0 +1,78 @@
+{
+  "product_name": "PowerPoint",
+  "vendor_name": "Microsoft",
+  "vendor_directory_url": "#",
+  "product_description": "Microsoft PowerPoint is a presentation application that enables users to create, edit, and display slide-based presentations with text, images, charts, and multimedia content.",
+  "product_website_url": "https://www.microsoft.com/en-us/microsoft-365/powerpoint",
+  "vendor_resources": [
+    {
+      "url": "https://support.microsoft.com/en-us/office/make-your-powerpoint-presentations-accessible-to-people-with-disabilities-6f7772b2-2f33-4bd2-8ca7-dae3b2b3ef25",
+      "text": "Make your PowerPoint presentations accessible to people with disabilities"
+    },
+    {
+      "url": "https://www.usu.edu/accessibility/documents/powerpoint-accessibility",
+      "text": "PowerPoint Accessibility"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/office/accessibility-tools-for-powerpoint-2b7a387c-bc02-408f-8c49-59534665850f",
+      "text": "Accessibility tools for PowerPoint"
+    },
+    {
+      "url": "https://www.microsoft.com/en-us/accessibility",
+      "text": "Accessibility at Microsoft"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/office/set-up-your-device-to-work-with-accessibility-in-microsoft-365-a0ca81c1-fa3e-417e-9d3b-78b8816fce58#PickTab=Windows",
+      "text": "Set up your device to work with accessibility in Microsoft 365"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/office/improve-accessibility-with-the-accessibility-checker-a16f6de0-2f39-4a2b-8bd8-5ad801426c7f",
+      "text": "Improve accessibility with the Accessibility Checker"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/accessibility",
+      "text": "Accessibility help & learning"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://webaim.org/techniques/powerpoint/",
+      "text": "PowerPoint Accessibility"
+    },
+    {
+      "url": "https://www.oaisd.org/about-us/ada-compliance/resources/creating-accessible-documents/microsoft-powerpoint",
+      "text": "Microsoft Powerpoint"
+    },
+    {
+      "url": "https://www.microsoft.com/en-us/accessibility/disability-answer-desk",
+      "text": "Disability Answer Desk"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://www.microsoft.com/en-us/accessibility/disability-answer-desk",
+      "label": "Disability Answer Desk"
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "PowerPoint \u2013 Mac Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/c96e2bf6-8916-40ef-829d-06d4738d2d29/a/6b0f4113-71db-45a6-b601-fc995de330d1/f/PowerPoint%20for%20Mac.Mac.WCAG_22.docx"
+    },
+    {
+      "title": "PowerPoint \u2013 Microsoft 365 Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/a3b60c7a-8893-47fb-9d6d-aa3591b9313c/a/a093e75e-3b81-43c3-9c8e-e0798de7d665/f/PowerPoint%20for%20Microsoft%20365.Win32.WCAG_22.docx"
+    },
+    {
+      "title": "PowerPoint \u2013 iOS Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/400457b2-1ca4-48ec-bae7-9132e1adfe94/a/8d04b60a-c459-47e6-8efb-4921a007819b/f/PowerPoint%20-%20iOS.iOS.WCAG_22.docx"
+    },
+    {
+      "title": "PowerPoint \u2013 Android Accessible Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/33d29ff4-9578-4032-98ee-db040c6e3297/a/46bf5558-4dd1-404a-bd36-753cbeb979e2/f/PowerPoint%20-%20Android.Android.WCAG_22.docx"
+    }
+  ],
+  "last_updated": "April 6, 2026"
+}

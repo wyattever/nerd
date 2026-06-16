@@ -1,0 +1,42 @@
+{
+  "product_name": "Wayground",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Wayground is an online platform that provides K\u201312 educators with tools to create, assign, and manage interactive learning activities and digital lessons for classroom and remote instruction.",
+  "product_website_url": "https://wayground.com/",
+  "vendor_resources": [
+    {
+      "url": "https://help.wayground.com/support/solutions/articles/158000404015-wayground-accessibility-and-inclusion-statement-including-vpat-",
+      "text": "Wayground Accessibility and Inclusion Statement"
+    },
+    {
+      "url": "https://wayground.com/home/accommodations",
+      "text": "Wayground Accommodations"
+    },
+    {
+      "url": "https://wayground.com/blog/accessibility-compliance-and-equitable-learning-just-got-easier",
+      "text": "Accessibility compliance and equitable learning just got easier"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "mailto:accessibility@wayground.com",
+      "text": "accessibility@wayground.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "accessibility@wayground.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Available on Request",
+      "url": "#"
+    }
+  ],
+  "last_updated": "March 6, 2026"
+}

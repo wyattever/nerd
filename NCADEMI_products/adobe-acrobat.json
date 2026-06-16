@@ -1,0 +1,87 @@
+{
+  "product_name": "Adobe Acrobat",
+  "vendor_name": "Adobe",
+  "vendor_directory_url": "#",
+  "product_description": "Adobe Acrobat is a software application used to create, edit, view, and manage PDF documents.",
+  "product_website_url": "https://www.adobe.com/acrobat.html",
+  "vendor_resources": [
+    {
+      "url": "https://helpx.adobe.com/acrobat/using/create-verify-pdf-accessibility.html",
+      "text": "Create and verify PDF accessibility"
+    },
+    {
+      "url": "https://helpx.adobe.com/reader/using/accessibility-features.html",
+      "text": "Accessibility features"
+    },
+    {
+      "url": "https://www.adobe.com/accessibility/pdf/pdf-accessibility-overview.html",
+      "text": "PDF Accessibility Overview"
+    },
+    {
+      "url": "https://www.adobe.com/trust/accessibility.html",
+      "text": "Accessibility at Adobe"
+    },
+    {
+      "url": "https://www.adobe.com/trust/accessibility/initiatives.html",
+      "text": "Accessibility initiatives at Adobe"
+    },
+    {
+      "url": "https://www.adobe.com/accessibility/compliance.html",
+      "text": "Accessibility conformance reports for Adobe solutions."
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://webaim.org/techniques/acrobat/acrobat",
+      "text": "PDF Accessibility: Setting Up Acrobat"
+    },
+    {
+      "url": "https://www.sc.edu/about/offices_and_divisions/digital-accessibility/toolbox/documents_pdfs/adobe_acrobat/accessibility_checker_acrobat/index.php",
+      "text": "Accessibility Checker in Acrobat"
+    },
+    {
+      "url": "https://blog.pope.tech/2024/04/25/how-to-check-and-fix-pdf-accessibility-issues/",
+      "text": "How to check and fix PDF accessibility issues"
+    },
+    {
+      "url": "https://survey.adobe.com/jfe/form/SV_3sbhTyF03ASFQWy",
+      "text": "Adobe Accessibility Feedback form"
+    },
+    {
+      "url": "mailto:access@adobe.com",
+      "text": "access@adobe.com"
+    },
+    {
+      "url": "https://www.deque.com/",
+      "text": "Deque Systems Inc."
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://survey.adobe.com/jfe/form/SV_3sbhTyF03ASFQWy",
+      "label": "Adobe Accessibility Feedback form"
+    },
+    {
+      "type": "email",
+      "value": "access@adobe.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Adobe Acrobat iOS",
+      "url": "https://www.adobe.com/accessibility/compliance/acrobat-ios-2025-acr.html"
+    },
+    {
+      "title": "Adobe Acrobat Android",
+      "url": "https://www.adobe.com/accessibility/compliance/acrobat-android-2025-acr.html"
+    },
+    {
+      "title": "Adobe Acrobat Pro",
+      "url": "https://www.adobe.com/accessibility/compliance/acrobat-pro-new-experience-2025-acr.html"
+    }
+  ],
+  "last_updated": "March 6, 2026"
+}

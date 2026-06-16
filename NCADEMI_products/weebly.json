@@ -1,0 +1,33 @@
+{
+  "product_name": "Weebly",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Weebly is a website-building platform that allows users to create and publish websites and online stores using templates and easy-to-use design tools.",
+  "product_website_url": "https://www.weebly.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.weebly.com/app/help/us/en/sections/web-accessibility",
+      "text": "Web Accessibility Support Topics"
+    },
+    {
+      "url": "https://platformaccessibility.weebly.com/",
+      "text": "Is weebly.com accessible?"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://www.weebly.com/app/help/",
+      "text": "Weebly Support"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://www.weebly.com/app/help/",
+      "label": "Weebly Support"
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 20, 2026"
+}

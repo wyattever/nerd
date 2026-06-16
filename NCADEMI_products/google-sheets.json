@@ -1,0 +1,67 @@
+{
+  "product_name": "Google Sheets",
+  "vendor_name": "Google",
+  "vendor_directory_url": "#",
+  "product_description": "Google Sheets is a web-based spreadsheet application that allows users to organize, calculate, analyze, and collaboratively edit data in real time.",
+  "product_website_url": "https://workspace.google.com/products/sheets/",
+  "vendor_resources": [
+    {
+      "url": "https://support.google.com/accessibility/answer/1632199?hl=en",
+      "text": "Use Google Sheets with a screen reader"
+    },
+    {
+      "url": "https://support.google.com/docs/answer/181110",
+      "text": "Keyboard shortcuts for Google Sheets"
+    },
+    {
+      "url": "https://edu.google.com/intl/ALL_us/our-values/accessibility/",
+      "text": "Accessibility features in Google for Education"
+    },
+    {
+      "url": "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "text": "Make your document, presentation, sheets & videos more accessible"
+    },
+    {
+      "url": "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC",
+      "text": "Use Google Docs Editors with a screen reader"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://accessibility.huit.harvard.edu/creating-accessible-google-sheets",
+      "text": "Creating Accessible Google Sheets"
+    },
+    {
+      "url": "https://dap.berkeley.edu/documents-forms/google/google-sheets",
+      "text": "How do I make my Google Sheets accessible?"
+    },
+    {
+      "url": "https://support.google.com/accessibility/answer/7641084?sjid=17911664697938960395-NC",
+      "text": "Contact the Google Disability Support team"
+    },
+    {
+      "url": "mailto:apps-accessibility@google.com",
+      "text": "apps-accessibility@google.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://support.google.com/accessibility/answer/7641084?sjid=17911664697938960395-NC",
+      "label": "Contact the Google Disability Support team"
+    },
+    {
+      "type": "email",
+      "value": "apps-accessibility@google.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Google Sheets Accessibility Conformance Report (PDF)",
+      "url": "https://services.google.com/fh/files/misc/google_sheets-vpat.pdf"
+    }
+  ],
+  "last_updated": "April 6, 2026"
+}

@@ -1,0 +1,33 @@
+{
+  "product_name": "History.com",
+  "vendor_name": "A+E Global Media",
+  "vendor_directory_url": "#",
+  "product_description": "History.com provides educational content on historical events, figures, and topics through articles, videos, and interactive resources, supporting learning in history and social studies.",
+  "product_website_url": "https://www.history.com/",
+  "vendor_resources": [],
+  "other_resources": [
+    {
+      "url": "https://www.aegm.com/accessibility-support",
+      "text": "A+E Global Media Accessibility Support"
+    },
+    {
+      "url": "mailto:ClosedCaptions@aegm.com",
+      "text": "ClosedCaptions@aegm.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://www.aegm.com/accessibility-support",
+      "label": "A+E Global Media Accessibility Support"
+    },
+    {
+      "type": "email",
+      "value": "ClosedCaptions@aegm.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 6, 2026"
+}

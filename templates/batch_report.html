@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCADEMI Candidates — Batch Summary Report</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc; }
+        h1 { color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 10px; margin-bottom: 40px; }
+        .candidate-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; margin-bottom: 40px; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .meta { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .product-name { font-size: 1.5rem; font-weight: bold; color: #0f172a; margin: 0; }
+        .product-url { font-size: 0.875rem; color: #64748b; word-break: break-all; text-decoration: none; }
+        .product-url:hover { text-decoration: underline; color: #3b82f6; }
+        .validation-badge { padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .status-complete { background-color: #dcfce7; color: #166534; }
+        .status-incomplete { background-color: #fef9c3; color: #854d0e; }
+        .status-error { background-color: #fee2e2; color: #991b1b; }
+        
+        .code-container { position: relative; margin-top: 20px; }
+        .code-label { font-size: 0.75rem; font-weight: bold; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        pre { background: #1e293b; color: #e2e8f0; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 0.875rem; max-height: 400px; }
+        code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        
+        .copy-btn { position: absolute; top: 10px; right: 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer; }
+        .copy-btn:hover { background: #2563eb; }
+
+        .preview-btn { position: absolute; top: 10px; right: 65px; background: #10b981; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer; }
+        .preview-btn:hover { background: #059669; }
+        
+        .issues-list { list-style: none; padding: 0; margin: 10px 0; font-size: 0.8125rem; color: #ef4444; }
+        .issues-list li::before { content: "⚠️ "; }
+        
+        footer { text-align: center; margin-top: 60px; color: #94a3b8; font-size: 0.875rem; }
+    </style>
+</head>
+<body>
+    <h1>📋 NCADEMI Candidates Batch Report</h1>
+    
+    <div class="summary-stats" style="margin-bottom: 30px; display: flex; gap: 20px;">
+        <div style="background: #eff6ff; padding: 15px 25px; border-radius: 8px; border: 1px solid #bfdbfe;">
+            <strong>Total Candidates:</strong> {{ total_count }}
+        </div>
+        <div style="background: #f0fdf4; padding: 15px 25px; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <strong>Complete:</strong> {{ success_count }}
+        </div>
+        <div style="background: #fffbeb; padding: 15px 25px; border-radius: 8px; border: 1px solid #fef3c7;">
+            <strong>Needs Attention:</strong> {{ issue_count }}
+        </div>
+    </div>
+
+    {% for item in candidates %}
+    <div class="candidate-card">
+        <div class="meta">
+            <div>
+                <h2 class="product-name">{{ item.name }}</h2>
+                <a href="{{ item.url }}" target="_blank" class="product-url">{{ item.url }}</a>
+            </div>
+            <span class="validation-badge {{ 'status-complete' if not item.issues else 'status-incomplete' }}">
+                {{ 'Ready' if not item.issues else 'Incomplete' }}
+            </span>
+        </div>
+
+        {% if item.issues %}
+        <ul class="issues-list">
+            {% for issue in item.issues %}
+            <li>{{ issue }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <div class="code-container">
+            <span class="code-label">WordPress Editor Structure (Paste into Spreadsheet/WP)</span>
+            <button class="preview-btn" onclick="previewCode(this)">Preview</button>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>{{ item.html_fragment | e }}</code></pre>
+        </div>
+    </div>
+    {% endfor %}
+
+    <footer>
+        Report generated on {{ generation_date }} — N.E.R.D. Batch Processor v1.0
+    </footer>
+
+    <script>
+        function previewCode(btn) {
+            const code = btn.parentElement.querySelector('code').innerText;
+            const previewWin = window.open('', '_blank');
+            previewWin.document.write(`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>NCADEMI Product Preview</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <style>
+                        .nerd-artifact *, .nerd-artifact *::before, .nerd-artifact *::after { box-sizing: border-box; margin: 0; padding: 0; }
+                        .nerd-artifact { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; font-size: 16px; line-height: 1.6; color: #1a1a1a; background: #fff; padding: 1.5rem 0 3rem; max-width: 960px; margin: 0 auto; }
+                        .nerd-artifact .product-header h1 { font-size: 2rem; font-weight: 600; margin-bottom: 0.4rem; line-height: 1.25; }
+                        .nerd-artifact .vendor-line { font-size: 0.95rem; margin-bottom: 0.65rem; }
+                        .nerd-artifact a { color: #0054a6; text-decoration: none; }
+                        .nerd-artifact a:hover { text-decoration: underline; }
+                        .nerd-artifact .product-desc { font-size: 0.95rem; color: #444; margin-bottom: 0.5rem; line-height: 1.65; }
+                        .nerd-artifact .product-website { font-size: 0.95rem; margin-bottom: 1.75rem; }
+                        .nerd-artifact h2.resources-heading { font-size: 1.5rem; font-weight: 600; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem; margin-bottom: 1.25rem; }
+                        .nerd-artifact .resources-grid { display: flex; flex-wrap: wrap; gap: 2rem; margin-bottom: 2rem; }
+                        .nerd-artifact .col-main { flex: 2; min-width: 300px; }
+                        .nerd-artifact .col-side { flex: 1; min-width: 200px; }
+                        @media (max-width: 768px) { .nerd-artifact .resources-grid { flex-direction: column; } .nerd-artifact .col-main, .nerd-artifact .col-side { flex: 1 1 100%; } }
+                        .nerd-artifact h3.section-heading { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.5rem; color: #333; }
+                        .nerd-artifact .col-main h3.section-heading:first-child { margin-top: 0; }
+                        .nerd-artifact ul.resource-list { list-style: disc; padding-left: 1.5rem; margin-bottom: 1.5rem; }
+                        .nerd-artifact ul.resource-list li { font-size: 1rem; padding: 4px 0; line-height: 1.5; }
+                        .nerd-artifact .ai-insights { background-color: #f4f4f4; padding: 1.5rem; border-left: 4px solid #0054a6; margin-top: 2rem; border-radius: 4px; }
+                        .nerd-artifact .ai-insights h3 { margin-top: 0; font-size: 1.1em; color: #333; margin-bottom: 0.5rem; }
+                        .nerd-artifact .ai-insights p { margin-bottom: 0; font-size: 0.95em; color: #444; line-height: 1.6; }
+                        .nerd-artifact .product-support, .nerd-artifact .edtech-acr { margin-bottom: 2rem; }
+                        .nerd-artifact .acr-report { margin-bottom: 1.5rem; }
+                        .nerd-artifact .acr-report h4 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+                        .nerd-artifact .acr-report ul { list-style: none; padding: 0; margin: 0; font-size: 0.9em; color: #555; }
+                        .nerd-artifact .last-updated { font-size: 0.9em; color: #666; text-align: right; font-style: italic; border-top: 1px solid #eee; padding-top: 1rem; margin-top: 2rem; }
+                    </style>
+                </head>
+                <body>
+                    ${code}
+                </body>
+                </html>
+            `);
+            previewWin.document.close();
+        }
+
+        function copyCode(btn) {
+            const code = btn.nextElementSibling.innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = 'Copied!';
+                btn.style.background = '#10b981';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = '#3b82f6';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

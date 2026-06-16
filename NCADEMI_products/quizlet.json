@@ -1,0 +1,42 @@
+{
+  "product_name": "Quizlet",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Quizlet is an online study platform that enables users to create and access digital flashcards, practice quizzes, and learning activities across a range of academic subjects.",
+  "product_website_url": "https://quizlet.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.youtube.com/watch?v=GiylZvSXA88",
+      "text": "Accessibility and support for all students through Quizlet (Video)"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://www.perkins.org/resource/quizlet-and-low-vision/",
+      "text": "How I use Quizlet with low vision"
+    },
+    {
+      "url": "https://help.quizlet.com/hc/en-us",
+      "text": "Quizlet Help Center"
+    },
+    {
+      "url": "mailto:support@quizlet.com",
+      "text": "support@quizlet.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://help.quizlet.com/hc/en-us",
+      "label": "Quizlet Help Center"
+    },
+    {
+      "type": "email",
+      "value": "support@quizlet.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 20, 2026"
+}

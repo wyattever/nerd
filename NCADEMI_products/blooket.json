@@ -1,0 +1,38 @@
+{
+  "product_name": "Blooket",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Blooket is a game-based learning platform that allows educators to create and host quiz activities for student practice and review.",
+  "product_website_url": "https://www.blooket.com/",
+  "vendor_resources": [
+    {
+      "url": "https://help.blooket.com/hc/en-us/articles/16182356890647-How-to-Enable-Automatic-Audio-Text-to-Speech-in-Blooket",
+      "text": "How to Enable Automatic Audio (Text to Speech) in Blooket"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://edtechbooks.org/onlinetools/blooket#h3_Jqib",
+      "text": "Blooket Accessibility Review"
+    },
+    {
+      "url": "mailto:contact-us@blooket.com",
+      "text": "contact-us@blooket.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "contact-us@blooket.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Blooket LLC Accessibility Conformance Report",
+      "url": "https://software.psdschools.org/ApplicationsPublic/GetDocument/a78b0118-7ef8-4660-8e9e-c2abca53d4a6"
+    }
+  ],
+  "last_updated": "April 10, 2026"
+}

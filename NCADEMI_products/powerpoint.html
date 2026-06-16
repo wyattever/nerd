@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerPoint — NCADEMI EdTech Directory</title>
+
+<!-- Load exact NCADEMI theme CSS and WordPress blocks to mirror production -->
+<link rel="stylesheet" href="https://ncademi.org/wp-content/themes/ncademitheme/style.css">
+<link rel="stylesheet" href="https://ncademi.org/wp-includes/css/dist/block-library/style.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  /* Base reset for iframe isolation while inheriting WP styles */
+  body { 
+    background: #fff; 
+    margin: 0; 
+    padding: 20px; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; 
+  }
+  
+  /* Fallback gap for WP flex layout if block library CSS fails to load in iframe */
+  .wp-block-columns { gap: 2em; margin-bottom: 2em; }
+  
+  /* Retain any custom overrides if passed */
+  /* ── Reset & isolation ───────────────────────────────────────── */
+.nerd-artifact *, .nerd-artifact *::before, .nerd-artifact *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.nerd-artifact {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fff;
+  padding: 1.5rem 0 3rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ── Product header ─────────────────────────────────────────── */
+.nerd-artifact .product-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  line-height: 1.25;
+}
+.nerd-artifact .vendor-line {
+  font-size: 0.95rem;
+  margin-bottom: 0.65rem;
+}
+.nerd-artifact a { color: #0054a6; text-decoration: none; }
+.nerd-artifact a:hover { text-decoration: underline; }
+.nerd-artifact a:focus-visible { outline: 2px solid #0054a6; outline-offset: 2px; border-radius: 2px; }
+
+.nerd-artifact .product-desc {
+  font-size: 0.95rem;
+  color: #444;
+  margin-bottom: 0.5rem;
+  line-height: 1.65;
+}
+
+.nerd-artifact .product-website {
+  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
+}
+.nerd-artifact .product-website a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Section heading ────────────────────────────────────────── */
+.nerd-artifact h2.resources-heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Two-column grid (WP Block Columns mirror) ──────────────── */
+.nerd-artifact .resources-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.nerd-artifact .col-main {
+  flex: 2;
+  min-width: 300px;
+}
+
+.nerd-artifact .col-side {
+  flex: 1;
+  min-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .nerd-artifact .resources-grid { flex-direction: column; }
+  .nerd-artifact .col-main, .nerd-artifact .col-side { flex: 1 1 100%; }
+}
+
+/* ── h3 sub-section headings ────────────────────────────────── */
+.nerd-artifact h3.section-heading {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  margin-top: 1.5rem;
+  color: #333;
+}
+.nerd-artifact .col-main h3.section-heading:first-child { margin-top: 0; }
+
+/* ── Resource link lists ────────────────────────────────────── */
+.nerd-artifact ul.resource-list {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.nerd-artifact ul.resource-list li {
+  font-size: 1rem;
+  padding: 4px 0;
+  line-height: 1.5;
+}
+
+/* ── AI Generated Insights block ───────────────────────────── */
+.nerd-artifact .ai-insights {
+  background-color: #f4f4f4;
+  padding: 1.5rem;
+  border-left: 4px solid #0054a6;
+  margin-top: 2rem;
+  border-radius: 4px;
+}
+.nerd-artifact .ai-insights h3 {
+  margin-top: 0;
+  font-size: 1.1em;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+.nerd-artifact .ai-insights p {
+  margin-bottom: 0;
+  font-size: 0.95em;
+  color: #444;
+  line-height: 1.6;
+}
+
+/* ── Right column: support + ACR ───────────────────────────── */
+.nerd-artifact .product-support { margin-bottom: 2rem; }
+
+.nerd-artifact .edtech-acr { margin-bottom: 2rem; }
+
+.nerd-artifact .acr-report { margin-bottom: 1.5rem; }
+.nerd-artifact .acr-report h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.nerd-artifact .acr-report ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9em;
+  color: #555;
+}
+.nerd-artifact .acr-report ul li {
+  padding: 2px 0;
+}
+
+/* ── Last-updated footer ────────────────────────────────────── */
+.nerd-artifact .last-updated {
+  font-size: 0.9em;
+  color: #666;
+  text-align: right;
+  font-style: italic;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+  margin-top: 2rem;
+}
+
+</style>
+</head>
+<body class="wp-custom-logo wp-embed-responsive post-template-default single single-product has-blocks">
+
+<main id="primary" class="site-main">
+  <header class="entry-header alignwide">
+    <h1 class="entry-title">PowerPoint</h1>
+  </header>
+
+  <article class="product type-product status-publish hentry">
+    <div class="nerd-artifact">
+      <div class="entry-content">
+        
+        <header class="product-header">
+          <p class="vendor-line"><strong>Vendor:</strong> 
+<a href="#">Microsoft</a>          </p>
+
+          <p class="product-desc">Microsoft PowerPoint is a presentation application that enables users to create, edit, and display slide-based presentations with text, images, charts, and multimedia content.</p>
+
+          <p class="product-website">
+            <a href="https://www.microsoft.com/en-us/microsoft-365/powerpoint" target="_blank" rel="noopener noreferrer">
+              <i class="fa-solid fa-globe" aria-hidden="true"></i> PowerPoint Website
+            </a>
+          </p>
+        </header>
+
+        <h2 class="resources-heading">Accessibility Documentation &amp; Resources</h2>
+        
+        <!-- Exact WordPress block columns structure with NERD grid overrides -->
+        <div class="wp-block-columns is-layout-flex wp-container-core-columns-is-layout-1 wp-block-columns-is-layout-flex resources-grid">
+          
+          <!-- Left Column (approx 66%) -->
+          <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-main" style="flex-basis:66.66%">
+            
+            <h3 class="section-heading">From Microsoft</h3>
+            <ul class="wp-block-list resource-list">
+              <li><a href="https://support.microsoft.com/en-us/office/make-your-powerpoint-presentations-accessible-to-people-with-disabilities-6f7772b2-2f33-4bd2-8ca7-dae3b2b3ef25" target="_blank" rel="noopener noreferrer">Make your PowerPoint presentations accessible to people with disabilities</a></li>
+              <li><a href="https://www.usu.edu/accessibility/documents/powerpoint-accessibility" target="_blank" rel="noopener noreferrer">PowerPoint Accessibility</a></li>
+              <li><a href="https://support.microsoft.com/en-us/office/accessibility-tools-for-powerpoint-2b7a387c-bc02-408f-8c49-59534665850f" target="_blank" rel="noopener noreferrer">Accessibility tools for PowerPoint</a></li>
+              <li><a href="https://www.microsoft.com/en-us/accessibility" target="_blank" rel="noopener noreferrer">Accessibility at Microsoft</a></li>
+              <li><a href="https://support.microsoft.com/en-us/office/set-up-your-device-to-work-with-accessibility-in-microsoft-365-a0ca81c1-fa3e-417e-9d3b-78b8816fce58#PickTab=Windows" target="_blank" rel="noopener noreferrer">Set up your device to work with accessibility in Microsoft 365</a></li>
+              <li><a href="https://support.microsoft.com/en-us/office/improve-accessibility-with-the-accessibility-checker-a16f6de0-2f39-4a2b-8bd8-5ad801426c7f" target="_blank" rel="noopener noreferrer">Improve accessibility with the Accessibility Checker</a></li>
+              <li><a href="https://support.microsoft.com/en-us/accessibility" target="_blank" rel="noopener noreferrer">Accessibility help &amp; learning</a></li>
+            </ul>
+
+            <h3 class="section-heading">From Other Sources</h3>
+            <ul class="wp-block-list resource-list">
+              <li><a href="https://webaim.org/techniques/powerpoint/" target="_blank" rel="noopener noreferrer">PowerPoint Accessibility</a></li>
+              <li><a href="https://www.oaisd.org/about-us/ada-compliance/resources/creating-accessible-documents/microsoft-powerpoint" target="_blank" rel="noopener noreferrer">Microsoft Powerpoint</a></li>
+              <li><a href="https://www.microsoft.com/en-us/accessibility/disability-answer-desk" target="_blank" rel="noopener noreferrer">Disability Answer Desk</a></li>
+            </ul>
+
+            
+          </div>
+
+          <!-- Right Column (approx 33%) -->
+          <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-side" style="flex-basis:33.33%">
+            
+            <div class="product-support">
+              <h3 class="section-heading">Support</h3>
+              <ul class="wp-block-list resource-list">
+                <li>
+                  <a href="https://www.microsoft.com/en-us/accessibility/disability-answer-desk" target="_blank" rel="noopener noreferrer">Disability Answer Desk</a>
+                </li>
+              </ul>
+            </div>
+
+            <div class="edtech-acr">
+              <h3 class="section-heading">Accessibility Conformance Reports</h3>
+              <div class="acr-report">
+                <h4><a href="https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/c96e2bf6-8916-40ef-829d-06d4738d2d29/a/6b0f4113-71db-45a6-b601-fc995de330d1/f/PowerPoint%20for%20Mac.Mac.WCAG_22.docx" target="_blank" rel="noopener noreferrer">PowerPoint – Mac Accessibility Conformance Report (Word document)</a></h4>
+                <ul>
+                </ul>
+              </div>
+              <div class="acr-report">
+                <h4><a href="https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/a3b60c7a-8893-47fb-9d6d-aa3591b9313c/a/a093e75e-3b81-43c3-9c8e-e0798de7d665/f/PowerPoint%20for%20Microsoft%20365.Win32.WCAG_22.docx" target="_blank" rel="noopener noreferrer">PowerPoint – Microsoft 365 Accessibility Conformance Report (Word document)</a></h4>
+                <ul>
+                </ul>
+              </div>
+              <div class="acr-report">
+                <h4><a href="https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/400457b2-1ca4-48ec-bae7-9132e1adfe94/a/8d04b60a-c459-47e6-8efb-4921a007819b/f/PowerPoint%20-%20iOS.iOS.WCAG_22.docx" target="_blank" rel="noopener noreferrer">PowerPoint – iOS Accessibility Conformance Report (Word document)</a></h4>
+                <ul>
+                </ul>
+              </div>
+              <div class="acr-report">
+                <h4><a href="https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/33d29ff4-9578-4032-98ee-db040c6e3297/a/46bf5558-4dd1-404a-bd36-753cbeb979e2/f/PowerPoint%20-%20Android.Android.WCAG_22.docx" target="_blank" rel="noopener noreferrer">PowerPoint – Android Accessible Conformance Report (Word document)</a></h4>
+                <ul>
+                </ul>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+        <p class="last-updated">Product information last updated April 6, 2026</p>
+
+      </div>
+    </div>
+  </article>
+</main>
+
+</body>
+</html>

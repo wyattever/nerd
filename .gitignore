@@ -174,3 +174,12 @@ venv_verify/
 eval/results/
 *.pyc
 .pytest_cache/
+
+# Generated outputs and working notes
+NCADEMI_candidates_summary.html
+artifacts/
+storage/
+frontend/test-results/
+DELETE_CANDIDATE_DIAGNOSTICS.md
+UPDATE_CANDIDATE_PLAN.md
+CLAUDE_TESTING_PROMPT.md

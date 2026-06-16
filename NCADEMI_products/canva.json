@@ -1,0 +1,75 @@
+{
+  "product_name": "Canva",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Canva is an online design platform that allows users to create graphics, presentations, and other visual content using templates and editing tools.",
+  "product_website_url": "https://www.canva.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.canva.com/en_au/help/canva-accessibility-features/",
+      "text": "Canva accessibility features"
+    },
+    {
+      "url": "https://www.canva.com/accessibility/",
+      "text": "Accessibility at Canva"
+    },
+    {
+      "url": "https://www.canva.com/en_au/help/using-design-accessibility/",
+      "text": "Use Design Accessibility"
+    },
+    {
+      "url": "https://www.canva.com/en_au/help/using-alt-text/",
+      "text": "Create and edit alt text for your images and elements"
+    },
+    {
+      "url": "https://www.canva.com/en_au/help/pdf-accessibility-features/",
+      "text": "PDF accessibility features"
+    },
+    {
+      "url": "https://www.canva.com/en_au/help/enable-captions/",
+      "text": "Enable captions on videos and audio"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=GGR8UDCdi14",
+      "text": "Design for Accessibility (Video)"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://help.illinoisstate.edu/accessibility/website-and-digital/accessibility-tips-for-canva",
+      "text": "Accessibility Tips for Canva"
+    },
+    {
+      "url": "https://freshspectrum.com/canva-accessibility/",
+      "text": "Canva Accessibility is getting better, but still needs fixing"
+    },
+    {
+      "url": "https://www.canva.com/help/get-in-touch/",
+      "text": "Canva Support"
+    },
+    {
+      "url": "mailto:accessibility@canva.com",
+      "text": "accessibility@canva.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://www.canva.com/help/get-in-touch/",
+      "label": "Canva Support"
+    },
+    {
+      "type": "email",
+      "value": "accessibility@canva.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Available on Request",
+      "url": "#"
+    }
+  ],
+  "last_updated": "April 10, 2026"
+}

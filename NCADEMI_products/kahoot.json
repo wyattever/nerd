@@ -1,0 +1,50 @@
+{
+  "product_name": "Kahoot!",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Kahoot! is a game-based learning platform that enables users to create, share, and play interactive quizzes and learning games, fostering engagement in educational and professional settings.",
+  "product_website_url": "https://kahoot.com/",
+  "vendor_resources": [
+    {
+      "url": "https://support.kahoot.com/hc/en-us/articles/115004537447-Does-Kahoot-meet-accessibility-standards",
+      "text": "Does Kahoot! meet accessibility standards?"
+    },
+    {
+      "url": "https://trust.kahoot.com/inclusion-and-accessibility-policy/",
+      "text": "Inclusion and Accessibility policy"
+    },
+    {
+      "url": "https://trust.kahoot.com/accessibility-settings/",
+      "text": "Accessible options for playing Kahoot!"
+    },
+    {
+      "url": "https://kahoot.com/blog/2024/09/16/accessibility/",
+      "text": "Empowering every learner: Kahoot!\u2019s commitment to accessibility"
+    },
+    {
+      "url": "https://kahoot.com/accessibility/",
+      "text": "Inclusive and accessible learning with Kahoot!"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://support.kahoot.com/hc/en-us/requests/new",
+      "text": "Submit a request"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://support.kahoot.com/hc/en-us/requests/new",
+      "label": "Submit a request"
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Kahoot! Website and Game Experience for Participants Accessibility Conformance Report (PDF)",
+      "url": "https://support.kahoot.com/hc/article_attachments/39492672437651"
+    }
+  ],
+  "last_updated": "March 6, 2026"
+}

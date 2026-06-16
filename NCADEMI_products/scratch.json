@@ -1,0 +1,45 @@
+{
+  "product_name": "Scratch",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Scratch is a coding community for children and a coding language with a simple visual interface that allows young people to create digital stories, games, and animations.",
+  "product_website_url": "https://scratch.mit.edu/",
+  "vendor_resources": [
+    {
+      "url": "https://www.youtube.com/watch?v=m-4YKkR9wvE",
+      "text": "Developing Accessibility Tools with Scratch Video"
+    },
+    {
+      "url": "https://en.scratch-wiki.info/wiki/Accessibility_Color_Changes",
+      "text": "Accessibility Color Changes"
+    },
+    {
+      "url": "https://medium.com/scratchteam-blog/new-color-contrast-mode-launches-to-support-scratchers-with-disabilities-57c7436b66e0",
+      "text": "New Color Contrast Mode launches to support Scratchers with disabilities"
+    },
+    {
+      "url": "https://scratch.mit.edu/discuss/topic/689659/",
+      "text": "Color Contrast in Scratch"
+    },
+    {
+      "url": "https://www.scratchfoundation.org/learn/learning-library/scratch-project-editor-settings",
+      "text": "Turn on High Contrast Mode Video"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://scratch.mit.edu/contact-us/",
+      "text": "Help Center"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://scratch.mit.edu/contact-us/",
+      "label": "Help Center"
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 20, 2026"
+}

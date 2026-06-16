@@ -1,0 +1,59 @@
+{
+  "product_name": "Google Classroom",
+  "vendor_name": "Google",
+  "vendor_directory_url": "#",
+  "product_description": "Google Classroom is a cloud-based learning management platform within Google Workspace for Education that helps educators create, distribute, manage, and grade assignments while facilitating communication and collaboration with students.",
+  "product_website_url": "https://edu.google.com/workspace-for-education/products/classroom/",
+  "vendor_resources": [
+    {
+      "url": "https://edu.google.com/intl/ALL_us/our-values/accessibility/",
+      "text": "Accessibility features in Google for Education"
+    },
+    {
+      "url": "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "text": "Make your document, presentation, sheets & videos more accessible"
+    },
+    {
+      "url": "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC",
+      "text": "Use Google Docs Editors with a screen reader"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://afb.org/aw/summer2023/teaching-and-learning-in-google-classroom",
+      "text": "Teaching and Learning in Google Classroom: an Accessibility Review"
+    },
+    {
+      "url": "https://support.google.com/accessibility/answer/7641084?sjid=17911664697938960395-NC",
+      "text": "Contact the Google Disability Support team"
+    },
+    {
+      "url": "mailto:apps-accessibility@google.com",
+      "text": "apps-accessibility@google.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://support.google.com/accessibility/answer/7641084?sjid=17911664697938960395-NC",
+      "label": "Contact the Google Disability Support team"
+    },
+    {
+      "type": "email",
+      "value": "apps-accessibility@google.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Google Classroom Accessibility Conformance Report \u2013 Web Application (PDF)",
+      "url": "https://services.google.com/fh/files/misc/google_classroom_web_vpat.pdf"
+    },
+    {
+      "title": "Google Classroom Accessibility Conformance Report \u2013 Mobile Application (PDF)",
+      "url": "https://services.google.com/fh/files/misc/google_classroom_mobile_vpat.pdf"
+    }
+  ],
+  "last_updated": "April 7, 2026"
+}

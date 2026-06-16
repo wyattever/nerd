@@ -1,0 +1,29 @@
+{
+  "product_name": "Epic!",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Epic is a subscription-based digital reading platform that provides children (typically ages 12 and under) access to a large library of eBooks, audiobooks, read-to-me titles, and educational videos.",
+  "product_website_url": "https://www.getepic.com/",
+  "vendor_resources": [
+    {
+      "url": "https://support.getepic.com/hc/en-us/articles/21405636781709-Enhancing-Accessibility-on-Epic-The-Best-Apps-Features",
+      "text": "Enhancing Accessibility on Epic: The Best Apps & Features"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "mailto:support@getepic.com",
+      "text": "support@getepic.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "support@getepic.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 6, 2026"
+}

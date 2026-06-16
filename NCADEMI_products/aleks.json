@@ -1,0 +1,54 @@
+{
+  "product_name": "ALEKS",
+  "vendor_name": "McGraw Hill",
+  "vendor_directory_url": "#",
+  "product_description": "ALEKS (Assessment and LEarning in Knowledge Spaces) is a web-based, adaptive learning and assessment system that provides personalized instruction and practice in subjects such as mathematics, chemistry, and statistics.",
+  "product_website_url": "https://www.aleks.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.mheducation.com/unitas/school/explore/sites/aleks/6-12-accessibility.pdf",
+      "text": "ALEKS Accessibility Policy (PDF)"
+    },
+    {
+      "url": "https://mh.my.site.com/aleks/s/article/ALEKS-Accessibility",
+      "text": "ALEKS Accessibility"
+    },
+    {
+      "url": "https://veroniiiica.com/aleks-accessibility-visual-impairment/",
+      "text": "ALEKS Accessibility for Visual Impairment"
+    },
+    {
+      "url": "https://www.aleks.com/manual/pdf/student-account-independent-use.pdf#page=59.06",
+      "text": "Student Module Reference Guide: Accessibility (PDF, page 59)"
+    },
+    {
+      "url": "https://www.mheducation.com/about-us/trust-center/accessibility",
+      "text": "McGraw Hill Accessibility"
+    },
+    {
+      "url": "https://www.mheducation.com/unitas/school/explore/sites/aleks/6-12-accessibility.pdf",
+      "text": "Accessibility Policy (PDF)"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "mailto:accessibility@mheducation.com",
+      "text": "accessibility@mheducation.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "accessibility@mheducation.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Available on Request",
+      "url": "#"
+    }
+  ],
+  "last_updated": "March 20, 2026"
+}

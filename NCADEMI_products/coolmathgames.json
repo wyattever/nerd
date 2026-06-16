@@ -1,0 +1,34 @@
+{
+  "product_name": "CoolMathGames",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Coolmath Games is an online platform offering a variety of non-violent, educational games designed to promote logical thinking and problem-solving skills among players of all ages.",
+  "product_website_url": "https://www.coolmathgames.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.coolmathgames.com/coolmath-games-accessibility",
+      "text": "Coolmath Games Accessibility"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "mailto:support@coolmath.com",
+      "text": "support@coolmath.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "support@coolmath.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Coolmath LLC Accessibility Conformance Report (PDF)",
+      "url": "https://www.coolmathgames.com/sites/default/files/games/Coolmath-Games-VPAT-October-2024.pdf"
+    }
+  ],
+  "last_updated": "March 6, 2026"
+}

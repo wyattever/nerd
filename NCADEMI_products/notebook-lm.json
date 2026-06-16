@@ -1,0 +1,63 @@
+{
+  "product_name": "Notebook LM",
+  "vendor_name": "Google",
+  "vendor_directory_url": "#",
+  "product_description": "NotebookLM is an AI-powered research and note-taking tool that allows users to upload documents and generate summaries, explanations, and responses based on the provided sources.",
+  "product_website_url": "https://notebooklm.google/",
+  "vendor_resources": [
+    {
+      "url": "https://edu.google.com/intl/ALL_us/our-values/accessibility/",
+      "text": "Accessibility features in Google for Education"
+    },
+    {
+      "url": "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "text": "Make your document, presentation, sheets & videos more accessible"
+    },
+    {
+      "url": "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC",
+      "text": "Use Google Docs Editors with a screen reader"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://kb.wisc.edu/accessibility/157699",
+      "text": "Google NotebookLM Accessibility and Usability Information"
+    },
+    {
+      "url": "https://help.sunyempire.edu/TDClient/277/Portal/KB/ArticleDet?ID=11378",
+      "text": "Accessibility of NotebookLM"
+    },
+    {
+      "url": "https://support.google.com/notebooklm/",
+      "text": "NotebookLM Help"
+    },
+    {
+      "url": "https://support.google.com/accessibility/answer/7641084?sjid=17911664697938960395-NC",
+      "text": "Contact the Google Disability Support team"
+    },
+    {
+      "url": "mailto:apps-accessibility@google.com",
+      "text": "apps-accessibility@google.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://support.google.com/notebooklm/",
+      "label": "NotebookLM Help"
+    },
+    {
+      "type": "url",
+      "value": "https://support.google.com/accessibility/answer/7641084?sjid=17911664697938960395-NC",
+      "label": "Contact the Google Disability Support team"
+    },
+    {
+      "type": "email",
+      "value": "apps-accessibility@google.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "April 6, 2026"
+}

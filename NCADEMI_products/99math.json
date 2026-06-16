@@ -1,0 +1,24 @@
+{
+  "product_name": "99math",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "99math is an online mathematics practice platform that provides multiplayer games and formative assessment activities aligned with K\u201312 math standards.",
+  "product_website_url": "https://99math.com/",
+  "vendor_resources": [],
+  "other_resources": [
+    {
+      "url": "https://support.99math.com/support/tickets/new",
+      "text": "Submit a Ticket"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://support.99math.com/support/tickets/new",
+      "label": "Submit a Ticket"
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 20, 2026"
+}

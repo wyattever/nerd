@@ -1,0 +1,42 @@
+{
+  "product_name": "Khan Academy",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Khan Academy provides instructional resources including videos, exercises, and personalized learning programs.",
+  "product_website_url": "https://www.khanacademy.org/",
+  "vendor_resources": [
+    {
+      "url": "https://www.khanacademy.org/about/accessibility-statement",
+      "text": "Khan Academy Accessibility Statement"
+    },
+    {
+      "url": "https://support.khanacademy.org/hc/en-us/sections/4404526648845-Accessibility-Features",
+      "text": "Accessibility Features"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://support.khanacademy.org/hc/en-us/requests/new",
+      "text": "Submit a Request"
+    },
+    {
+      "url": "mailto:accessibility@khanacademy.org",
+      "text": "accessibility@khanacademy.org"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://support.khanacademy.org/hc/en-us/requests/new",
+      "label": "Submit a Request"
+    },
+    {
+      "type": "email",
+      "value": "accessibility@khanacademy.org",
+      "label": ""
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 20, 2026"
+}

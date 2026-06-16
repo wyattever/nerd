@@ -19,7 +19,7 @@ test('Full Research Run - Canvas', async ({ page }) => {
   await page.click('button:has-text("Generate Listing")');
 
   // Monitor terminal log
-  const terminal = page.locator('[role="status"]');
+  const terminal = page.locator('[role="log"]');
   await expect(terminal).toBeVisible();
 
   console.log('--- STARTING SSE LOG CAPTURE ---');

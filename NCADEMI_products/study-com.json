@@ -1,0 +1,42 @@
+{
+  "product_name": "Study.com",
+  "vendor_name": "",
+  "vendor_directory_url": "#",
+  "product_description": "Study.com is an online learning platform that provides video lessons, practice quizzes, and study materials across academic subjects and test preparation areas with opportunities to earn certificates and/or college credit.",
+  "product_website_url": "https://study.com/",
+  "vendor_resources": [
+    {
+      "url": "https://study.com/pages/ada.html",
+      "text": "Study.com Accessibility Statement"
+    },
+    {
+      "url": "https://study.com/special-needs-education/index.html",
+      "text": "Special needs education & accommodation resources for parents"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://study.com/contact/index.html",
+      "text": "Contact Support"
+    },
+    {
+      "url": "mailto:ada-compliance@study.com",
+      "text": "ada-compliance@study.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://study.com/contact/index.html",
+      "label": "Contact Support"
+    },
+    {
+      "type": "email",
+      "value": "ada-compliance@study.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 20, 2026"
+}

@@ -1,0 +1,86 @@
+{
+  "product_name": "Excel",
+  "vendor_name": "Microsoft",
+  "vendor_directory_url": "#",
+  "product_description": "Microsoft Excel is a spreadsheet application that allows users to organize data, perform calculations, create charts, and analyze information using formulas and functions.",
+  "product_website_url": "https://www.microsoft.com/en-us/microsoft-365/excel",
+  "vendor_resources": [
+    {
+      "url": "https://support.microsoft.com/en-us/office/accessibility-best-practices-with-excel-spreadsheets-6cc05fc5-1314-48b5-8eb3-683e49b3e593",
+      "text": "Accessibility best practices with Excel spreadsheets"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/office/accessibility-tools-for-excel-9d06ce53-457b-49dc-abd1-b31a7a92993f",
+      "text": "Accessibility tools for Excel"
+    },
+    {
+      "url": "https://www.microsoft.com/en-us/accessibility",
+      "text": "Accessibility at Microsoft"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/office/set-up-your-device-to-work-with-accessibility-in-microsoft-365-a0ca81c1-fa3e-417e-9d3b-78b8816fce58#PickTab=Windows",
+      "text": "Set up your device to work with accessibility in Microsoft 365"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/office/improve-accessibility-with-the-accessibility-checker-a16f6de0-2f39-4a2b-8bd8-5ad801426c7f",
+      "text": "Improve accessibility with the Accessibility Checker"
+    },
+    {
+      "url": "https://support.microsoft.com/en-us/accessibility",
+      "text": "Accessibility help & learning"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://webaim.org/techniques/excel/",
+      "text": "Microsoft Excel: Optimizing Spreadsheet Accessibility"
+    },
+    {
+      "url": "https://www.section508.gov/create/spreadsheets/training-videos/",
+      "text": "How to Make an Accessible Spreadsheet in Microsoft Excel Training Videos"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=8N6NGrIXxtM",
+      "text": "How to make an Excel sheet accessible (Video)"
+    },
+    {
+      "url": "https://a11y.canada.ca/en/accessible-excel-workbooks-in-microsoft-365/",
+      "text": "Accessible Excel workbooks in Microsoft 365"
+    },
+    {
+      "url": "https://www.microsoft.com/en-us/accessibility/disability-answer-desk",
+      "text": "Disability Answer Desk"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://www.microsoft.com/en-us/accessibility/disability-answer-desk",
+      "label": "Disability Answer Desk"
+    }
+  ],
+  "acr_reports": [
+    {
+      "title": "Excel Mac Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/c4592848-59a9-47b3-889d-0b1784aa81a7/a/77cc09d9-aab9-4caf-9732-d2e87db2648b/f/Excel%20for%20Mac.Mac.WCAG_22.docx"
+    },
+    {
+      "title": "Excel Web Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/9440346c-b7d3-4887-af25-fb5ec34bdfd7/a/9e77afd7-507f-4d6e-8bcb-ac72568a4171/f/Excel%20for%20the%20web.Web.WCAG_22.docx"
+    },
+    {
+      "title": "Excel Android Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/0fab19c5-3037-4c46-89a6-14817b8894b6/a/fe065ae8-29d1-4fdf-aed7-8dc3a30d8fe8/f/Excel%20for%20Android.Android.WCAG_22.docx"
+    },
+    {
+      "title": "Excel Windows Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/fa7e8caa-4166-4731-928f-0d6c94cde259/a/91fce8b5-0d2d-4b23-9791-5d7248c40561/f/Windows%20Excel%20for%20Microsoft%20365.Win32.WCAG_22.docx"
+    },
+    {
+      "title": "Excel iOS Accessibility Conformance Report (Word document)",
+      "url": "https://aat-acr-api-prod.azurewebsites.net/api/file/d/p/83274c8b-0f45-46cd-944c-8e86e2a8820b/a/557fe762-79ac-40e1-b2dc-afec75819830/f/Excel%20iOS.iOS.WCAG_22.docx"
+    }
+  ],
+  "last_updated": "March 6, 2026"
+}

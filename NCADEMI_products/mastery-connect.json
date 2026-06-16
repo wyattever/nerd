@@ -1,0 +1,57 @@
+{
+  "product_name": "Mastery Connect",
+  "vendor_name": "Instructure",
+  "vendor_directory_url": "#",
+  "product_description": "Mastery Connect is a K\u201312 digital assessment management system that lets educators create and deliver both formative and benchmark assessments, tie results to specific academic standards, visualize student mastery through trackers and reports, and use that data to inform instructional decisions and interventions rather than just reporting overall scores.",
+  "product_website_url": "https://www.instructure.com/mastery",
+  "vendor_resources": [
+    {
+      "url": "https://community.instructure.com/en/discussion/609423/mastery-connect-s-new-accessible-mastery-level-color-palette/p1",
+      "text": "Mastery Connect\u2019s new & accessible Mastery Level color palette"
+    },
+    {
+      "url": "https://community.instructure.com/en/kb/articles/661988-how-do-i-take-an-enhanced-accommodations-assessment-as-a-student",
+      "text": "How do I take an enhanced accommodations assessment as a student?"
+    },
+    {
+      "url": "https://community.instructure.com/en/kb/articles/661989-how-do-i-use-assessment-tools-and-accommodations-as-a-student",
+      "text": "How do I use assessment tools and accommodations as a student?"
+    },
+    {
+      "url": "https://community.instructure.com/en/kb/articles/661944-how-do-i-configure-tools-and-accommodations-for-individual-formative-assessments",
+      "text": "How do I configure tools and accommodations for individual formative assessments?"
+    },
+    {
+      "url": "https://www.instructure.com/accessibility",
+      "text": "We believe in accessibility for all"
+    },
+    {
+      "url": "https://community.instructure.com/en/categories/accessibility",
+      "text": "Instructure Accessibility Community"
+    },
+    {
+      "url": "https://community.instructure.com/en/categories/accessibility",
+      "text": "Accessibility Toolkit"
+    },
+    {
+      "url": "https://www.instructure.com/resources/blog/opening-doors-learning-essential-role-accessibility-k-12-schools",
+      "text": "Opening Doors to Learning: The Essential Role of Accessibility in K-12 Schools"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "mailto:support_a11y@instructure.com",
+      "text": "support_a11y@instructure.com"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "email",
+      "value": "support_a11y@instructure.com",
+      "label": ""
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "March 6, 2026"
+}

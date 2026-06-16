@@ -1,0 +1,29 @@
+{
+  "product_name": "ABCya!",
+  "vendor_name": "IXL Learning",
+  "vendor_directory_url": "#",
+  "product_description": "Educational platform that provides interactive games and activities designed to support learning in subjects such as math, language arts, and problem-solving for students in grades PreK-6.",
+  "product_website_url": "https://www.abcya.com/",
+  "vendor_resources": [
+    {
+      "url": "https://www.abcya.com/static/assets/ABCyaAccessibility.pdf",
+      "text": "ABCya Accessibility (PDF)"
+    }
+  ],
+  "other_resources": [
+    {
+      "url": "https://www.abcya.com/faq/#general",
+      "text": "Help Page (Contact Us Dropdown)"
+    }
+  ],
+  "ai_insights": "",
+  "support_contacts": [
+    {
+      "type": "url",
+      "value": "https://www.abcya.com/faq/#general",
+      "label": "Help Page (Contact Us Dropdown)"
+    }
+  ],
+  "acr_reports": [],
+  "last_updated": "May 13, 2026"
+}
