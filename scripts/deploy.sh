@@ -145,6 +145,7 @@ gcloud run deploy nerd-api \
   --platform managed \
   --region "${REGION}" \
   --allow-unauthenticated \
+  --memory 2Gi \
   --set-env-vars="WORKER_URL=${WORKER_URL},QUEUE_NAME=${QUEUE_NAME},GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},TASKS_SA=${TASKS_SA}" \
   --set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
 

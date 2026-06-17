@@ -65,8 +65,8 @@ class LinkValidatorEngine:
 
         crawler = PlaywrightCrawler(
             concurrency_settings=ConcurrencySettings(
-                max_concurrency=3,
-                desired_concurrency=3,
+                max_concurrency=2,
+                desired_concurrency=2,
                 max_tasks_per_minute=20
             ),
             request_handler=self._request_handler,
