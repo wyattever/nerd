@@ -446,8 +446,61 @@ async def update_candidate(slug: str, data: schemas.ListingData):
 
 @app.get("/healthz")
 async def healthz():
-    return {
-        "status": "ok",
+    from datetime import datetime, timezone
+    
+    checks = {
         "worker_url_configured": bool(WORKER_URL),
         "tasks_sa_configured": bool(TASKS_SA),
+        "firestore": "pending",
+        "cloud_tasks_queue": "pending"
+    }
+    
+    if LOCAL_MODE:
+        return {
+            "status": "ok",
+            "checks": {**checks, "firestore": "ok (local_mode)", "cloud_tasks_queue": "ok (local_mode)"},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "note": "local_mode: true"
+        }
+
+    # Firestore check
+    try:
+        # Attempt to fetch a non-existent doc to prove connectivity
+        from .job_store import db, COLLECTION
+        # Use a very short timeout for healthchecks
+        doc_ref = db.collection(COLLECTION).document("health-check-non-existent")
+        await asyncio.wait_for(doc_ref.get(), timeout=3.0)
+        checks["firestore"] = "ok"
+    except asyncio.TimeoutError:
+        checks["firestore"] = "error: timeout (3s)"
+    except Exception as e:
+        checks["firestore"] = f"error: {str(e)}"
+
+    # Cloud Tasks check
+    try:
+        # tasks_client and queue_path are initialized at module level
+        await asyncio.wait_for(
+            asyncio.to_thread(tasks_client.get_queue, name=queue_path), 
+            timeout=3.0
+        )
+        checks["cloud_tasks_queue"] = "ok"
+    except asyncio.TimeoutError:
+        checks["cloud_tasks_queue"] = "error: timeout (3s)"
+    except Exception as e:
+        checks["cloud_tasks_queue"] = f"error: {str(e)}"
+
+    # Status aggregation
+    all_ok = all(v == "ok" for k, v in checks.items() if k in ["firestore", "cloud_tasks_queue"])
+    any_error = any(v.startswith("error") for v in checks.values())
+    
+    status = "ok"
+    if any_error:
+        status = "error" if (checks["firestore"].startswith("error") or checks["cloud_tasks_queue"].startswith("error")) else "degraded"
+    elif not all_ok:
+        status = "degraded"
+
+    return {
+        "status": status,
+        "checks": checks,
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }

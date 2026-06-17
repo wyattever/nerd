@@ -391,10 +391,9 @@ export default function Home() {
       // Step 3: Poll for completion
       let results = null;
       let iterations = 0;
-      // 10s is a placeholder per-URL budget pending real p95 timing data.
-      const maxAttempts = Math.ceil((candidateUrls.length * 10000 + 30000) / 2000);
+      const MAX_POLLS = 90; // 3 minutes at 2s intervals
 
-      while (iterations < maxAttempts) {
+      while (iterations < MAX_POLLS) {
         iterations++;
         const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links/${job_id}`, {
           headers: { 'Authorization': authHeader }
@@ -419,14 +418,14 @@ export default function Home() {
         }
         
         if (iterations % 4 === 0) {
-           logMessage(`Polling validation status (Attempt ${iterations}/${maxAttempts})...`);
-        }
-
-        if (iterations === maxAttempts) {
-          throw new Error(`Validation timed out after ${maxAttempts} attempts`);
+           logMessage(`Polling validation status (Attempt ${iterations}/${MAX_POLLS})...`);
         }
 
         await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      if (!results) {
+        throw new Error("Validation timed out after 3 minutes. Partial results may be available — please retry.");
       }
 
       // Step 4: Map the backend's detailed results back to the UI interface

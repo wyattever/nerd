@@ -210,6 +210,14 @@ FRONTEND_URL=$(gcloud run services describe nerd-frontend \
   --format "value(status.url)")
 echo "  Frontend deployed: ${FRONTEND_URL}"
 
+echo "[7b] Patching nerd-api with resolved FRONTEND_URL..."
+gcloud run services update nerd-api \
+  --platform managed \
+  --region "${REGION}" \
+  --update-env-vars="FRONTEND_URL=${FRONTEND_URL}"
+echo "  nerd-api FRONTEND_URL set to: ${FRONTEND_URL}"
+
+
 # ── 8. SUMMARY ────────────────────────────────────────────────────────────────
 
 echo ""

@@ -2,7 +2,7 @@ import asyncio
 import uuid
 import os
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydantic import BaseModel
 
 from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
@@ -62,15 +62,18 @@ class LinkValidatorEngine:
                 max_tasks_per_minute=20
             ),
             request_handler=self._request_handler,
+            request_handler_timeout=timedelta(seconds=20),
             browser_type='chromium',
             headless=True,
             max_request_retries=0,
+            navigation_timeout=timedelta(seconds=15),
             ignore_http_error_status_codes=[404, 403, 401, 500, 502, 503, 504]
         )
-        
         crawler.failed_request_handler(self._failed_request_handler)
-
-        await crawler.run(urls)
+        try:
+            await asyncio.wait_for(crawler.run(urls), timeout=120)
+        except asyncio.TimeoutError:
+            pass  # Return partial results already in self.results
         return self.results
 
     async def _request_handler(self, context: PlaywrightCrawlingContext) -> None:
@@ -89,10 +92,12 @@ class LinkValidatorEngine:
             return
         
         # 3. Heuristic Soft 404 Detection (JS Rendered DOM)
-        content = await page.locator('body').inner_text()
-        content_lower = content.lower()
+        try:
+            content = (await context.page.locator('body').inner_text(timeout=5000)).lower()
+        except Exception:
+            content = ""
 
-        is_soft_404 = any(indicator in content_lower for indicator in SOFT_404_INDICATORS)
+        is_soft_404 = any(indicator in content for indicator in SOFT_404_INDICATORS)
         
         if is_soft_404:
             context.log.warning(f"Link {url} flagged as Soft 404 based on content.")
@@ -134,7 +139,7 @@ class LinkValidatorEngine:
         filepath = os.path.join(self.artifacts_dir, filename)
         
         try:
-            await page.screenshot(path=filepath, full_page=True)
+            await page.screenshot(path=filepath, full_page=False, timeout=5000)
             screenshot_rel_path = f"/artifacts/{filename}"
         except Exception as e:
             print(f"Failed to take screenshot for {url}: {e}")
