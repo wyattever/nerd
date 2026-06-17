@@ -28,6 +28,9 @@ export default function Home() {
   const [saveStatus, setSaveStatus] = useState<{ [key: string]: string }>({});
   const [isDirty, setIsDirty] = useState(false);
   const [localLog, setLocalLog] = useState<string[]>([]);
+  const [htmlEditorMode, setHtmlEditorMode] = useState(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const pendingHtmlRef = useRef("");
   const logRef = useRef<HTMLDivElement>(null);
   const heartbeatTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -172,6 +175,48 @@ export default function Home() {
     init();
   }, [refreshLists]);
 
+  const handleEnterHtmlEditor = async () => {
+    if (!state.listing) return;
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+      const token = await getIdToken();
+      const authHeader = `Bearer ${token ?? "local-bypass"}`;
+
+      const res = await fetch(`${baseUrl}/render`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": authHeader,
+        },
+        body: JSON.stringify(state.listing),
+      });
+
+      if (!res.ok) throw new Error(`Render failed with status: ${res.status}`);
+
+      const data = await res.json();
+      setHtmlEditorMode(true);
+      pendingHtmlRef.current = data.html;
+    } catch (err) {
+      logMessage("ERROR: Could not load HTML for editing.");
+      console.error("HTML Editor Error:", err);
+    }
+  };
+
+  const handleSaveHtmlEdit = () => {
+    if (!state.listing || !editorRef.current) return;
+    
+    const newHtml = editorRef.current.value;
+    updateListing({ ...state.listing, html_override: newHtml });
+    setIsDirty(true);
+    setHtmlEditorMode(false);
+    logMessage("HTML override saved. Use Save Candidate or Save Product to persist.");
+  };
+
+  const handleCancelHtmlEdit = () => {
+    setHtmlEditorMode(false);
+    pendingHtmlRef.current = "";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -258,15 +303,24 @@ export default function Home() {
     if (!state.listing || !activeCandidateSlug) return;
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+      
+      // Add mm-dd-yy hh:mm timestamp
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const timestamp = `${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${now.getFullYear().toString().slice(-2)} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      
+      const updatedListing = { ...state.listing, last_updated_at: timestamp };
+      
       const res = await fetch(`${baseUrl}/admin/candidates/${activeCandidateSlug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(state.listing),
+        body: JSON.stringify(updatedListing),
       });
       if (!res.ok) throw new Error("Failed to update candidate");
 
+      updateListing(updatedListing);
       setSaveStatus(prev => ({ ...prev, update: "Updated!" }));
-      logMessage("Candidate listing has been updated.");
+      logMessage(`Candidate listing updated at ${timestamp}.`);
       setIsDirty(false);
 
       // Reset status after 3 seconds
@@ -724,8 +778,8 @@ export default function Home() {
               </button>
               <button
                 onClick={handleValidateLinks}
-                disabled={isValidating}
-                aria-disabled={isValidating}
+                disabled={isValidating || htmlEditorMode}
+                aria-disabled={isValidating || htmlEditorMode}
                 className="border border-gray-300 text-sm px-4 py-2 rounded
                            hover:bg-gray-50 focus:outline-none focus:ring-2
                            focus:ring-blue-500 focus:ring-offset-2
@@ -734,12 +788,33 @@ export default function Home() {
                 {isValidating ? "Validating..." : "Validate Links"}
               </button>
               <button
+                onClick={htmlEditorMode ? handleSaveHtmlEdit : handleEnterHtmlEditor}
+                disabled={isValidating}
+                className="border border-gray-300 text-sm px-4 py-2 rounded
+                           hover:bg-gray-50 focus:outline-none focus:ring-2
+                           focus:ring-blue-500 focus:ring-offset-2
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {htmlEditorMode ? "Save HTML" : "Edit HTML"}
+              </button>
+              {htmlEditorMode && (
+                <button
+                  onClick={handleCancelHtmlEdit}
+                  className="border border-gray-300 text-sm px-4 py-2 rounded
+                             hover:bg-gray-50 focus:outline-none focus:ring-2
+                             focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
                 onClick={() => {
                   reset();
                   setLocalLog([]);
                   setProcessHeading("");
                   setIsDirty(false);
                   setActiveCandidateSlug(null);
+                  setHtmlEditorMode(false);
                 }}
                 className="border border-gray-300 text-sm px-4 py-2 rounded
                            hover:bg-gray-50 focus:outline-none focus:ring-2
@@ -832,7 +907,24 @@ export default function Home() {
                   </button>
                 </div>
 
-                <ListingCard listing={state.listing} />
+                {htmlEditorMode ? (
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="html-editor" className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      HTML Editor — edits will override the rendered output when saved
+                    </label>
+                    <textarea
+                      id="html-editor"
+                      ref={editorRef}
+                      className="w-full h-[600px] font-mono text-xs border border-gray-300 rounded p-3
+                                 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                      aria-label="HTML source editor"
+                      spellCheck={false}
+                    />
+
+                  </div>
+                ) : (
+                  <ListingCard listing={state.listing} />
+                )}
               </div>
             </section>
           </>

@@ -20,8 +20,8 @@ def pydantic_to_dataclass(payload: schemas.ListingData) -> gen.ListingData:
 
     last_updated handling:
       - explicit value from client  -> used verbatim
-      - None / omitted              -> server fills datetime.now() to mirror the
-                                       legacy parser (parse_markdown_to_listing
+      - None / omitted              -> server fills datetime.now() at render time,
+                                       matching the legacy parser (parse_markdown_to_listing
                                        sets datetime.now().strftime('%B %d, %Y'))
     """
     last_updated = payload.last_updated
@@ -49,6 +49,8 @@ def pydantic_to_dataclass(payload: schemas.ListingData) -> gen.ListingData:
             for a in payload.acr_reports
         ],
         last_updated=last_updated,
+        html_override=payload.html_override or "",
+        last_updated_at=payload.last_updated_at or "",
     )
 
 
@@ -79,4 +81,6 @@ def dataclass_to_pydantic(listing: gen.ListingData) -> schemas.ListingData:
             for a in listing.acr_reports
         ],
         last_updated=listing.last_updated or None,
+        html_override=listing.html_override or None,
+        last_updated_at=listing.last_updated_at or None,
     )
