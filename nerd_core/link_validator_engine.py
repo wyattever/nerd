@@ -53,7 +53,15 @@ class LinkValidatorEngine:
             )
 
         if not valid_urls:
+            self.results["debug_info"] = LinkValidationResult(
+                url="debug_info", is_valid=False, reason=f"No valid URLs found in input of length {len(urls)}", timestamp=datetime.now()
+            )
             return self.results
+
+        # Canary to prove we reached this point
+        self.results["canary"] = LinkValidationResult(
+            url="canary", is_valid=True, reason=f"Started with {len(valid_urls)} valid URLs", timestamp=datetime.now()
+        )
 
         crawler = PlaywrightCrawler(
             concurrency_settings=ConcurrencySettings(
@@ -71,9 +79,17 @@ class LinkValidatorEngine:
         )
         crawler.failed_request_handler(self._failed_request_handler)
         try:
-            await asyncio.wait_for(crawler.run(urls), timeout=120)
+            await asyncio.wait_for(crawler.run(valid_urls), timeout=120)
         except asyncio.TimeoutError:
-            pass  # Return partial results already in self.results
+            self.results["timeout_debug"] = LinkValidationResult(
+                url="timeout_debug", is_valid=False, reason="asyncio timeout hit", timestamp=datetime.now()
+            )
+        
+        if not self.results or len(self.results) <= 1: # only canary
+             self.results["crawler_debug"] = LinkValidationResult(
+                url="crawler_debug", is_valid=False, reason="Crawler finished but results still empty", timestamp=datetime.now()
+            )
+
         return self.results
 
     async def _request_handler(self, context: PlaywrightCrawlingContext) -> None:
