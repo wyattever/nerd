@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
 from crawlee import ConcurrencySettings
+from crawlee.browsers import PlaywrightBrowserPlugin
 
 # Heuristic indicators for Soft 404 detection
 SOFT_404_INDICATORS = [
@@ -53,17 +54,19 @@ class LinkValidatorEngine:
             )
 
         if not valid_urls:
-            self.results["debug_info"] = LinkValidationResult(
-                url="debug_info", is_valid=False, reason=f"No valid URLs found in input of length {len(urls)}", timestamp=datetime.now()
-            )
             return self.results
 
-        # Canary to prove we reached this point
-        self.results["canary"] = LinkValidationResult(
-            url="canary", is_valid=True, reason=f"Started with {len(valid_urls)} valid URLs", timestamp=datetime.now()
+        # Plugin required for --no-sandbox which is needed when running as root in Cloud Run
+        browser_plugin = PlaywrightBrowserPlugin(
+            browser_type='chromium',
+            browser_launch_options={
+                'headless': True,
+                'args': ['--no-sandbox', '--disable-setuid-sandbox']
+            }
         )
 
         crawler = PlaywrightCrawler(
+            browser_plugin=browser_plugin,
             concurrency_settings=ConcurrencySettings(
                 max_concurrency=2,
                 desired_concurrency=2,
@@ -71,8 +74,6 @@ class LinkValidatorEngine:
             ),
             request_handler=self._request_handler,
             request_handler_timeout=timedelta(seconds=20),
-            browser_type='chromium',
-            headless=True,
             max_request_retries=0,
             navigation_timeout=timedelta(seconds=15),
             ignore_http_error_status_codes=[404, 403, 401, 500, 502, 503, 504]
@@ -81,14 +82,7 @@ class LinkValidatorEngine:
         try:
             await asyncio.wait_for(crawler.run(valid_urls), timeout=120)
         except asyncio.TimeoutError:
-            self.results["timeout_debug"] = LinkValidationResult(
-                url="timeout_debug", is_valid=False, reason="asyncio timeout hit", timestamp=datetime.now()
-            )
-        
-        if not self.results or len(self.results) <= 1: # only canary
-             self.results["crawler_debug"] = LinkValidationResult(
-                url="crawler_debug", is_valid=False, reason="Crawler finished but results still empty", timestamp=datetime.now()
-            )
+            pass  # Return partial results already in self.results
 
         return self.results
 
