@@ -27,7 +27,17 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+          <body className="min-h-full flex flex-col">
+      <link
+        rel="stylesheet"
+        href="https://ncademi.org/wp-content/themes/ncademitheme/style.css?ver=1.3"
+      />
+      <link
+        rel="stylesheet"
+        href="https://ncademi.org/wp-includes/css/dist/block-library/style.min.css"
+      />
+      {children}
+    </body>
     </html>
   );
 }
