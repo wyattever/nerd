@@ -4,7 +4,7 @@ import { useResearch } from "@/hooks/useResearch";
 import { ListingCard } from "@/components/ListingCard";
 import { InvalidLinksModal } from "@/components/InvalidLinksModal";
 import { InvalidLink } from "@/lib/types";
-import { buildNcademiPreviewHtml } from "@/lib/ncademiPreview";
+
 import { getIdToken } from "@/lib/firebase";
 
 interface CandidateRef {
@@ -888,31 +888,7 @@ export default function Home() {
                       Delete Candidate
                     </button>
                   )}
-                  <button
-                    onClick={() => {
-                      const html = buildNcademiPreviewHtml(state.listing!);
-                      const blob = new Blob([html], { type: "text/html" });
-                      const url = URL.createObjectURL(blob);
-                      window.open(url, "_blank", "noopener,noreferrer");
-                      // Revoke after a short delay to allow the tab to load
-                      setTimeout(() => URL.revokeObjectURL(url), 10000);
-                    }}
-                    aria-label="Preview as NCADEMI product page (opens in new tab)"
-                    title="Preview as NCADEMI product page"
-                    className="inline-flex items-center gap-1.5 text-xs text-black
-                               border border-black rounded px-2.5 py-1.5
-                               hover:bg-gray-50 focus:outline-none focus:ring-2
-                               focus:ring-gray-500 focus:ring-offset-2"
-                  >
-                    <span aria-live="assertive">Preview</span>
-                    {/* External link / open in new tab icon */}
-                    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12"
-                      fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M5 2H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7"/>
-                      <path d="M8 1h3v3"/>
-                      <path d="M11 1L5.5 6.5"/>
-                    </svg>
-                  </button>
+
                 </div>
 
                 {htmlEditorMode ? (
