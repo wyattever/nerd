@@ -24,10 +24,10 @@ The system has been migrated from a monolithic prototype to a scalable, asynchro
 *   **Isolation**: Only callable by Cloud Tasks via OIDC identity tokens, ensuring research quotas are protected.
 
 ### D. Core Business Logic (`nerd_core/`)
-*   **`services.py`**: Orchestrates Vertex AI GenAI SDK and Search Grounding.
-*   **`link_validator_engine.py`**: A Playwright-based engine (via Crawlee) that performs high-fidelity, browser-rendered link checking with screenshot evidence collection.
-*   **`generators.py`**: The "Robust Parsing" engine that converts AI Markdown output (supporting Parenthetical or Raw URL formats) into structured `ListingData` and Jinja2-rendered HTML.
-*   **`utils.py`**: Security-first utilities for SSRF mitigation, URL normalization, and proxy resolution.
+*   **`services.py`**: Orchestrates calls to the Vertex AI GenAI SDK for the initial research and deep-dive workflows.
+*   **`link_validator_engine.py`**: A standalone, Playwright-based engine (via Crawlee) that performs high-fidelity, browser-rendered link checking with screenshot evidence collection and SSRF protection.
+*   **`generators.py`**: Contains the core parsing logic (`parse_markdown_to_listing`) that converts AI-generated markdown into the structured `ListingData` model, and also contains the HTML rendering logic that uses Jinja2 templates.
+*   **`utils.py`**: Contains general-purpose helpers and security utilities.
 
 ## 3. Core Workflows
 
