@@ -295,7 +295,7 @@ async def jobs_sse(request: Request, job_id: str, uid: str = Depends(verify_toke
 
 
 @app.post("/render", response_model=schemas.RenderResponse)
-async def render(payload: schemas.RenderRequest):
+async def render(payload: schemas.RenderRequest, uid: str = Depends(verify_token)):
     if payload.html_override:
         normalized_html = normalize_html_fragment(payload.html_override)
         return schemas.RenderResponse(html=normalized_html)
@@ -401,13 +401,13 @@ async def get_batch_report():
 
 
 @app.get("/admin/candidates")
-async def list_candidates():
+async def list_candidates(uid: str = Depends(verify_token)):
     """Returns a list of all processed candidates."""
     return await _list_records(CANDIDATES_COLLECTION, _local_candidates)
 
 
 @app.get("/admin/candidates/{slug}")
-async def get_candidate_data(slug: str):
+async def get_candidate_data(slug: str, uid: str = Depends(verify_token)):
     """Retrieves the full JSON data for a specific candidate."""
     data = await _get_record(CANDIDATES_COLLECTION, slug, _local_candidates)
     if not data:
@@ -416,13 +416,13 @@ async def get_candidate_data(slug: str):
 
 
 @app.get("/admin/products")
-async def list_products():
+async def list_products(uid: str = Depends(verify_token)):
     """Returns a list of all transformed products."""
     return await _list_records(PRODUCTS_COLLECTION, _local_products)
 
 
 @app.get("/admin/products/{slug}")
-async def get_product_data(slug: str):
+async def get_product_data(slug: str, uid: str = Depends(verify_token)):
     """Retrieves the full JSON data for a specific published product."""
     data = await _get_record(PRODUCTS_COLLECTION, slug, _local_products)
     if not data:
@@ -431,7 +431,7 @@ async def get_product_data(slug: str):
 
 
 @app.post("/admin/candidates")
-async def save_candidate(data: schemas.ListingData):
+async def save_candidate(data: schemas.ListingData, uid: str = Depends(verify_token)):
     """Saves or updates a candidate."""
     slug = slugify(data.product_name)
     await _upsert_record(CANDIDATES_COLLECTION, slug, data, _local_candidates)
@@ -439,7 +439,7 @@ async def save_candidate(data: schemas.ListingData):
 
 
 @app.post("/admin/products")
-async def save_product(data: schemas.ListingData):
+async def save_product(data: schemas.ListingData, uid: str = Depends(verify_token)):
     """Saves or updates a product."""
     slug = slugify(data.product_name)
     await _upsert_record(PRODUCTS_COLLECTION, slug, data, _local_products)
@@ -447,7 +447,7 @@ async def save_product(data: schemas.ListingData):
 
 
 @app.delete("/admin/candidates/{slug}")
-async def delete_candidate(slug: str):
+async def delete_candidate(slug: str, uid: str = Depends(verify_token)):
     """Deletes a candidate."""
     success = await _delete_record(CANDIDATES_COLLECTION, slug, _local_candidates)
     if not success:
@@ -456,7 +456,7 @@ async def delete_candidate(slug: str):
 
 
 @app.put("/admin/candidates/{slug}")
-async def update_candidate(slug: str, data: schemas.ListingData):
+async def update_candidate(slug: str, data: schemas.ListingData, uid: str = Depends(verify_token)):
     """Explicitly overwrites an existing candidate."""
     # Check if exists first to maintain 404 behavior
     existing = await _get_record(CANDIDATES_COLLECTION, slug, _local_candidates)
