@@ -374,13 +374,17 @@ async def validate_links(request: schemas.LinkValidationRequest, uid: str = Depe
     try:
         # 1. Call the internal utility (FIXED: added await)
         valid_links_dict = await resolve_and_validate_all(request.urls)
-        
-        # 2. Extract successfully validated URLs
-        valid_urls_set = set(valid_links_dict.keys())
-        
+
+        # 2. A URL is reachable only if it resolved to a non-ERROR destination.
+        #    resolve_and_validate_all maps failures to an "ERROR: ..." string, so
+        #    we must inspect values, not just key presence.
+        def _is_reachable(u: str) -> bool:
+            resolved = valid_links_dict.get(u)
+            return resolved is not None and not str(resolved).startswith("ERROR:")
+
         # 3. Identify unreachable URLs
-        unreachable = [url for url in request.urls if url not in valid_urls_set]
-        
+        unreachable = [url for url in request.urls if not _is_reachable(url)]
+
         return schemas.LinkValidationResponse(unreachable_urls=unreachable)
         
     except Exception as e:
