@@ -24,6 +24,7 @@ export default function Home() {
   const [selectedSlug, setSelectedSlug] = useState("");
   const [selectedProductSlug, setSelectedProductSlug] = useState("");
   const [activeCandidateSlug, setActiveCandidateSlug] = useState<string | null>(null);
+  const [isProductLoaded, setIsProductLoaded] = useState(false);
   const [processHeading, setProcessHeading] = useState("");
   const [saveStatus, setSaveStatus] = useState<{ [key: string]: string }>({});
   const [isDirty, setIsDirty] = useState(false);
@@ -182,6 +183,7 @@ export default function Home() {
       setLocalLog([]);
       setIsDirty(false);
       setActiveCandidateSlug(null);
+      setIsProductLoaded(false);
       startResearch(url.trim());
     }
   };
@@ -191,6 +193,7 @@ export default function Home() {
     setProcessHeading("Viewing Candidate");
     setLocalLog([]);
     setIsDirty(false);
+    setIsProductLoaded(false);
     try {
       const token = await getIdToken();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/candidates/${selectedSlug}`, { headers: { Authorization: `Bearer ${token ?? "local-bypass"}` } });
@@ -215,6 +218,7 @@ export default function Home() {
       const data = await res.json();
       injectListing(data, "Injected data from saved product.");
       setActiveCandidateSlug(null);
+      setIsProductLoaded(true);
       setSelectedProductSlug("");
     } catch (err) {
       console.error("Failed to fetch product data:", err);
@@ -236,6 +240,7 @@ export default function Home() {
       const resData = await res.json();
       if (target === "candidates" && resData.slug) {
         setActiveCandidateSlug(resData.slug);
+        setIsProductLoaded(false);
         console.log(`Active candidate slug updated to: ${resData.slug}`);
       } else if (target === "products") {
         setActiveCandidateSlug(null);
@@ -329,6 +334,7 @@ export default function Home() {
       setLocalLog([]);
       setProcessHeading("");
       setActiveCandidateSlug(null);
+      setIsProductLoaded(false);
       
       await refreshLists();
       logMessage("UI cleared and dropdowns refreshed.");
@@ -757,6 +763,7 @@ export default function Home() {
                   setProcessHeading("");
                   setIsDirty(false);
                   setActiveCandidateSlug(null);
+                  setIsProductLoaded(false);
                 }}
                 className="border border-gray-300 text-sm px-4 py-2 rounded
                            hover:bg-gray-50 focus:outline-none focus:ring-2
@@ -771,17 +778,7 @@ export default function Home() {
 
                 {/* Preview and Save buttons — top-right corner of the card */}
                 <div className="absolute top-4 right-4 flex gap-2">
-                  <button
-                    onClick={() => handleSave("products")}
-                    className="inline-flex items-center gap-1.5 text-xs text-black
-                               border border-black rounded px-2.5 py-1.5
-                               hover:bg-gray-50 focus:outline-none focus:ring-2
-                               focus:ring-gray-500 focus:ring-offset-2 transition-all"
-                  >
-                    <span aria-live="assertive">
-                      {saveStatus["products"] || "Save Product"}
-                    </span>
-                  </button>
+
 
                   {!activeCandidateSlug ? (
                     <button
@@ -839,6 +836,7 @@ export default function Home() {
           vendorName={state.listing?.vendor_name || ""}
           onClose={() => setShowValidationModal(false)}
           onApplyChanges={handleApplyChanges}
+          readOnly={isProductLoaded}
         />
       )}
     </div>

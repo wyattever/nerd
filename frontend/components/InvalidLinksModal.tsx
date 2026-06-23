@@ -13,6 +13,7 @@ interface Props {
   vendorName: string;
   onClose: () => void;
   onApplyChanges: (toDelete: InvalidLink[], toAdd: NewLink[]) => void;
+  readOnly?: boolean;
 }
 
 // Group links by section label
@@ -24,7 +25,7 @@ function groupBySection(links: InvalidLink[]): Record<string, InvalidLink[]> {
   }, {});
 }
 
-export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges }: Props) {
+export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, readOnly = false }: Props) {
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -336,11 +337,14 @@ export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges }
             </button>
             <button
               onClick={handleApplyChanges}
+              disabled={readOnly}
+              aria-disabled={readOnly}
               className="flex-[2] text-sm px-4 py-2 rounded bg-blue-700 text-white
                          hover:bg-blue-800 focus:outline-none font-medium
-                         focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                         focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                         disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Apply Changes (Delete & Add)
+              {readOnly ? "Apply Changes (Disabled — Read Only)" : "Apply Changes (Delete & Add)"}
             </button>
           </div>
           <button
