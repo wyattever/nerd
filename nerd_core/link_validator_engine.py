@@ -3,7 +3,7 @@ import uuid
 import os
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from crawlee.browsers import BrowserPool, PlaywrightBrowserPlugin
 from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
@@ -29,7 +29,7 @@ class LinkValidationResult(BaseModel):
     status_code: Optional[int] = None
     reason: Optional[str] = None
     screenshot_path: Optional[str] = None
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = Field(default_factory=datetime.now)
 
 class LinkValidatorEngine:
     def __init__(self, artifacts_dir: str = "artifacts"):
