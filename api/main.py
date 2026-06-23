@@ -17,6 +17,7 @@ import logging
 import asyncio
 from typing import Any
 
+from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
@@ -217,6 +218,25 @@ def _enqueue_task(endpoint_path: str, payload: dict) -> None:
     tasks_client.create_task(request={"parent": queue_path, "task": task})
 
 
+def normalize_html_fragment(raw_html: str) -> str:
+    """
+    Parses the raw HTML and strips structural wrappers (<html>, <head>, <body>),
+    guaranteeing a safe fragment for React injection.
+    """
+    if not raw_html:
+        return ""
+    
+    # Parse the untrusted HTML
+    soup = BeautifulSoup(raw_html, 'html.parser')
+    
+    # Isolate the body content to discard the <head> and wrappers
+    if soup.body:
+        return soup.body.decode_contents()
+    
+    # If no body exists, return the parsed string directly
+    return str(soup)
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.post("/research/initial", response_model=schemas.EnqueueResponse)
@@ -276,6 +296,9 @@ async def jobs_sse(request: Request, job_id: str, uid: str = Depends(verify_toke
 
 @app.post("/render", response_model=schemas.RenderResponse)
 async def render(payload: schemas.RenderRequest):
+    if payload.html_override:
+        normalized_html = normalize_html_fragment(payload.html_override)
+        return schemas.RenderResponse(html=normalized_html)
     listing_dc = pydantic_to_dataclass(payload)
     html = render_listing_html(listing_dc)
     return schemas.RenderResponse(html=html)
