@@ -21,7 +21,6 @@ COPY prompts/ prompts/
 COPY nerd_core/ nerd_core/
 COPY api/ api/
 COPY templates/ templates/
-COPY artifacts/ artifacts/
 
 # Expose container port
 ENV PORT=8080
