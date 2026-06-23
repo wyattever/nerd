@@ -63,6 +63,8 @@ class ListingData(BaseModel):
     # This is the documented escape hatch for Phase 5 byte-fidelity (mock the
     # clock or pass an explicit date).
     last_updated: Optional[str] = None
+    html_override: Optional[str] = None
+    last_updated_at: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

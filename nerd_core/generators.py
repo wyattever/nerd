@@ -69,6 +69,8 @@ class ListingData:
     support_contacts: list[SupportContact] = field(default_factory=list)
     acr_reports: list[ACRReport] = field(default_factory=list)
     last_updated: str = ""
+    html_override: Optional[str] = ""
+    last_updated_at: Optional[str] = ""
 
 
 # ---------------------------------------------------------------------------
