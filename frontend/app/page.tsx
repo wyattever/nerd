@@ -37,9 +37,11 @@ export default function Home() {
   const refreshLists = useCallback(async () => {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
     try {
+      const token = await getIdToken();
+      const authHeader = `Bearer ${token ?? "local-bypass"}`;
       const [candRes, prodRes] = await Promise.all([
-        fetch(`${baseUrl}/admin/candidates`),
-        fetch(`${baseUrl}/admin/products`)
+        fetch(`${baseUrl}/admin/candidates`, { headers: { Authorization: authHeader } }),
+        fetch(`${baseUrl}/admin/products`, { headers: { Authorization: authHeader } })
       ]);
       
       const [candData, prodData] = await Promise.all([
@@ -235,7 +237,8 @@ export default function Home() {
     setLocalLog([]);
     setIsDirty(false);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/candidates/${selectedSlug}`);
+      const token = await getIdToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/candidates/${selectedSlug}`, { headers: { Authorization: `Bearer ${token ?? "local-bypass"}` } });
       const data = await res.json();
       injectListing(data);
       setActiveCandidateSlug(selectedSlug);
@@ -252,7 +255,8 @@ export default function Home() {
     setLocalLog([]);
     setIsDirty(false);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/products/${selectedProductSlug}`);
+      const token = await getIdToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/products/${selectedProductSlug}`, { headers: { Authorization: `Bearer ${token ?? "local-bypass"}` } });
       const data = await res.json();
       injectListing(data, "Injected data from saved product.");
       setActiveCandidateSlug(null);
@@ -266,9 +270,10 @@ export default function Home() {
     if (!state.listing) return;
     const label = target === "candidates" ? "Candidate" : "Product";
     try {
+      const token = await getIdToken();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/${target}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token ?? "local-bypass"}` },
         body: JSON.stringify(state.listing),
       });
       if (!res.ok) throw new Error(`Failed to save ${label}`);
@@ -311,9 +316,10 @@ export default function Home() {
       
       const updatedListing = { ...state.listing, last_updated_at: timestamp };
       
+      const token = await getIdToken();
       const res = await fetch(`${baseUrl}/admin/candidates/${activeCandidateSlug}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token ?? "local-bypass"}` },
         body: JSON.stringify(updatedListing),
       });
       if (!res.ok) throw new Error("Failed to update candidate");
@@ -350,8 +356,10 @@ export default function Home() {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
       const url = `${baseUrl}/admin/candidates/${activeCandidateSlug}`;
+      const token = await getIdToken();
       const res = await fetch(url, {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${token ?? "local-bypass"}` },
       });
       
       if (!res.ok) {
