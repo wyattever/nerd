@@ -7,15 +7,23 @@ from typing import Optional
 from google.cloud import bigquery
 
 # --- Local File Logging ---
+# File logging is best-effort: on read-only filesystems (e.g. Cloud Run) the
+# FileHandler cannot be created. Failure here must never crash module import.
 LOG_FILE = Path(__file__).parent.parent / "nerd_debug.log"
-file_handler = logging.FileHandler(LOG_FILE)
-file_handler.setFormatter(logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-))
 
-logger = logging.getLogger("nerd") # Root project logger
+logger = logging.getLogger("nerd")  # Root project logger
 logger.setLevel(logging.DEBUG)
-logger.addHandler(file_handler)
+
+try:
+    file_handler = logging.FileHandler(LOG_FILE)
+    file_handler.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    ))
+    logger.addHandler(file_handler)
+except OSError:
+    logging.getLogger(__name__).warning(
+        "File logging disabled (read-only filesystem): %s", LOG_FILE
+    )
 
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "edtech-agent-2026")
 _TABLE = f"{PROJECT_ID}.telemetry.feedback_logs"
