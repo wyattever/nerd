@@ -24,8 +24,7 @@ export function buildNcademiListingHtml(listing: ListingData): string {
        <ul>
          ${listing.vendor_resources.map(r =>
            `<li><a href="${r.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.text)}</a></li>`
-         ).join("
-")}
+         ).join("\n")}
        </ul>`
     : "";
 
@@ -34,8 +33,7 @@ export function buildNcademiListingHtml(listing: ListingData): string {
        <ul>
          ${listing.other_resources.map(r =>
            `<li><a href="${r.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.text)}</a></li>`
-         ).join("
-")}
+         ).join("\n")}
        </ul>`
     : "";
 
@@ -45,15 +43,14 @@ export function buildNcademiListingHtml(listing: ListingData): string {
          <ul>
            ${listing.support_contacts.map(c => {
              const safeValue = escapeHtml(c.value);
-             const safeLabel = escapeHtml(c.label);
+             const safeLabel = escapeHtml(c.label || "");
              if (c.type === "email") {
                return `<li><a href="mailto:${c.value}">${safeValue}</a></li>`;
              } else if (c.type === "url") {
                return `<li><a href="${c.value}" target="_blank" rel="noopener noreferrer">${safeLabel || safeValue}</a></li>`;
              }
              return `<li>${safeValue}</li>`;
-           }).join("
-")}
+           }).join("\n")}
          </ul>
        </div>`
     : "";
@@ -73,8 +70,7 @@ export function buildNcademiListingHtml(listing: ListingData): string {
                  }</li>`
                : ""}
            </ul>`
-         ).join("
-")}
+         ).join("\n")}
        </div>`
     : "";
 
