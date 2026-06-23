@@ -1,3 +1,7 @@
+---
+**ARCHIVED DOCUMENT:** This document describes a legacy, Streamlit-based version of the N.E.R.D. application. It is kept for historical context only. For an accurate description of the current Next.js + FastAPI architecture, please refer to **`docs/NERD_System_Architecture.md`**.
+---
+
 # N.E.R.D. Technical Logic Documentation
 
 This document serves as the architectural reference for N.E.R.D. (NCADEMI EdTech Research for the Directory). It documents the core logic, modular structure, and iterative workflows as of June 12, 2026.
