@@ -31,9 +31,15 @@ export function useResearch() {
     setState(INITIAL_STATE);
   }, []);
 
-  const updateListing = useCallback((updated: ListingData) => {
-    setState(prev => ({ ...prev, listing: updated }));
-  }, []);
+  const updateListing = useCallback(
+    (update: ListingData | ((prev: ListingData | null) => ListingData)) => {
+      setState(prev => ({
+        ...prev,
+        listing: typeof update === "function" ? update(prev.listing) : update,
+      }));
+    },
+    []
+  );
 
   const injectListing = useCallback((data: ListingData, message?: string) => {
     setState({
