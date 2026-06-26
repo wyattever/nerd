@@ -208,7 +208,7 @@ Four layers — all must be green before merging to main or deploying.
 # Run all Python tests (unit + integration + integrity)
 source venv312/bin/activate
 export PYTHONPATH=$PYTHONPATH:.
-LOCAL_MODE=true pytest tests/ --tb=short -q --disable-warnings
+LOCAL_MODE=true pytest -W ignore tests/ --tb=short -q
 
 # Frontend build check (catches TypeScript errors)
 cd frontend && npm run build
@@ -217,9 +217,8 @@ cd frontend && npm run build
 cd frontend && npx playwright test
 ```
 
-Warnings are suppressed from output via --disable-warnings. This
-hides the summary block only — it does not disable warning
-collection. As of this writing, all known warnings (14) originate
+Warnings are suppressed from output via `-W ignore`. This
+hides all warning information. As of this writing, all known warnings (14) originate
 from third-party dependencies (protobuf/googleapis-common-protos,
 pydantic usage inside google-generativeai, dspy-ai) and require no
 action in this codebase. To see full warning detail when debugging
