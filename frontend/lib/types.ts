@@ -45,6 +45,7 @@ export type SectionKey = "header" | "vendor_resources" | "other_resources" | "su
 
 export interface InvalidLink {
   section: string;
+  sectionKey: SectionKey;
   text: string;
   url: string;
   reason?: string;

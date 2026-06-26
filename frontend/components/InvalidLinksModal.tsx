@@ -1,19 +1,14 @@
 "use client";
 import { useEffect, useRef, useState, useId } from "react";
-import { InvalidLink } from "@/lib/types";
-
-interface NewLink {
-  section: "vendor" | "other" | "support" | "acr";
-  text: string;
-  url: string;
-}
+import { InvalidLink, SectionKey } from "@/lib/types";
 
 interface Props {
   links: InvalidLink[];
   vendorName: string;
   onClose: () => void;
-  onApplyChanges: (toDelete: InvalidLink[], toAdd: NewLink[]) => void;
+  onApplyChanges: (toDelete: InvalidLink[]) => void;
   readOnly?: boolean;
+  overriddenSections: SectionKey[];
 }
 
 // Group links by section label
@@ -25,17 +20,11 @@ function groupBySection(links: InvalidLink[]): Record<string, InvalidLink[]> {
   }, {});
 }
 
-export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, readOnly = false }: Props) {
+export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, readOnly = false, overriddenSections }: Props) {
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
-
-  // Local state for new links
-  const [newVendorLink, setNewVendorLink] = useState("");
-  const [newOtherLink, setNewOtherLink] = useState("");
-  const [newSupportLink, setNewSupportLink] = useState("");
-  const [newAcrLink, setNewAcrLink] = useState("");
 
   // Focus the close button on mount
   useEffect(() => {
@@ -79,7 +68,8 @@ export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, 
 
   const linkKey = (link: InvalidLink) => `${link.section}::${link.url}`;
 
-  const allKeys = links.map(linkKey);
+  const deletableLinks = links.filter(l => !overriddenSections.includes(l.sectionKey));
+  const allKeys = deletableLinks.map(linkKey);
   const allChecked = allKeys.length > 0 && allKeys.every(k => checked.has(k));
   const someChecked = allKeys.some(k => checked.has(k)) && !allChecked;
 
@@ -106,26 +96,9 @@ export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, 
     await navigator.clipboard.writeText(text);
   };
 
-  const parseManualLink = (input: string, section: "vendor" | "other" | "support" | "acr"): NewLink | null => {
-    // Regex matches "Text (URL)"
-    const match = input.match(/(.*)\s*\((https?:\/\/.*)\)/);
-    if (match) {
-      return { section, text: match[1].trim(), url: match[2].trim() };
-    }
-    return null;
-  };
-
   const handleApplyChanges = () => {
     const selectedToDelete = links.filter(l => checked.has(linkKey(l)));
-    
-    const toAdd = [
-      parseManualLink(newVendorLink, "vendor"),
-      parseManualLink(newOtherLink, "other"),
-      parseManualLink(newSupportLink, "support"),
-      parseManualLink(newAcrLink, "acr"),
-    ].filter((item): item is NewLink => item !== null);
-
-    onApplyChanges(selectedToDelete, toAdd);
+    onApplyChanges(selectedToDelete);
     onClose();
   };
 
@@ -162,7 +135,7 @@ export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, 
         <div className="flex items-center justify-between px-6 py-4
                         border-b border-gray-200 flex-shrink-0">
           <h2 id={titleId} className="text-base font-semibold text-gray-900">
-            Link Management (Delete & Add)
+            Link Management (Delete Only)
           </h2>
           <button
             ref={closeButtonRef}
@@ -201,7 +174,7 @@ export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, 
                 />
                 <label htmlFor="select-all-invalid"
                   className="text-sm font-medium text-gray-700 cursor-pointer">
-                  Select all
+                  Select all (deletable)
                 </label>
               </div>
 
@@ -216,22 +189,24 @@ export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, 
                     {sectionLinks.map((link) => {
                       const key = linkKey(link);
                       const inputId = `invalid-link-${key.replace(/[^a-z0-9]/gi, "-")}`;
+                      const isOverridden = overriddenSections.includes(link.sectionKey);
                       return (
-                        <li key={key} className="flex flex-col gap-2 p-3 bg-gray-50 rounded border border-gray-100">
+                        <li key={key} className={`flex flex-col gap-2 p-3 rounded border ${isOverridden ? 'bg-gray-100 border-gray-200' : 'bg-gray-50 border-gray-100'}`}>
                           <div className="flex items-start gap-2">
                             <input
                               type="checkbox"
                               id={inputId}
                               checked={checked.has(key)}
                               onChange={() => handleToggle(key)}
+                              disabled={isOverridden}
                               className="mt-1 h-4 w-4 rounded border-gray-300
                                          text-blue-700 focus:ring-2
-                                         focus:ring-blue-500 flex-shrink-0"
+                                         focus:ring-blue-500 flex-shrink-0
+                                         disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <div className="flex-1 min-w-0">
-                              <label htmlFor={inputId}
-                                className="text-sm font-medium text-gray-900 cursor-pointer
-                                           leading-snug block">
+                              <label htmlFor={inputId} 
+                                className={`text-sm font-medium cursor-pointer leading-snug block ${isOverridden ? 'text-gray-500 cursor-not-allowed' : 'text-gray-900'}`}>
                                 {link.text}
                               </label>
                               <a href={link.url} target="_blank" rel="noopener noreferrer" 
@@ -241,6 +216,11 @@ export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, 
                               {link.reason && (
                                 <p className="text-xs font-semibold text-red-600 mt-1">
                                   Failure Reason: {link.reason}
+                                </p>
+                              )}
+                              {isOverridden && (
+                                <p className="text-xs font-semibold text-gray-600 mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                                  Edit this section to remove
                                 </p>
                               )}
                             </div>
@@ -266,58 +246,6 @@ export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, 
               ))}
             </>
           )}
-
-          {/* Manual Addition Section */}
-          <div className="mt-8 pt-6 border-t border-gray-200 space-y-4">
-            <div className="bg-blue-50 border-l-4 border-blue-400 p-3">
-              <p className="text-xs text-blue-700">
-                <strong>Instructions:</strong> To add a new link, enter the display text and the full URL (e.g., Accessibility Best Practices (https://example.com)). New links will be appended to the bottom of their respective sections.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">From {vendorName || "Vendor"}</label>
-                <input 
-                  type="text" 
-                  value={newVendorLink}
-                  onChange={(e) => setNewVendorLink(e.target.value)}
-                  placeholder="Link Text (https://...)"
-                  className="w-full text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">From Other Sources</label>
-                <input 
-                  type="text" 
-                  value={newOtherLink}
-                  onChange={(e) => setNewOtherLink(e.target.value)}
-                  placeholder="Link Text (https://...)"
-                  className="w-full text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Support</label>
-                <input 
-                  type="text" 
-                  value={newSupportLink}
-                  onChange={(e) => setNewSupportLink(e.target.value)}
-                  placeholder="Link Text (https://...)"
-                  className="w-full text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Accessibility Conformance Reports</label>
-                <input 
-                  type="text" 
-                  value={newAcrLink}
-                  onChange={(e) => setNewAcrLink(e.target.value)}
-                  placeholder="Link Text (https://...)"
-                  className="w-full text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer actions */}
@@ -337,14 +265,14 @@ export function InvalidLinksModal({ links, vendorName, onClose, onApplyChanges, 
             </button>
             <button
               onClick={handleApplyChanges}
-              disabled={readOnly}
-              aria-disabled={readOnly}
+              disabled={readOnly || !hasSelection}
+              aria-disabled={readOnly || !hasSelection}
               className="flex-[2] text-sm px-4 py-2 rounded bg-blue-700 text-white
                          hover:bg-blue-800 focus:outline-none font-medium
                          focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                          disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {readOnly ? "Apply Changes (Disabled — Read Only)" : "Apply Changes (Delete & Add)"}
+              {readOnly ? "Apply Changes (Disabled — Read Only)" : `Delete Selected (${checked.size})`}
             </button>
           </div>
           <button

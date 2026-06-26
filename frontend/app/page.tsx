@@ -367,39 +367,33 @@ export default function Home() {
     logMessage("--- Link Validation Started ---");
     try {
       const listing = state.listing;
-      const candidateLinks: InvalidLink[] = [
-        ...listing.vendor_resources.map(r => ({
-          section: `From ${listing.vendor_name || "Vendor"}`,
-          text: r.text,
-          url: r.url,
-        })),
-        ...listing.other_resources.map(r => ({
-          section: "From Other Sources",
-          text: r.text,
-          url: r.url,
-        })),
-        ...listing.support_contacts
-          .filter(c => c.type === "url")
-          .map(c => ({
-            section: "Support",
-            text: c.label || c.value,
-            url: c.value,
-          })),
-        ...listing.acr_reports.map(a => ({
-          section: "Accessibility Conformance Reports",
-          text: a.title,
-          url: a.url,
-        })),
-      ];
-      const candidateUrls = candidateLinks
-        .map(link => link.url)
-        .filter(url => url && url !== "#" && url.startsWith("http"));
-      if (candidateUrls.length === 0) {
-        logMessage("No valid candidate URLs found for validation.");
+      const candidateLinks: InvalidLink[] = SECTION_KEYS.flatMap(({ key, label }) => {
+        const html = getSectionHtml(listing, key);
+        if (!html) return [];
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const links = Array.from(doc.querySelectorAll("a"));
+        return links
+          .map(link => {
+            const href = link.getAttribute("href");
+            return {
+              section: label,
+              sectionKey: key,
+              text: link.textContent || "",
+              url: href || "",
+            };
+          })
+          .filter(link => link.url && link.url.startsWith("http"));
+      });
+
+      const uniqueUrls = [...new Set(candidateLinks.map(link => link.url))];
+
+      if (uniqueUrls.length === 0) {
+        logMessage("No valid http(s) links found in rendered HTML for validation.");
         setIsValidating(false);
         return;
       }
-      logMessage(`Validating ${candidateUrls.length} unique URLs...`);
+
+      logMessage(`Validating ${uniqueUrls.length} unique URLs...`);
       startHeartbeat("validating");
       const token = await getIdToken();
       const authHeader = `Bearer ${token ?? "local-bypass"}`;
@@ -411,7 +405,7 @@ export default function Home() {
             "Content-Type": "application/json",
             Authorization: authHeader,
           },
-          body: JSON.stringify({ urls: candidateUrls }),
+          body: JSON.stringify({ urls: uniqueUrls }),
         }
       );
       if (!response.ok) {
@@ -419,7 +413,7 @@ export default function Home() {
       }
       const { job_id } = await response.json();
       logMessage(`Job queued: ${job_id}. Polling for results...`);
-      let results = null;
+      let results: Record<string, { is_valid: boolean; reason?: string; screenshot_path?: string }> | null = null;
       let iterations = 0;
       const MAX_POLLS = 90;
       while (iterations < MAX_POLLS) {
@@ -454,9 +448,10 @@ export default function Home() {
       if (!results) {
         throw new Error("Validation timed out after 3 minutes. Partial results may be available — please retry.");
       }
+      const finalResults = results; // for type safety
       const brokenLinksToDisplay = candidateLinks
         .map(link => {
-          const res = results[link.url];
+          const res = finalResults[link.url];
           if (res && !res.is_valid) {
             return {
               ...link,
@@ -481,29 +476,24 @@ export default function Home() {
     }
   };
 
-  const handleApplyChanges = (toDelete: InvalidLink[], toAdd: { section: string; text: string; url: string }[]) => {
+  const handleApplyChanges = (toDelete: InvalidLink[]) => {
     if (!state.listing) return;
     const toDeleteUrls = new Set(toDelete.map(l => l.url));
+    if (toDeleteUrls.size === 0) {
+        logMessage("No links selected for deletion.");
+        return;
+    }
+
     const updated = {
       ...state.listing,
       vendor_resources: state.listing.vendor_resources.filter(r => !toDeleteUrls.has(r.url)),
       other_resources: state.listing.other_resources.filter(r => !toDeleteUrls.has(r.url)),
-      support_contacts: state.listing.support_contacts.filter(c => !toDeleteUrls.has(c.value)),
+      support_contacts: state.listing.support_contacts.filter(c => c.type !== 'url' || !toDeleteUrls.has(c.value)),
       acr_reports: state.listing.acr_reports.filter(a => !toDeleteUrls.has(a.url)),
     };
-    toAdd.forEach(link => {
-      if (link.section === "vendor") {
-        updated.vendor_resources.push({ text: link.text, url: link.url });
-      } else if (link.section === "other") {
-        updated.other_resources.push({ text: link.text, url: link.url });
-      } else if (link.section === "support") {
-        updated.support_contacts.push({ type: "url", value: link.url, label: link.text });
-      } else if (link.section === "acr") {
-        updated.acr_reports.push({ title: link.text, url: link.url });
-      }
-    });
+
     updateListing(updated);
-    logMessage(`Validation applied: ${toDelete.length} link(s) removed, ${toAdd.length} link(s) added.`);
+    logMessage(`Validation applied: ${toDelete.length} link(s) removed.`);
     setTimeout(() => {
       setIsDirty(true);
       logMessage("Ready to update candidate repository.");
@@ -827,6 +817,7 @@ export default function Home() {
           onClose={() => setShowValidationModal(false)}
           onApplyChanges={handleApplyChanges}
           readOnly={isProductLoaded}
+          overriddenSections={Object.keys(state.listing?.section_overrides ?? {}) as SectionKey[]}
         />
       )}
 
