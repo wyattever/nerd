@@ -1,4 +1,4 @@
-import { ListingData } from "@/lib/types";
+import { ListingData, SectionKey } from "@/lib/types";
 
 function escapeHtml(str: string): string {
   if (!str) return str;
@@ -10,7 +10,7 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
-export function buildNcademiListingHtml(listing: ListingData): string {
+function genHeaderHtml(listing: ListingData): string {
   const safeVendorName = escapeHtml(listing.vendor_name);
   const safeProductName = escapeHtml(listing.product_name);
   const safeDescription = escapeHtml(listing.product_description);
@@ -19,7 +19,30 @@ export function buildNcademiListingHtml(listing: ListingData): string {
     ? `<a href="${listing.vendor_directory_url}">${safeVendorName}</a>`
     : safeVendorName;
 
-  const vendorResourcesHtml = listing.vendor_resources.length
+  const websiteLinkHtml = listing.product_website_url && listing.product_website_url !== "#"
+    ? `<p><a href="${listing.product_website_url}" target="_blank" rel="noopener noreferrer">
+         <i class="fa-regular fa-globe" aria-hidden="true"></i>
+         ${safeProductName} Website
+       </a></p>`
+    : "";
+
+  return `
+    <header class="page-header">
+      <h1 class="page-title">${safeProductName}</h1>
+    </header>
+    ${listing.vendor_name
+      ? `<p><strong>Vendor:</strong> ${vendorLink}</p>`
+      : ""}
+    ${listing.product_description
+      ? `<p>${safeDescription}</p>`
+      : ""}
+    ${websiteLinkHtml}
+  `;
+}
+
+function genVendorResourcesHtml(listing: ListingData): string {
+  const safeVendorName = escapeHtml(listing.vendor_name);
+  return listing.vendor_resources.length
     ? `<h3>From ${safeVendorName || "Vendor"}</h3>
        <ul>
          ${listing.vendor_resources.map(r =>
@@ -27,8 +50,10 @@ export function buildNcademiListingHtml(listing: ListingData): string {
          ).join("\n")}
        </ul>`
     : "";
+}
 
-  const otherResourcesHtml = listing.other_resources.length
+function genOtherResourcesHtml(listing: ListingData): string {
+  return listing.other_resources.length
     ? `<h3>From Other Sources</h3>
        <ul>
          ${listing.other_resources.map(r =>
@@ -36,8 +61,10 @@ export function buildNcademiListingHtml(listing: ListingData): string {
          ).join("\n")}
        </ul>`
     : "";
+}
 
-  const supportHtml = listing.support_contacts.length
+function genSupportHtml(listing: ListingData): string {
+  return listing.support_contacts.length
     ? `<div class="product-support">
          <h3>Support</h3>
          <ul>
@@ -54,8 +81,10 @@ export function buildNcademiListingHtml(listing: ListingData): string {
          </ul>
        </div>`
     : "";
+}
 
-  const acrHtml = listing.acr_reports.length
+function genAcrHtml(listing: ListingData): string {
+  return listing.acr_reports.length
     ? `<div class="edtech-acr">
          <h3>Accessibility Conformance Reports</h3>
          ${listing.acr_reports.map(acr => `
@@ -73,6 +102,26 @@ export function buildNcademiListingHtml(listing: ListingData): string {
          ).join("\n")}
        </div>`
     : "";
+}
+
+export function getSectionHtml(listing: ListingData, key: SectionKey): string {
+  const override = listing.section_overrides?.[key];
+  if (override != null) return override;  // empty string is a valid override — see R6
+  switch (key) {
+    case "header":           return genHeaderHtml(listing);
+    case "vendor_resources": return genVendorResourcesHtml(listing);
+    case "other_resources":  return genOtherResourcesHtml(listing);
+    case "support":          return genSupportHtml(listing);
+    case "acr":              return genAcrHtml(listing);
+  }
+}
+
+export function buildNcademiListingHtml(listing: ListingData): string {
+  const header = getSectionHtml(listing, "header");
+  const vendorResources = getSectionHtml(listing, "vendor_resources");
+  const otherResources = getSectionHtml(listing, "other_resources");
+  const support = getSectionHtml(listing, "support");
+  const acr = getSectionHtml(listing, "acr");
 
   const aiInsightsHtml = listing.ai_insights
     ? `<div class="ai-insights" style="display: none;">
@@ -85,53 +134,23 @@ export function buildNcademiListingHtml(listing: ListingData): string {
     ? `<p class="entry-meta has-text-align-right"><em>Product information last updated ${escapeHtml(listing.last_updated)}</em></p>`
     : "";
 
-  const websiteLinkHtml = listing.product_website_url && listing.product_website_url !== "#"
-    ? `<p><a href="${listing.product_website_url}" target="_blank" rel="noopener noreferrer">
-         <i class="fa-regular fa-globe" aria-hidden="true"></i>
-         ${safeProductName} Website
-       </a></p>`
-    : "";
-
   return `
-    <header class="page-header">
-      <h1 class="page-title">${safeProductName}</h1>
-    </header>
-
+    ${header}
     <article class="product type-product status-publish hentry">
       <div class="entry-summary">
-
-        ${listing.vendor_name
-          ? `<p><strong>Vendor:</strong> ${vendorLink}</p>`
-          : ""}
-
-        ${listing.product_description
-          ? `<p>${safeDescription}</p>`
-          : ""}
-
-        ${websiteLinkHtml}
-
         <h2>Accessibility Documentation &amp; Resources</h2>
-
         <div class="row g-4 g-lg-5 align-items-start">
-
-          <!-- Left column: resource lists -->
           <div class="col-12 col-lg-8">
-            ${vendorResourcesHtml}
-            ${otherResourcesHtml}
+            ${vendorResources}
+            ${otherResources}
           </div>
-
-          <!-- Right column: support + ACR -->
           <div class="col-12 col-lg-4">
-            ${supportHtml}
-            ${acrHtml}
+            ${support}
+            ${acr}
           </div>
-
         </div>
-
         ${aiInsightsHtml}
-
         ${lastUpdatedHtml}
-
       </div>
     </article>
   `;

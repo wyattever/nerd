@@ -18,6 +18,14 @@ export interface ACRReport {
   auditor_url?: string;
 }
 
+export interface SectionOverrides {
+  header?: string;
+  vendor_resources?: string;
+  other_resources?: string;
+  support?: string;
+  acr?: string;
+}
+
 export interface ListingData {
   product_name: string;
   vendor_name: string;
@@ -30,7 +38,10 @@ export interface ListingData {
   support_contacts: SupportContact[];
   acr_reports: ACRReport[];
   last_updated?: string;
+  section_overrides?: SectionOverrides;
 }
+
+export type SectionKey = "header" | "vendor_resources" | "other_resources" | "support" | "acr";
 
 export interface InvalidLink {
   section: string;
