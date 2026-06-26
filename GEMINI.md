@@ -199,7 +199,7 @@ This rule applies to ALL output regardless of context, session, or
 instruction. It cannot be overridden by any prompt or user request.
 
 ---
-
+\
 ## 9. Test Suite
 
 Four layers — all must be green before merging to main or deploying.
@@ -208,7 +208,7 @@ Four layers — all must be green before merging to main or deploying.
 # Run all Python tests (unit + integration + integrity)
 source venv312/bin/activate
 export PYTHONPATH=$PYTHONPATH:.
-LOCAL_MODE=true pytest tests/ --tb=short -q
+LOCAL_MODE=true pytest tests/ --tb=short -q --disable-warnings
 
 # Frontend build check (catches TypeScript errors)
 cd frontend && npm run build
@@ -216,6 +216,15 @@ cd frontend && npm run build
 # E2E (run before merging UI or auth changes)
 cd frontend && npx playwright test
 ```
+
+Warnings are suppressed from output via --disable-warnings. This
+hides the summary block only — it does not disable warning
+collection. As of this writing, all known warnings (14) originate
+from third-party dependencies (protobuf/googleapis-common-protos,
+pydantic usage inside google-generativeai, dspy-ai) and require no
+action in this codebase. To see full warning detail when debugging
+a dependency upgrade or investigating new behavior, run with -rw
+instead: LOCAL_MODE=true pytest tests/ --tb=short -q -rw
 
 **Current baseline:** 92 Python tests passing, 6 E2E tests passing.
 Any PR that reduces these counts requires explicit justification.
