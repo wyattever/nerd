@@ -71,6 +71,7 @@ class ListingData:
     last_updated: str = ""
     html_override: str = ""
     last_updated_at: str = ""
+    section_overrides: dict = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
