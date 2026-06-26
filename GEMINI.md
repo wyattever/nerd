@@ -257,8 +257,23 @@ type: short description (imperative, max 72 chars)
 - WCAG compliance is mandatory, not optional. Any new UI component must
   have: aria labels, keyboard operability, visible focus, role="alert"
   for errors, aria-live for status updates.
+- Any new or modified interactive UI component must have a corresponding
+  automated accessibility check using @axe-core/playwright (already a
+  devDependency) before it is considered complete. Manual ARIA attribute
+  review alone does not satisfy this requirement — run the actual
+  AxeBuilder scan as part of the E2E suite (tests/e2e/) and confirm zero
+  violations, consistent with NERD_System_Architecture.md Section 4.D.
 - Mobile is out of scope. Do not factor mobile into any decision.
 - Output format is WordPress-compatible HTML only. DOCX is removed.
+- NEVER write code that persists a raw `grounding-api-redirect` URL
+  (the temporary https://vertexaisearch.cloud.google.com/grounding-api-redirect/...
+  format returned in Vertex AI groundingChunks) directly into a
+  ListingData JSON artifact, Firestore document, or any other storage
+  layer. These URLs expire and must be resolved to their canonical
+  destination via the link validator engine before persistence. If you
+  are writing or modifying parsing/storage code that touches grounding
+  metadata and you are not certain whether resolution has already
+  happened upstream, STOP and ask rather than assume.
 
 ---
 
