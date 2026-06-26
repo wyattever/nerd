@@ -29,33 +29,11 @@
 <body class="wp-custom-logo wp-embed-responsive post-template-default single single-product has-blocks">
 
 <main id="primary" class="site-main">
-  <header class="entry-header alignwide">
-    <h1 class="entry-title">{{ product_name }}</h1>
-  </header>
+  {{ header_html | safe }}
 
   <article class="product type-product status-publish hentry">
     <div class="nerd-artifact">
       <div class="entry-content">
-        
-        <header class="product-header">
-          {% if vendor_name %}
-          <p class="vendor-line"><strong>Vendor:</strong> 
-            {% if vendor_directory_url %}<a href="{{ vendor_directory_url }}">{{ vendor_name }}</a>{% else %}{{ vendor_name }}{% endif %}
-          </p>
-          {% endif %}
-
-          {% if product_description %}
-          <p class="product-desc">{{ product_description }}</p>
-          {% endif %}
-
-          {% if product_website_url %}
-          <p class="product-website">
-            <a href="{{ product_website_url }}" target="_blank" rel="noopener noreferrer">
-              <i class="fa-solid fa-globe" aria-hidden="true"></i> {{ product_name }} Website
-            </a>
-          </p>
-          {% endif %}
-        </header>
 
         <h2 class="resources-heading">Accessibility Documentation &amp; Resources</h2>
         
@@ -65,23 +43,9 @@
           <!-- Left Column (approx 66%) -->
           <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-main" style="flex-basis:66.66%">
             
-            {% if vendor_resources %}
-            <h3 class="section-heading">From {{ vendor_name or "Vendor" }}</h3>
-            <ul class="wp-block-list resource-list">
-              {% for item in vendor_resources %}
-              <li><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.text }}</a></li>
-              {% endfor %}
-            </ul>
-            {% endif %}
+            {{ vendor_resources_html | safe }}
 
-            {% if other_resources %}
-            <h3 class="section-heading">From Other Sources</h3>
-            <ul class="wp-block-list resource-list">
-              {% for item in other_resources %}
-              <li><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.text }}</a></li>
-              {% endfor %}
-            </ul>
-            {% endif %}
+            {{ other_resources_html | safe }}
 
             {% if ai_insights %}
             <div class="ai-insights">
@@ -95,45 +59,9 @@
           <!-- Right Column (approx 33%) -->
           <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-side" style="flex-basis:33.33%">
             
-            {% if support_contacts %}
-            <div class="product-support">
-              <h3 class="section-heading">Support</h3>
-              <ul class="wp-block-list resource-list">
-                {% for contact in support_contacts %}
-                <li>
-                  {% if contact.type == "email" %}
-                  <a href="mailto:{{ contact.value }}">{{ contact.value }}</a>
-                  {% elif contact.type == "url" %}
-                  <a href="{{ contact.value }}" target="_blank" rel="noopener noreferrer">{{ contact.label or contact.value }}</a>
-                  {% else %}
-                  {{ contact.value }}
-                  {% endif %}
-                </li>
-                {% endfor %}
-              </ul>
-            </div>
-            {% endif %}
+            {{ support_html | safe }}
 
-            {% if acr_reports %}
-            <div class="edtech-acr">
-              <h3 class="section-heading">Accessibility Conformance Reports</h3>
-              {% for acr in acr_reports %}
-              <div class="acr-report">
-                <h4><a href="{{ acr.url }}" target="_blank" rel="noopener noreferrer">{{ acr.title }}</a></h4>
-                <ul>
-                  {% if acr.version %}<li><strong>Version:</strong> {{ acr.version }}</li>{% endif %}
-                  {% if acr.date %}<li><strong>Date:</strong> {{ acr.date }}</li>{% endif %}
-                  {% if acr.auditor_name %}
-                  <li>
-                    <strong>Completed by:</strong>
-                    {% if acr.auditor_url %}<a href="{{ acr.auditor_url }}" target="_blank" rel="noopener noreferrer">{{ acr.auditor_name }}</a>{% else %}{{ acr.auditor_name }}{% endif %}
-                  </li>
-                  {% endif %}
-                </ul>
-              </div>
-              {% endfor %}
-            </div>
-            {% endif %}
+            {{ acr_html | safe }}
             
           </div>
         </div>

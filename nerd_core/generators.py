@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from markupsafe import escape
 
 # ---------------------------------------------------------------------------
 # Setup Jinja2
@@ -235,18 +236,140 @@ def render_listing_html(listing: ListingData) -> str:
     template = _jinja.get_template("ncademi_listing.html")
     return template.render(
         product_name=listing.product_name,
-        vendor_name=listing.vendor_name,
-        vendor_directory_url=listing.vendor_directory_url,
-        product_description=listing.product_description,
-        product_website_url=listing.product_website_url,
-        vendor_resources=listing.vendor_resources,
-        other_resources=listing.other_resources,
+        
+        # Pre-rendered sections
+        header_html=get_section_html(listing, "header"),
+        vendor_resources_html=get_section_html(listing, "vendor_resources"),
+        other_resources_html=get_section_html(listing, "other_resources"),
+        support_html=get_section_html(listing, "support"),
+        acr_html=get_section_html(listing, "acr"),
+
+        # Unchanged pass-through data
         ai_insights=listing.ai_insights,
-        support_contacts=listing.support_contacts,
-        acr_reports=listing.acr_reports,
         last_updated=listing.last_updated,
         css_content=css_content
     )
+
+
+def _gen_header_html(listing: ListingData) -> str:
+    """Reproduces the page-header/h1, vendor line, description, and website link block."""
+    parts = []
+    
+    # Entry Header
+    parts.append('<header class="entry-header alignwide">')
+    parts.append(f'<h1 class="entry-title">{escape(listing.product_name)}</h1>')
+    parts.append('</header>')
+    
+    # Product Header
+    parts.append('<header class="product-header">')
+    if listing.vendor_name:
+        vendor_link = f'<a href="{escape(listing.vendor_directory_url)}">{escape(listing.vendor_name)}</a>' if listing.vendor_directory_url else escape(listing.vendor_name)
+        parts.append(f'<p class="vendor-line"><strong>Vendor:</strong> {vendor_link}</p>')
+
+    if listing.product_description:
+        parts.append(f'<p class="product-desc">{escape(listing.product_description)}</p>')
+
+    if listing.product_website_url:
+        parts.append(
+            '<p class="product-website">'
+            f'<a href="{escape(listing.product_website_url)}" target="_blank" rel="noopener noreferrer">'
+            f'<i class="fa-solid fa-globe" aria-hidden="true"></i> {escape(listing.product_name)} Website'
+            '</a></p>'
+        )
+    parts.append('</header>')
+    
+    return "\n".join(parts)
+
+def _gen_vendor_resources_html(listing: ListingData) -> str:
+    """Reproduces the "From {Vendor}" resource list block."""
+    if not listing.vendor_resources:
+        return ""
+    
+    parts = []
+    vendor_display_name = escape(listing.vendor_name or "Vendor")
+    parts.append(f'<h3 class="section-heading">From {vendor_display_name}</h3>')
+    parts.append('<ul class="wp-block-list resource-list">')
+    for item in listing.vendor_resources:
+        parts.append(f'<li><a href="{escape(item.url)}" target="_blank" rel="noopener noreferrer">{escape(item.text)}</a></li>')
+    parts.append('</ul>')
+    return "\n".join(parts)
+
+def _gen_other_resources_html(listing: ListingData) -> str:
+    """Reproduces the "From Other Sources" resource list block."""
+    if not listing.other_resources:
+        return ""
+        
+    parts = []
+    parts.append('<h3 class="section-heading">From Other Sources</h3>')
+    parts.append('<ul class="wp-block-list resource-list">')
+    for item in listing.other_resources:
+        parts.append(f'<li><a href="{escape(item.url)}" target="_blank" rel="noopener noreferrer">{escape(item.text)}</a></li>')
+    parts.append('</ul>')
+    return "\n".join(parts)
+
+def _gen_support_html(listing: ListingData) -> str:
+    """Reproduces the Support contacts block."""
+    if not listing.support_contacts:
+        return ""
+
+    parts = []
+    parts.append('<div class="product-support">')
+    parts.append('<h3 class="section-heading">Support</h3>')
+    parts.append('<ul class="wp-block-list resource-list">')
+    for contact in listing.support_contacts:
+        parts.append('<li>')
+        if contact.type == "email":
+            parts.append(f'<a href="mailto:{escape(contact.value)}">{escape(contact.value)}</a>')
+        elif contact.type == "url":
+            label = escape(contact.label or contact.value)
+            parts.append(f'<a href="{escape(contact.value)}" target="_blank" rel="noopener noreferrer">{label}</a>')
+        else:
+            parts.append(escape(contact.value))
+        parts.append('</li>')
+    parts.append('</ul></div>')
+    return "\n".join(parts)
+
+def _gen_acr_html(listing: ListingData) -> str:
+    """Reproduces the Accessibility Conformance Reports block."""
+    if not listing.acr_reports:
+        return ""
+        
+    parts = []
+    parts.append('<div class="edtech-acr">')
+    parts.append('<h3 class="section-heading">Accessibility Conformance Reports</h3>')
+    for acr in listing.acr_reports:
+        parts.append('<div class="acr-report">')
+        parts.append(f'<h4><a href="{escape(acr.url)}" target="_blank" rel="noopener noreferrer">{escape(acr.title)}</a></h4>')
+        parts.append('<ul>')
+        if acr.version:
+            parts.append(f'<li><strong>Version:</strong> {escape(acr.version)}</li>')
+        if acr.date:
+            parts.append(f'<li><strong>Date:</strong> {escape(acr.date)}</li>')
+        if acr.auditor_name:
+            auditor = f'<a href="{escape(acr.auditor_url)}" target="_blank" rel="noopener noreferrer">{escape(acr.auditor_name)}</a>' if acr.auditor_url else escape(acr.auditor_name)
+            parts.append(f'<li><strong>Completed by:</strong> {auditor}</li>')
+        parts.append('</ul></div>')
+    parts.append('</div>')
+    return "\n".join(parts)
+
+def get_section_html(listing: ListingData, section_key: str) -> str:
+    """Returns the HTML a section should render: the override if
+    present in listing.section_overrides, else the auto-generated HTML.
+    Mirrors frontend/lib/ncademiPreview.ts's getSectionHtml (Step 3) —
+    this function and that one MUST implement the identical override-
+    or-generate rule, or Copy HTML will diverge from the live viewer
+    for overridden sections (see plan §3, §8 R1)."""
+    override = listing.section_overrides.get(section_key)
+    if override is not None:  # empty string IS a valid override - see R6
+        return override
+    generators = {
+        "header": _gen_header_html,
+        "vendor_resources": _gen_vendor_resources_html,
+        "other_resources": _gen_other_resources_html,
+        "support": _gen_support_html,
+        "acr": _gen_acr_html,
+    }
+    return generators[section_key](listing)
 
 def generate_ncademi_html(markdown: str) -> str:
     """
