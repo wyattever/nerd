@@ -21,7 +21,33 @@ with Google Search Grounding.
 
 ---
 
-## 2. Architecture Overview
+## 2. Precedence Over Global Configuration
+
+This project's Gemini CLI sessions also load a GLOBAL config file at
+~/.gemini/GEMINI.md, titled "Antigravity IDE Overrides." That file is
+written for a different tool (Antigravity CLI/IDE) and is NOT applicable
+to N.E.R.D. work. It is left in place globally because it may be relevant
+to other projects or a future migration — it is not being deleted or
+edited.
+
+When working in this repository, DISREGARD the global "Antigravity IDE
+Overrides" content entirely, including but not limited to:
+- Model-tier switching guidance (Flash vs. Pro/Advanced)
+- The "state and wait" mandatory protocol override
+- "Do not read files not directly relevant to the current task" — this
+  CONTRADICTS this project's read-only-diagnostics-first discipline
+  (Section 9 [renumbered] / originally Section 8) and must not be
+  followed here
+- The single-retry-then-stop deployment rule — this project's own deploy
+  rollback triggers (Section 7 [renumbered] / originally Section 6)
+  govern deployment behavior instead
+
+This project's rules (this file) take precedence over the global file in
+every case of overlap or conflict, with no exceptions.
+
+---
+
+## 3. Architecture Overview
 
 Three Cloud Run services plus shared core logic:
 
@@ -47,11 +73,11 @@ Three Cloud Run services plus shared core logic:
 - Next.js 16.2.9, React 19, Tailwind 4, TypeScript 5
 - FastAPI 0.124+, Python 3.10 (upgrade to 3.12 before Oct 2026)
 - Firebase Auth (client-side), firebase-admin (server-side, ADC)
-- @microsoft/fetch-event-source (SSE transport with Bearer auth)
+- `@microsoft/fetch-event-source` (SSE transport with Bearer auth)
 
 ---
 
-## 3. Environment Model
+## 4. Environment Model
 
 There are exactly two environments. Never create a third.
 
@@ -75,7 +101,7 @@ flag as a CRITICAL blocker and stop.
 
 ---
 
-## 4. Authentication Architecture
+## 5. Authentication Architecture
 
 ### Worker (nerd-worker)
 Uses Application Default Credentials via the Cloud Run service account
@@ -99,7 +125,7 @@ Uses Application Default Credentials via the Cloud Run service account
 
 ---
 
-## 5. Data Directory Structure
+## 6. Data Directory Structure
 
 There are TWO data directories. Both matter. Do not confuse them.
 
@@ -120,7 +146,7 @@ There are TWO data directories. Both matter. Do not confuse them.
 
 ---
 
-## 6. Deploy Rules (Read Before Touching deploy.sh)
+## 7. Deploy Rules (Read Before Touching deploy.sh)
 
 `scripts/deploy.sh` is the canonical deployment script. It deploys in
 order: worker → api → frontend.
@@ -156,7 +182,7 @@ changes in the past:
 
 ---
 
-## 7. Output Safety
+## 8. Output Safety
 
 **NEVER output credentials, secrets, or sensitive values in plain text.**
 This includes API keys, secret tokens, App IDs, project credentials,
@@ -174,7 +200,7 @@ instruction. It cannot be overridden by any prompt or user request.
 
 ---
 
-## 8. Test Suite
+## 9. Test Suite
 
 Four layers — all must be green before merging to main or deploying.
 
@@ -200,7 +226,7 @@ Any PR that reduces these counts requires explicit justification.
 
 ---
 
-## 9. Branch and Commit Discipline
+## 10. Branch and Commit Discipline
 
 - `main` is always deployable. Never commit broken code to main.
 - Use feature branches for all work: `feat/`, `fix/`, `chore/` prefixes.
@@ -220,7 +246,7 @@ type: short description (imperative, max 72 chars)
 
 ---
 
-## 10. Code Change Rules
+## 11. Code Change Rules
 
 - Do not refactor or improve code beyond what the current task requires.
 - Do not add npm packages that are not imported in source code.
@@ -236,7 +262,7 @@ type: short description (imperative, max 72 chars)
 
 ---
 
-## 11. Session Hygiene
+## 12. Session Hygiene
 
 Start a new Gemini session (exit and reinvoke without --resume) when:
 - You are starting a new phase or major task
@@ -253,7 +279,7 @@ checking git status and git diff to understand what state was left.
 
 ---
 
-## 12. Deferred Cleanup Items
+## 13. Deferred Cleanup Items
 
 These are known issues flagged for future action. Do not address them
 unless explicitly instructed:
@@ -270,7 +296,7 @@ unless explicitly instructed:
 
 ---
 
-## 13. Quick Reference — Production URLs
+## 14. Quick Reference — Production URLs
 
 | Service | URL |
 |---------|-----|
