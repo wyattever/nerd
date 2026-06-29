@@ -3,8 +3,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useResearch } from "@/hooks/useResearch";
 import { ListingCard } from "@/components/ListingCard";
 import { InvalidLinksModal } from "@/components/InvalidLinksModal";
-import { InvalidLink } from "@/lib/types";
-
+import { InvalidLink, SectionKey } from "@/lib/types";
+import { SectionEditor } from "@/components/SectionEditor";
+import { getSectionHtml } from "@/lib/ncademiPreview";
 import { getIdToken } from "@/lib/firebase";
 
 interface CandidateRef {
@@ -13,14 +14,22 @@ interface CandidateRef {
   url: string;
 }
 
+const SECTION_KEYS: { key: SectionKey; label: string }[] = [
+  { key: "header", label: "Header" },
+  { key: "vendor_resources", label: "Vendor Resources" },
+  { key: "other_resources", label: "Other Resources" },
+  { key: "support", label: "Support" },
+  { key: "acr", label: "ACR" },
+];
+
 export default function Home() {
-  const { state, startResearch, reset, updateListing, injectListing } = useResearch();
+  const { state, startResearch, reset, stopResearch, updateListing, injectListing } = useResearch();
   const [url, setUrl] = useState("");
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [invalidLinks, setInvalidLinks] = useState<InvalidLink[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [candidates, setCandidates] = useState<CandidateRef[]>([]);
-  const [products, setProducts] = useState<{ name: string, slug: string }[]>([]);
+  const [products, setProducts] = useState<{ name: string; slug: string }[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("");
   const [selectedProductSlug, setSelectedProductSlug] = useState("");
   const [activeCandidateSlug, setActiveCandidateSlug] = useState<string | null>(null);
@@ -32,6 +41,38 @@ export default function Home() {
   const logRef = useRef<HTMLDivElement>(null);
   const heartbeatTimer = useRef<NodeJS.Timeout | null>(null);
 
+  const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
+  const [editorOpenCount, setEditorOpenCount] = useState(0);
+  const [unsavedSections, setUnsavedSections] = useState<Set<SectionKey>>(new Set());
+
+  const handleSaveSection = (key: SectionKey, html: string) => {
+    updateListing(prev => {
+      if (!prev) throw new Error("Cannot save section: listing is null");
+      return {
+        ...prev,
+        section_overrides: {
+          ...prev.section_overrides,
+          [key]: html,
+        },
+      };
+    });
+    setIsDirty(true);
+    setUnsavedSections(prev => new Set(prev).add(key));
+  };
+
+  const handleResetSection = (key: SectionKey) => {
+    updateListing(prev => {
+      if (!prev) throw new Error("Cannot reset section: listing is null");
+      const { [key]: _, ...rest } = prev.section_overrides ?? {};
+      return {
+        ...prev,
+        section_overrides: rest,
+      };
+    });
+    setIsDirty(true);
+    setUnsavedSections(prev => new Set(prev).add(key));
+  };
+
   const refreshLists = useCallback(async () => {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
     try {
@@ -39,14 +80,9 @@ export default function Home() {
       const authHeader = `Bearer ${token ?? "local-bypass"}`;
       const [candRes, prodRes] = await Promise.all([
         fetch(`${baseUrl}/admin/candidates`, { headers: { Authorization: authHeader } }),
-        fetch(`${baseUrl}/admin/products`, { headers: { Authorization: authHeader } })
+        fetch(`${baseUrl}/admin/products`, { headers: { Authorization: authHeader } }),
       ]);
-      
-      const [candData, prodData] = await Promise.all([
-        candRes.json(),
-        prodRes.json()
-      ]);
-      
+      const [candData, prodData] = await Promise.all([candRes.json(), prodRes.json()]);
       setCandidates(candData);
       setProducts(prodData);
       console.log(`Refreshed: ${candData.length} candidates, ${prodData.length} products`);
@@ -66,7 +102,7 @@ export default function Home() {
       "Snapshotting page content for parsing...",
       "Resolving vendor directory paths...",
       "Analyzing accessibility landmarks...",
-      "Scoping vendor support resources..."
+      "Scoping vendor support resources...",
     ],
     validating: [
       "Checking SSL certificate validity...",
@@ -78,7 +114,7 @@ export default function Home() {
       "Timing out slow responses...",
       "Validating resource patterns...",
       "Fetching remote screenshot...",
-      "Verifying content-type headers..."
+      "Verifying content-type headers...",
     ],
     synthesizing: [
       "Assembling research fragments...",
@@ -90,8 +126,8 @@ export default function Home() {
       "Validating final JSON structure...",
       "Formatting WordPress-ready fragments...",
       "Calculating data fidelity metrics...",
-      "Finalizing research draft..."
-    ]
+      "Finalizing research draft...",
+    ],
   };
 
   const heartbeatType = useRef<keyof typeof MICRO_MESSAGES | null>(null);
@@ -101,8 +137,7 @@ export default function Home() {
   };
 
   const startHeartbeat = (type: keyof typeof MICRO_MESSAGES) => {
-    if (heartbeatType.current === type) return; // Already running this type
-    
+    if (heartbeatType.current === type) return;
     stopHeartbeat();
     heartbeatType.current = type;
     let index = 0;
@@ -123,32 +158,30 @@ export default function Home() {
 
   useEffect(() => {
     if (state.status === "streaming") {
-      // Synchronize with the macro log (e.g. from SSE)
-      // We append the NEW macro messages that aren't in localLog yet
       const lastMacroMsg = state.log[state.log.length - 1];
       if (lastMacroMsg) {
-        // This effect intentionally syncs external SSE-driven state into local display
-        // state, and message order must be preserved for the aria-live log.
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setLocalLog(prev => {
-          // If the last message in localLog is already this macro message, do nothing
           if (prev[prev.length - 1] === lastMacroMsg) return prev;
           return [...prev, lastMacroMsg];
         });
       }
-
       const msgLower = lastMacroMsg?.toLowerCase() || "";
-      if (msgLower.includes("queuing") || msgLower.includes("opening") || msgLower.includes("researching") || msgLower.includes("analyzing")) {
+      if (
+        msgLower.includes("queuing") ||
+        msgLower.includes("opening") ||
+        msgLower.includes("researching") ||
+        msgLower.includes("analyzing")
+      ) {
         startHeartbeat("searching");
       } else if (msgLower.includes("synthesizing") || msgLower.includes("insights")) {
         startHeartbeat("synthesizing");
       }
     } else if (state.status === "complete") {
       stopHeartbeat();
-      // Ensure final macro log is set
       if (state.log.length > 0) {
         const lastMsg = state.log[state.log.length - 1];
-        setLocalLog(prev => prev[prev.length - 1] === lastMsg ? prev : [...prev, lastMsg]);
+        setLocalLog(prev => (prev[prev.length - 1] === lastMsg ? prev : [...prev, lastMsg]));
       }
     } else if (state.status === "error") {
       stopHeartbeat();
@@ -177,11 +210,11 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (url.trim()) {
       setProcessHeading("Generating Listing");
       setLocalLog([]);
       setIsDirty(false);
+      setUnsavedSections(new Set());
       setActiveCandidateSlug(null);
       setIsProductLoaded(false);
       startResearch(url.trim());
@@ -193,10 +226,14 @@ export default function Home() {
     setProcessHeading("Viewing Candidate");
     setLocalLog([]);
     setIsDirty(false);
+    setUnsavedSections(new Set());
     setIsProductLoaded(false);
     try {
       const token = await getIdToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/candidates/${selectedSlug}`, { headers: { Authorization: `Bearer ${token ?? "local-bypass"}` } });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/candidates/${selectedSlug}`,
+        { headers: { Authorization: `Bearer ${token ?? "local-bypass"}` } }
+      );
       const data = await res.json();
       injectListing(data);
       setActiveCandidateSlug(selectedSlug);
@@ -212,9 +249,13 @@ export default function Home() {
     setProcessHeading("Viewing Product");
     setLocalLog([]);
     setIsDirty(false);
+    setUnsavedSections(new Set());
     try {
       const token = await getIdToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/products/${selectedProductSlug}`, { headers: { Authorization: `Bearer ${token ?? "local-bypass"}` } });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/products/${selectedProductSlug}`,
+        { headers: { Authorization: `Bearer ${token ?? "local-bypass"}` } }
+      );
       const data = await res.json();
       injectListing(data, "Injected data from saved product.");
       setActiveCandidateSlug(null);
@@ -232,11 +273,10 @@ export default function Home() {
       const token = await getIdToken();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/${target}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token ?? "local-bypass"}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? "local-bypass"}` },
         body: JSON.stringify(state.listing),
       });
       if (!res.ok) throw new Error(`Failed to save ${label}`);
-      
       const resData = await res.json();
       if (target === "candidates" && resData.slug) {
         setActiveCandidateSlug(resData.slug);
@@ -245,19 +285,14 @@ export default function Home() {
       } else if (target === "products") {
         setActiveCandidateSlug(null);
       }
-
       setSaveStatus(prev => ({ ...prev, [target]: "Saved!" }));
       logMessage(`Successfully saved to NCADEMI ${label} repository.`);
       setIsDirty(false);
-      
-      // Reset status after 3 seconds
+      setUnsavedSections(new Set());
       setTimeout(() => {
         setSaveStatus(prev => ({ ...prev, [target]: "" }));
       }, 3000);
-
-      // Refresh both lists to be sure
       await refreshLists();
-
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       logMessage(`ERROR saving ${label}: ${msg}`);
@@ -268,32 +303,28 @@ export default function Home() {
     if (!state.listing || !activeCandidateSlug) return;
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-      
-      // Add mm-dd-yy hh:mm timestamp
       const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const timestamp = `${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${now.getFullYear().toString().slice(-2)} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const timestamp = `${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${now
+        .getFullYear()
+        .toString()
+        .slice(-2)} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
       const updatedListing = { ...state.listing, last_updated_at: timestamp };
-      
       const token = await getIdToken();
       const res = await fetch(`${baseUrl}/admin/candidates/${activeCandidateSlug}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token ?? "local-bypass"}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? "local-bypass"}` },
         body: JSON.stringify(updatedListing),
       });
       if (!res.ok) throw new Error("Failed to update candidate");
-
       updateListing(updatedListing);
       setSaveStatus(prev => ({ ...prev, update: "Updated!" }));
       logMessage(`Candidate listing updated at ${timestamp}.`);
       setIsDirty(false);
-
-      // Reset status after 3 seconds
+      setUnsavedSections(new Set());
       setTimeout(() => {
         setSaveStatus(prev => ({ ...prev, update: "" }));
       }, 3000);
-
       await refreshLists();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -306,13 +337,10 @@ export default function Home() {
       logMessage("ERROR: No active candidate slug found for deletion.");
       return;
     }
-    
     if (!confirm(`Are you sure you want to delete the candidate "${activeCandidateSlug}"?`)) {
       return;
     }
-
     logMessage(`Attempting to delete candidate: ${activeCandidateSlug}...`);
-
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
       const url = `${baseUrl}/admin/candidates/${activeCandidateSlug}`;
@@ -321,24 +349,19 @@ export default function Home() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token ?? "local-bypass"}` },
       });
-      
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.detail || "Failed to delete candidate");
       }
-
       logMessage(`Successfully deleted candidate from repository.`);
-      
-      // Sequential Cleanup
       reset();
       setLocalLog([]);
       setProcessHeading("");
       setActiveCandidateSlug(null);
       setIsProductLoaded(false);
-      
+      setEditingSection(null);
       await refreshLists();
       logMessage("UI cleared and dropdowns refreshed.");
-
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       logMessage(`ERROR deleting candidate: ${msg}`);
@@ -350,128 +373,108 @@ export default function Home() {
     if (!state.listing) return;
     setIsValidating(true);
     logMessage("--- Link Validation Started ---");
-
     try {
       const listing = state.listing;
-      const candidateLinks: InvalidLink[] = [
-        ...listing.vendor_resources.map(r => ({
-          section: `From ${listing.vendor_name || "Vendor"}`,
-          text: r.text,
-          url: r.url,
-        })),
-        ...listing.other_resources.map(r => ({
-          section: "From Other Sources",
-          text: r.text,
-          url: r.url,
-        })),
-        ...listing.support_contacts
-          .filter(c => c.type === "url")
-          .map(c => ({
-            section: "Support",
-            text: c.label || c.value,
-            url: c.value,
-          })),
-        ...listing.acr_reports.map(a => ({
-          section: "Accessibility Conformance Reports",
-          text: a.title,
-          url: a.url,
-        })),
-      ];
+      const candidateLinks: InvalidLink[] = SECTION_KEYS.flatMap(({ key, label }) => {
+        const html = getSectionHtml(listing, key);
+        if (!html) return [];
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const links = Array.from(doc.querySelectorAll("a"));
+        return links
+          .map(link => {
+            const href = link.getAttribute("href");
+            return {
+              section: label,
+              sectionKey: key,
+              text: link.textContent || "",
+              url: href || "",
+            };
+          })
+          .filter(link => link.url && link.url.startsWith("http"));
+      });
 
-      const candidateUrls = candidateLinks
-        .map(link => link.url)
-        .filter(url => url && url !== "#" && url.startsWith("http"));
+      const uniqueUrls = [...new Set(candidateLinks.map(link => link.url))];
 
-      if (candidateUrls.length === 0) {
-        logMessage("No valid candidate URLs found for validation.");
+      if (uniqueUrls.length === 0) {
+        logMessage("No valid http(s) links found in rendered HTML for validation.");
         setIsValidating(false);
         return;
       }
 
-      logMessage(`Validating ${candidateUrls.length} unique URLs...`);
+      logMessage(`Validating ${uniqueUrls.length} unique URLs...`);
       startHeartbeat("validating");
-
       const token = await getIdToken();
       const authHeader = `Bearer ${token ?? "local-bypass"}`;
-
-      // Step 2: Dispatch a single POST request to the new FastAPI endpoint
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links-async`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader
-        },
-        body: JSON.stringify({ urls: candidateUrls }),
-      });
-
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links-async`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
+          },
+          body: JSON.stringify({ urls: uniqueUrls }),
+        }
+      );
       if (!response.ok) {
         throw new Error(`Validation service failed with status: ${response.status}`);
       }
-
       const { job_id } = await response.json();
       logMessage(`Job queued: ${job_id}. Polling for results...`);
-
-      // Step 3: Poll for completion
-      let results = null;
+      let results: Record<string, { is_valid: boolean; reason?: string; screenshot_path?: string }> | null = null;
       let iterations = 0;
-      const MAX_POLLS = 90; // 3 minutes at 2s intervals
-
+      const MAX_POLLS = 90;
       while (iterations < MAX_POLLS) {
         iterations++;
-        const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links/${job_id}`, {
-          headers: { 'Authorization': authHeader }
-        });
-
+        const statusRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links/${job_id}`,
+          {
+            headers: { Authorization: authHeader },
+          }
+        );
         if (!statusRes.ok) {
-          const detail = statusRes.status === 404
-            ? "Validation job not found (may have been lost to an instance restart)"
-            : `Server error (${statusRes.status})`;
+          const detail =
+            statusRes.status === 404
+              ? "Validation job not found (may have been lost to an instance restart)"
+              : `Server error (${statusRes.status})`;
           throw new Error(detail);
         }
-
         const statusData = await statusRes.json();
-        
-        if (statusData.status === 'complete') {
+        if (statusData.status === "complete") {
           results = statusData.results;
           logMessage("Validation backend processing complete.");
           stopHeartbeat();
           break;
-        } else if (statusData.status === 'error') {
+        } else if (statusData.status === "error") {
           throw new Error(statusData.error || "Validation job failed");
         }
-        
         if (iterations % 4 === 0) {
-           logMessage(`Polling validation status (Attempt ${iterations}/${MAX_POLLS})...`);
+          logMessage(`Polling validation status (Attempt ${iterations}/${MAX_POLLS})...`);
         }
-
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
-
       if (!results) {
         throw new Error("Validation timed out after 3 minutes. Partial results may be available — please retry.");
       }
-
-      // Step 4: Map the backend's detailed results back to the UI interface
+      const finalResults = results; // for type safety
       const brokenLinksToDisplay = candidateLinks
         .map(link => {
-          const res = results[link.url];
+          const res = finalResults[link.url];
           if (res && !res.is_valid) {
             return {
               ...link,
               reason: res.reason,
-              screenshot_path: res.screenshot_path ? `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}${res.screenshot_path}` : undefined
+              screenshot_path: res.screenshot_path
+                ? `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}${res.screenshot_path}`
+                : undefined,
             } as InvalidLink;
           }
           return null;
         })
         .filter((l): l is InvalidLink => l !== null);
-
       logMessage(`Validation complete. Found ${brokenLinksToDisplay.length} broken links.`);
-
-      // Step 5: Update the UI state with the final grouped/mapped invalid links
       setInvalidLinks(brokenLinksToDisplay);
       setShowValidationModal(true);
-
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unknown error";
       logMessage(`ERROR during validation: ${msg}`);
@@ -481,48 +484,24 @@ export default function Home() {
     }
   };
 
-  const handleApplyChanges = (toDelete: InvalidLink[], toAdd: { section: string, text: string, url: string }[]) => {
+  const handleApplyChanges = (toDelete: InvalidLink[]) => {
     if (!state.listing) return;
-
     const toDeleteUrls = new Set(toDelete.map(l => l.url));
+    if (toDeleteUrls.size === 0) {
+        logMessage("No links selected for deletion.");
+        return;
+    }
 
     const updated = {
       ...state.listing,
-      vendor_resources: state.listing.vendor_resources.filter(
-        r => !toDeleteUrls.has(r.url)
-      ),
-      other_resources: state.listing.other_resources.filter(
-        r => !toDeleteUrls.has(r.url)
-      ),
-      support_contacts: state.listing.support_contacts.filter(
-        c => !toDeleteUrls.has(c.value)
-      ),
-      acr_reports: state.listing.acr_reports.filter(
-        a => !toDeleteUrls.has(a.url)
-      ),
+      vendor_resources: state.listing.vendor_resources.filter(r => !toDeleteUrls.has(r.url)),
+      other_resources: state.listing.other_resources.filter(r => !toDeleteUrls.has(r.url)),
+      support_contacts: state.listing.support_contacts.filter(c => c.type !== 'url' || !toDeleteUrls.has(c.value)),
+      acr_reports: state.listing.acr_reports.filter(a => !toDeleteUrls.has(a.url)),
     };
 
-    // Append new links
-    toAdd.forEach(link => {
-      if (link.section === "vendor") {
-        updated.vendor_resources.push({ text: link.text, url: link.url });
-      } else if (link.section === "other") {
-        updated.other_resources.push({ text: link.text, url: link.url });
-      } else if (link.section === "support") {
-        updated.support_contacts.push({ type: "url", value: link.url, label: link.text });
-      } else if (link.section === "acr") {
-        updated.acr_reports.push({ title: link.text, url: link.url });
-      }
-    });
-
-    // 1. First update the listing data
     updateListing(updated);
-    
-    // 2. Log the completion of the data transformation
-    logMessage(`Validation applied: ${toDelete.length} link(s) removed, ${toAdd.length} link(s) added.`);
-    
-    // 3. Activate the Update button only after a tiny delay to ensure React state batching 
-    // and re-renders are prioritized.
+    logMessage(`Validation applied: ${toDelete.length} link(s) removed.`);
     setTimeout(() => {
       setIsDirty(true);
       logMessage("Ready to update candidate repository.");
@@ -531,8 +510,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
-      {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <h1 className="text-xl font-bold text-gray-900">
           N.E.R.D. | NCADEMI EdTech Researcher for the Directory
@@ -540,16 +517,10 @@ export default function Home() {
       </header>
 
       <main className="max-w-[90%] mx-auto px-6 py-8 space-y-8">
-
-        {/* Input & Messages Section — Always visible */}
         <section aria-label="Research input and messages">
           <div className="flex gap-8 items-start">
-            
-            {/* Left Column: Messages (50%) */}
             <div className="w-1/2 flex flex-col gap-1">
-              <label className="text-sm font-semibold text-gray-700">
-                Messages
-              </label>
+              <label className="text-sm font-semibold text-gray-700">Messages</label>
               <div
                 ref={logRef}
                 role="log"
@@ -570,14 +541,14 @@ export default function Home() {
                   return (
                     <p key={i}>
                       <span className="text-gray-600 select-none mr-2">›</span>
-                      {line}{isActive && <span className="ellipsis-animation"></span>}
+                      {line}
+                      {isActive && <span className="ellipsis-animation"></span>}
                     </p>
                   );
                 })}
               </div>
             </div>
 
-            {/* Right Column: URL & Buttons (50%) */}
             <div className="w-1/2 flex flex-col gap-4">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="flex flex-col gap-1">
@@ -589,7 +560,7 @@ export default function Home() {
                       id="product-url"
                       type="url"
                       value={url}
-                      onChange={(e) => setUrl(e.target.value)}
+                      onChange={e => setUrl(e.target.value)}
                       placeholder="https://vendor.com/product"
                       required
                       disabled={state.status === "streaming" || isValidating}
@@ -607,19 +578,29 @@ export default function Home() {
                     >
                       {state.status === "streaming" ? "Processing..." : "Generate Listing"}
                     </button>
+                    <button
+                      type="button"
+                      onClick={stopResearch}
+                      disabled={state.status !== "streaming"}
+                      aria-disabled={state.status !== "streaming"}
+                      className="bg-[#bf1712] text-white text-sm font-medium px-5 py-2 rounded
+                                 hover:bg-red-800 focus:outline-none focus:ring-2
+                                 focus:ring-red-500 focus:ring-offset-2
+                                 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                    >
+                      Stop
+                    </button>
                   </div>
                 </div>
               </form>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-gray-700">
-                  NCADEMI Products
-                </label>
+                <label className="text-sm font-semibold text-gray-700">NCADEMI Products</label>
                 <div className="flex gap-3 items-center">
-                  <select 
+                  <select
                     aria-label="Select NCADEMI Product"
                     value={selectedProductSlug}
-                    onChange={(e) => setSelectedProductSlug(e.target.value)}
+                    onChange={e => setSelectedProductSlug(e.target.value)}
                     disabled={state.status === "streaming" || isValidating}
                     className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -628,7 +609,9 @@ export default function Home() {
                   >
                     <option value="">select Product</option>
                     {products.map(p => (
-                      <option key={p.slug} value={p.slug}>{p.name}</option>
+                      <option key={p.slug} value={p.slug}>
+                        {p.name}
+                      </option>
                     ))}
                   </select>
                   <button
@@ -646,14 +629,12 @@ export default function Home() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-gray-700">
-                  NCADEMI Candidate
-                </label>
+                <label className="text-sm font-semibold text-gray-700">NCADEMI Candidate</label>
                 <div className="flex gap-3 items-center">
-                  <select 
+                  <select
                     aria-label="Select NCADEMI Candidate"
                     value={selectedSlug}
-                    onChange={(e) => setSelectedSlug(e.target.value)}
+                    onChange={e => setSelectedSlug(e.target.value)}
                     disabled={state.status === "streaming" || isValidating}
                     className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -662,7 +643,9 @@ export default function Home() {
                   >
                     <option value="">select Candidate</option>
                     {candidates.map(c => (
-                      <option key={c.slug} value={c.slug}>{c.name}</option>
+                      <option key={c.slug} value={c.slug}>
+                        {c.name}
+                      </option>
                     ))}
                   </select>
                   <button
@@ -684,8 +667,19 @@ export default function Home() {
                       className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                       title="View Full Batch Report"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
+                        />
                       </svg>
                     </a>
                   </div>
@@ -695,24 +689,18 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Results phase — static read-only listing */}
         {state.status === "complete" && state.listing && (
           <>
-            {/* Action bar - Now above the results */}
-            <div className="flex gap-3" role="toolbar" aria-label="Listing actions">
+            <div className="flex gap-3 items-center" role="toolbar" aria-label="Listing actions">
               <button
                 onClick={() => {
-                  // Fetch rendered HTML from /render and copy to clipboard
-                  fetch(
-                    `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/render`,
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(state.listing),
-                    }
-                  )
-                    .then((r) => r.json())
-                    .then((d) => navigator.clipboard.writeText(d.html));
+                  fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/render`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(state.listing),
+                  })
+                    .then(r => r.json())
+                    .then(d => navigator.clipboard.writeText(d.html));
                 }}
                 className="border border-gray-300 text-sm px-4 py-2 rounded
                            hover:bg-gray-50 focus:outline-none focus:ring-2
@@ -722,16 +710,13 @@ export default function Home() {
               </button>
               <button
                 onClick={() => {
-                  fetch(
-                    `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/render`,
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(state.listing),
-                    }
-                  )
-                    .then((r) => r.json())
-                    .then((d) => {
+                  fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/render`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(state.listing),
+                  })
+                    .then(r => r.json())
+                    .then(d => {
                       const blob = new Blob([d.html], { type: "text/html" });
                       const a = document.createElement("a");
                       a.href = URL.createObjectURL(blob);
@@ -764,6 +749,8 @@ export default function Home() {
                   setIsDirty(false);
                   setActiveCandidateSlug(null);
                   setIsProductLoaded(false);
+                  setEditingSection(null);
+                  setUnsavedSections(new Set());
                 }}
                 className="border border-gray-300 text-sm px-4 py-2 rounded
                            hover:bg-gray-50 focus:outline-none focus:ring-2
@@ -771,15 +758,35 @@ export default function Home() {
               >
                 Clear
               </button>
+
+              {!isProductLoaded && (
+                <div role="toolbar" aria-label="Section editors" className="ml-auto flex items-center gap-2 border-l pl-3">
+                  <span className="text-xs font-semibold text-gray-600">EDIT:</span>
+                  {SECTION_KEYS.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setEditingSection(key);
+                        setEditorOpenCount(c => c + 1);
+                      }}
+                      className="relative text-xs border border-gray-300 rounded px-2 py-1 hover:bg-gray-50"
+                    >
+                      {label}
+                      {unsavedSections.has(key) && (
+                        <span
+                          className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-blue-500"
+                          title="This section has unsaved changes"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <section aria-label="Research results">
               <div className="relative bg-white border border-gray-200 rounded-lg p-6">
-
-                {/* Preview and Save buttons — top-right corner of the card */}
                 <div className="absolute top-4 right-4 flex gap-2">
-
-
                   {!activeCandidateSlug ? (
                     <button
                       onClick={() => handleSave("candidates")}
@@ -788,9 +795,7 @@ export default function Home() {
                                  hover:bg-gray-50 focus:outline-none focus:ring-2
                                  focus:ring-gray-500 focus:ring-offset-2 transition-all"
                     >
-                      <span aria-live="assertive">
-                        {saveStatus["candidates"] || "Save Candidate"}
-                      </span>
+                      <span aria-live="assertive">{saveStatus["candidates"] || "Save Candidate"}</span>
                     </button>
                   ) : (
                     <button
@@ -802,9 +807,7 @@ export default function Home() {
                                  focus:ring-gray-500 focus:ring-offset-2 transition-all
                                  disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <span aria-live="assertive">
-                        {saveStatus["update"] || "Update Candidate"}
-                      </span>
+                      <span aria-live="assertive">{saveStatus["update"] || "Update Candidate"}</span>
                     </button>
                   )}
 
@@ -819,15 +822,13 @@ export default function Home() {
                       Delete Candidate
                     </button>
                   )}
-
                 </div>
 
-                  <ListingCard listing={state.listing} />
+                <ListingCard listing={state.listing} />
               </div>
             </section>
           </>
         )}
-
       </main>
 
       {showValidationModal && (
@@ -837,6 +838,22 @@ export default function Home() {
           onClose={() => setShowValidationModal(false)}
           onApplyChanges={handleApplyChanges}
           readOnly={isProductLoaded}
+          overriddenSections={Object.keys(state.listing?.section_overrides ?? {}) as SectionKey[]}
+        />
+      )}
+
+      {editingSection && state.listing && (
+        <SectionEditor
+          key={`${editingSection}-${editorOpenCount}`}
+          sectionKey={editingSection}
+          label={SECTION_KEYS.find(k => k.key === editingSection)?.label || "Section"}
+          initialHtml={getSectionHtml(state.listing, editingSection)}
+          isOverridden={state.listing.section_overrides?.[editingSection] != null}
+          generatedHtml={""} // This prop is for conceptual completeness. Reset logic is handled by the parent.
+          isOpen={!!editingSection}
+          onSave={handleSaveSection}
+          onReset={handleResetSection}
+          onClose={() => setEditingSection(null)}
         />
       )}
     </div>

@@ -28,6 +28,11 @@ def pydantic_to_dataclass(payload: schemas.ListingData) -> gen.ListingData:
     if last_updated is None:
         last_updated = datetime.now().strftime("%B %d, %Y")
 
+    section_overrides = {}
+    if payload.section_overrides is not None:
+        # model_dump(exclude_none=True) -> only populated sections become keys
+        section_overrides = payload.section_overrides.model_dump(exclude_none=True)
+
     return gen.ListingData(
         product_name=payload.product_name,
         vendor_name=payload.vendor_name,
@@ -51,6 +56,7 @@ def pydantic_to_dataclass(payload: schemas.ListingData) -> gen.ListingData:
         last_updated=last_updated,
         html_override=payload.html_override or "",
         last_updated_at=payload.last_updated_at or "",
+        section_overrides=section_overrides,
     )
 
 
@@ -60,6 +66,10 @@ def dataclass_to_pydantic(listing: gen.ListingData) -> schemas.ListingData:
     Used to package parse_markdown_to_listing() output for the SSE result payload
     so Next.js can hydrate the React Hook Form.
     """
+    section_overrides = (
+        schemas.SectionOverrides(**listing.section_overrides)
+        if listing.section_overrides else None
+    )
     return schemas.ListingData(
         product_name=listing.product_name,
         vendor_name=listing.vendor_name,
@@ -83,4 +93,5 @@ def dataclass_to_pydantic(listing: gen.ListingData) -> schemas.ListingData:
         last_updated=listing.last_updated or None,
         html_override=listing.html_override or None,
         last_updated_at=listing.last_updated_at or None,
+        section_overrides=section_overrides,
     )

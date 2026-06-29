@@ -45,6 +45,20 @@ class ACRReport(BaseModel):
     auditor_url: str = ""
 
 
+class SectionOverrides(BaseModel):
+    """Per-section raw-HTML overrides. Each value, if present, replaces
+    the auto-generated HTML for that section in BOTH the live viewer and
+    /render. Closed key set — these are the only editable sections
+    (footer excluded)."""
+    header: Optional[str] = Field(default=None, max_length=102400)
+    vendor_resources: Optional[str] = Field(default=None, max_length=102400)
+    other_resources: Optional[str] = Field(default=None, max_length=102400)
+    support: Optional[str] = Field(default=None, max_length=102400)
+    acr: Optional[str] = Field(default=None, max_length=102400)
+
+    model_config = {"extra": "forbid"}  # reject unknown section keys
+
+
 class ListingData(BaseModel):
     product_name: str = "Unknown Product"
     vendor_name: str = ""
@@ -65,6 +79,7 @@ class ListingData(BaseModel):
     last_updated: Optional[str] = None
     html_override: Optional[str] = Field(default=None, max_length=102400)
     last_updated_at: Optional[str] = None
+    section_overrides: Optional[SectionOverrides] = None
 
 
 # ---------------------------------------------------------------------------

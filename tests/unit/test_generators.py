@@ -1,5 +1,5 @@
 import pytest
-from nerd_core.generators import parse_markdown_to_listing, ListingData, ResourceLink
+from nerd_core.generators import parse_markdown_to_listing, render_listing_html, ListingData, ResourceLink, SupportContact
 
 def test_parse_markdown_basic():
     markdown = """
@@ -64,3 +64,31 @@ def test_parse_markdown_missing_sections():
     assert listing.vendor_resources == []
     assert listing.other_resources == []
     assert listing.ai_insights == ""
+
+def test_render_with_section_override():
+    listing = ListingData(
+        product_name="Test Product",
+        vendor_name="Test Vendor",
+        support_contacts=[SupportContact(type="email", value="old@example.com")],
+        section_overrides={"support": "<p>OVERRIDE SUPPORT CONTENT</p>"},
+    )
+    html = render_listing_html(listing)
+    assert "<p>OVERRIDE SUPPORT CONTENT</p>" in html
+    assert "old@example.com" not in html  # override replaced, not appended
+    assert "Test Vendor" in html  # non-overridden sections still auto-generate
+
+def test_render_without_overrides_regression():
+    listing = ListingData(
+        product_name="Regress Product",
+        vendor_name="Regress Vendor",
+        support_contacts=[SupportContact(type="email", value="regress@example.com")],
+        vendor_resources=[ResourceLink(url="https://regress.com", text="Regress Link")]
+    )
+    html = render_listing_html(listing)
+    
+    # Check that auto-generated content is present
+    assert "Regress Product" in html
+    assert "Regress Vendor" in html
+    assert "regress@example.com" in html
+    assert "Regress Link" in html
+    assert "https://regress.com" in html
