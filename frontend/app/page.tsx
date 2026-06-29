@@ -23,7 +23,7 @@ const SECTION_KEYS: { key: SectionKey; label: string }[] = [
 ];
 
 export default function Home() {
-  const { state, startResearch, reset, updateListing, injectListing } = useResearch();
+  const { state, startResearch, reset, stopResearch, updateListing, injectListing } = useResearch();
   const [url, setUrl] = useState("");
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [invalidLinks, setInvalidLinks] = useState<InvalidLink[]>([]);
@@ -577,6 +577,18 @@ export default function Home() {
                                  disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                     >
                       {state.status === "streaming" ? "Processing..." : "Generate Listing"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopResearch}
+                      disabled={state.status !== "streaming"}
+                      aria-disabled={state.status !== "streaming"}
+                      className="bg-[#bf1712] text-white text-sm font-medium px-5 py-2 rounded
+                                 hover:bg-red-800 focus:outline-none focus:ring-2
+                                 focus:ring-red-500 focus:ring-offset-2
+                                 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                    >
+                      Stop
                     </button>
                   </div>
                 </div>

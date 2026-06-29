@@ -31,6 +31,15 @@ export function useResearch() {
     setState(INITIAL_STATE);
   }, []);
 
+  const stopResearch = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setState(prev => ({
+      ...prev,
+      status: "idle",
+      log: [...prev.log, "Research stopped by user."],
+    }));
+  }, []);
+
   const updateListing = useCallback(
     (update: ListingData | ((prev: ListingData | null) => ListingData)) => {
       setState(prev => ({
@@ -140,5 +149,5 @@ export function useResearch() {
     }
   }, []);
 
-  return { state, startResearch, reset, updateListing, injectListing };
+  return { state, startResearch, reset, stopResearch, updateListing, injectListing };
 }
