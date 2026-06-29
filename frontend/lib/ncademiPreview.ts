@@ -15,7 +15,7 @@ function genHeaderHtml(listing: ListingData): string {
 
   // Entry Header
   parts.push('<header class="entry-header alignwide">');
-  parts.push(`<h1 class="entry-title">${escapeHtml(listing.product_name)}</h1>`);
+  parts.push(`<h1 id="product-name" class="entry-title">${escapeHtml(listing.product_name)}</h1>`);
   parts.push('</header>');
 
   // Product Header

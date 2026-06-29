@@ -258,7 +258,7 @@ def _gen_header_html(listing: ListingData) -> str:
     
     # Entry Header
     parts.append('<header class="entry-header alignwide">')
-    parts.append(f'<h1 class="entry-title">{escape(listing.product_name)}</h1>')
+    parts.append(f'<h1 id="product-name" class="entry-title">{escape(listing.product_name)}</h1>')
     parts.append('</header>')
     
     # Product Header
