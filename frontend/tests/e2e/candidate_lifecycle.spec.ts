@@ -22,8 +22,11 @@ test('Candidate Lifecycle: Inject -> Edit -> Update -> Delete', async ({ page })
   // Wait for validation modal
   const modal = page.locator('role=dialog');
   await expect(modal).toBeVisible({ timeout: 30000 });
+
+  // Select all deletable links so the Delete Selected button becomes enabled
+  await page.click('#select-all-invalid');
   
-  await page.click('button:has-text("Apply Changes")');
+  await page.click('button:has-text("Delete Selected")');
   
   // Verify isDirty
   await expect(updateBtn).toBeEnabled();
@@ -31,7 +34,7 @@ test('Candidate Lifecycle: Inject -> Edit -> Update -> Delete', async ({ page })
   // 3. Update
   await updateBtn.click();
   const log = page.locator('[role="log"]');
-  await expect(log).toContainText('Candidate listing has been updated', { timeout: 10000 });
+  await expect(log).toContainText('Candidate listing updated at', { timeout: 10000 });
   await expect(updateBtn).toBeDisabled();
 
   // 4. Delete
