@@ -128,7 +128,7 @@ def run_deep_dive(product_url: str, product_name: str, current_draft: str, timeo
 
 
 # --- Phase 3: AI Insights synthesis (with URL masking) ---
-def synthesize_insights(draft_markdown: str) -> str:
+def synthesize_insights(draft_markdown: str, timeout_min: int = 2) -> str:
     """Synthesize the AI Generated Insights paragraph with URL masking."""
     masker = URLMask()
     masked = masker.mask(draft_markdown)
@@ -139,7 +139,10 @@ def synthesize_insights(draft_markdown: str) -> str:
     response = _client.models.generate_content(
         model=MODEL,
         contents=prompt,
-        config=types.GenerateContentConfig(temperature=0.2),
+        config=types.GenerateContentConfig(
+            temperature=0.2,
+            http_options=types.HttpOptions(timeout=timeout_min * 60 * 1000),
+        ),
     )
 
     audit = masker.audit(response.text)
