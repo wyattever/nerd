@@ -11,97 +11,125 @@ function escapeHtml(str: string): string {
 }
 
 function genHeaderHtml(listing: ListingData): string {
-  const safeVendorName = escapeHtml(listing.vendor_name);
-  const safeProductName = escapeHtml(listing.product_name);
-  const safeDescription = escapeHtml(listing.product_description);
+  const parts: string[] = [];
 
-  const vendorLink = listing.vendor_directory_url && listing.vendor_directory_url !== "#"
-    ? `<a href="${listing.vendor_directory_url}">${safeVendorName}</a>`
-    : safeVendorName;
+  // Entry Header
+  parts.push('<header class="entry-header alignwide">');
+  parts.push(`<h1 class="entry-title">${escapeHtml(listing.product_name)}</h1>`);
+  parts.push('</header>');
 
-  const websiteLinkHtml = listing.product_website_url && listing.product_website_url !== "#"
-    ? `<p><a href="${listing.product_website_url}" target="_blank" rel="noopener noreferrer">
-         <i class="fa-regular fa-globe" aria-hidden="true"></i>
-         ${safeProductName} Website
-       </a></p>`
-    : "";
+  // Product Header
+  parts.push('<header class="product-header">');
+  if (listing.vendor_name) {
+    const vendorLink = (listing.vendor_directory_url && listing.vendor_directory_url !== '#')
+      ? `<a href="${escapeHtml(listing.vendor_directory_url)}">${escapeHtml(listing.vendor_name)}</a>`
+      : escapeHtml(listing.vendor_name);
+    parts.push(`<p class="vendor-line"><strong>Vendor:</strong> ${vendorLink}</p>`);
+  }
 
-  return `
-    <header class="page-header">
-      <h1 class="page-title">${safeProductName}</h1>
-    </header>
-    ${listing.vendor_name
-      ? `<p><strong>Vendor:</strong> ${vendorLink}</p>`
-      : ""}
-    ${listing.product_description
-      ? `<p>${safeDescription}</p>`
-      : ""}
-    ${websiteLinkHtml}
-  `;
+  if (listing.product_description) {
+    parts.push(`<p class="product-desc">${escapeHtml(listing.product_description)}</p>`);
+  }
+
+  if (listing.product_website_url && listing.product_website_url !== '#') {
+    parts.push(
+      '<p class="product-website">' +
+      `<a href="${escapeHtml(listing.product_website_url)}" target="_blank" rel="noopener noreferrer">` +
+      `<i class="fa-solid fa-globe" aria-hidden="true"></i> ${escapeHtml(listing.product_name)} Website` +
+      '</a></p>'
+    );
+  }
+  parts.push('</header>');
+
+  return parts.join("\n");
 }
 
 function genVendorResourcesHtml(listing: ListingData): string {
-  const safeVendorName = escapeHtml(listing.vendor_name);
-  return listing.vendor_resources.length
-    ? `<h3>From ${safeVendorName || "Vendor"}</h3>
-       <ul>
-         ${listing.vendor_resources.map(r =>
-           `<li><a href="${r.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.text)}</a></li>`
-         ).join("\n")}
-       </ul>`
-    : "";
+  if (!listing.vendor_resources || listing.vendor_resources.length === 0) {
+    return "";
+  }
+
+  const vendorDisplayName = escapeHtml(listing.vendor_name || "Vendor");
+  const parts = [
+    `<h3 class="section-heading">From ${vendorDisplayName}</h3>`,
+    '<ul class="wp-block-list resource-list">',
+    ...listing.vendor_resources.map(item =>
+      `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.text)}</a></li>`
+    ),
+    '</ul>'
+  ];
+  return parts.join("\n");
 }
 
 function genOtherResourcesHtml(listing: ListingData): string {
-  return listing.other_resources.length
-    ? `<h3>From Other Sources</h3>
-       <ul>
-         ${listing.other_resources.map(r =>
-           `<li><a href="${r.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.text)}</a></li>`
-         ).join("\n")}
-       </ul>`
-    : "";
+  if (!listing.other_resources || listing.other_resources.length === 0) {
+    return "";
+  }
+
+  const parts = [
+    '<h3 class="section-heading">From Other Sources</h3>',
+    '<ul class="wp-block-list resource-list">',
+    ...listing.other_resources.map(item =>
+      `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.text)}</a></li>`
+    ),
+    '</ul>'
+  ];
+  return parts.join("\n");
 }
 
 function genSupportHtml(listing: ListingData): string {
-  return listing.support_contacts.length
-    ? `<div class="product-support">
-         <h3>Support</h3>
-         <ul>
-           ${listing.support_contacts.map(c => {
-             const safeValue = escapeHtml(c.value);
-             const safeLabel = escapeHtml(c.label || "");
-             if (c.type === "email") {
-               return `<li><a href="mailto:${c.value}">${safeValue}</a></li>`;
-             } else if (c.type === "url") {
-               return `<li><a href="${c.value}" target="_blank" rel="noopener noreferrer">${safeLabel || safeValue}</a></li>`;
-             }
-             return `<li>${safeValue}</li>`;
-           }).join("\n")}
-         </ul>
-       </div>`
-    : "";
+  if (!listing.support_contacts || listing.support_contacts.length === 0) {
+    return "";
+  }
+
+  const parts: string[] = [];
+  parts.push('<div class="product-support">');
+  parts.push('<h3 class="section-heading">Support</h3>');
+  parts.push('<ul class="wp-block-list resource-list">');
+  listing.support_contacts.forEach(contact => {
+    parts.push('<li>');
+    if (contact.type === "email") {
+      parts.push(`<a href="mailto:${escapeHtml(contact.value)}">${escapeHtml(contact.value)}</a>`);
+    } else if (contact.type === "url") {
+      const label = escapeHtml(contact.label || contact.value);
+      parts.push(`<a href="${escapeHtml(contact.value)}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+    } else {
+      parts.push(escapeHtml(contact.value));
+    }
+    parts.push('</li>');
+  });
+  parts.push('</ul></div>');
+  return parts.join("\n");
 }
 
 function genAcrHtml(listing: ListingData): string {
-  return listing.acr_reports.length
-    ? `<div class="edtech-acr">
-         <h3>Accessibility Conformance Reports</h3>
-         ${listing.acr_reports.map(acr => `
-           <h4><a href="${acr.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.title)}</a></h4>
-           <ul>
-             ${acr.version ? `<li><strong>Version:</strong> ${escapeHtml(acr.version)}</li>` : ""}
-             ${acr.date ? `<li><strong>Date:</strong> ${escapeHtml(acr.date)}</li>` : ""}
-             ${acr.auditor_name
-               ? `<li><strong>Completed by:</strong> ${acr.auditor_url
-                   ? `<a href="${acr.auditor_url}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.auditor_name)}</a>`
-                   : escapeHtml(acr.auditor_name)
-                 }</li>`
-               : ""}
-           </ul>`
-         ).join("\n")}
-       </div>`
-    : "";
+  if (!listing.acr_reports || listing.acr_reports.length === 0) {
+    return "";
+  }
+
+  const parts: string[] = [];
+  parts.push('<div class="edtech-acr">');
+  parts.push('<h3 class="section-heading">Accessibility Conformance Reports</h3>');
+  listing.acr_reports.forEach(acr => {
+    parts.push('<div class="acr-report">');
+    parts.push(`<h4><a href="${escapeHtml(acr.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.title)}</a></h4>`);
+    parts.push('<ul>');
+    if (acr.version) {
+      parts.push(`<li><strong>Version:</strong> ${escapeHtml(acr.version)}</li>`);
+    }
+    if (acr.date) {
+      parts.push(`<li><strong>Date:</strong> ${escapeHtml(acr.date)}</li>`);
+    }
+    if (acr.auditor_name) {
+      const auditor = acr.auditor_url
+        ? `<a href="${escapeHtml(acr.auditor_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.auditor_name)}</a>`
+        : escapeHtml(acr.auditor_name);
+      parts.push(`<li><strong>Completed by:</strong> ${auditor}</li>`);
+    }
+    parts.push('</ul></div>');
+  });
+  parts.push('</div>');
+  return parts.join("\n");
 }
 
 export function getSectionHtml(listing: ListingData, key: SectionKey): string {
@@ -124,33 +152,35 @@ export function buildNcademiListingHtml(listing: ListingData): string {
   const acr = getSectionHtml(listing, "acr");
 
   const aiInsightsHtml = listing.ai_insights
-    ? `<div class="ai-insights" style="display: none;">
+    ? `<div class="ai-insights">
          <h3>AI Generated Insights</h3>
          <p>${escapeHtml(listing.ai_insights)}</p>
        </div>`
     : "";
 
   const lastUpdatedHtml = listing.last_updated
-    ? `<p class="entry-meta has-text-align-right"><em>Product information last updated ${escapeHtml(listing.last_updated)}</em></p>`
+    ? `<p class="last-updated">Product information last updated ${escapeHtml(listing.last_updated)}</p>`
     : "";
 
   return `
     ${header}
     <article class="product type-product status-publish hentry">
-      <div class="entry-summary">
-        <h2>Accessibility Documentation &amp; Resources</h2>
-        <div class="row g-4 g-lg-5 align-items-start">
-          <div class="col-12 col-lg-8">
-            ${vendorResources}
-            ${otherResources}
+      <div class="nerd-artifact">
+        <div class="entry-content">
+          <h2 class="resources-heading">Accessibility Documentation &amp; Resources</h2>
+          <div class="wp-block-columns is-layout-flex wp-container-core-columns-is-layout-1 wp-block-columns-is-layout-flex resources-grid">
+            <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-main" style="flex-basis:66.66%">
+              ${vendorResources}
+              ${otherResources}
+              ${aiInsightsHtml}
+            </div>
+            <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-side" style="flex-basis:33.33%">
+              ${support}
+              ${acr}
+            </div>
           </div>
-          <div class="col-12 col-lg-4">
-            ${support}
-            ${acr}
-          </div>
+          ${lastUpdatedHtml}
         </div>
-        ${aiInsightsHtml}
-        ${lastUpdatedHtml}
       </div>
     </article>
   `;

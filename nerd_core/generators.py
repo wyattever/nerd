@@ -270,7 +270,7 @@ def _gen_header_html(listing: ListingData) -> str:
     if listing.product_description:
         parts.append(f'<p class="product-desc">{escape(listing.product_description)}</p>')
 
-    if listing.product_website_url:
+    if listing.product_website_url and listing.product_website_url != "#":
         parts.append(
             '<p class="product-website">'
             f'<a href="{escape(listing.product_website_url)}" target="_blank" rel="noopener noreferrer">'
