@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { SectionKey } from "@/lib/types";
 
@@ -99,20 +98,38 @@ export function SectionEditor({
   };
 
   return (
-    <dialog ref={dialogRef} onClose={handleClose}>
-      <h2>Editing: {label}</h2>
+    <dialog 
+      ref={dialogRef} 
+      onClose={handleClose}
+      className="p-6 bg-white rounded-lg shadow-xl w-full max-w-4xl m-auto backdrop:bg-gray-900/50 border border-gray-200"
+    >
+      <h2 className="text-lg font-bold text-gray-900 mb-4">Editing: {label}</h2>
       <textarea
         value={currentHtml}
         onChange={(e) => setCurrentHtml(e.target.value)}
         rows={15}
-        style={{ width: "100%", fontFamily: "monospace" }}
+        className="w-full font-mono text-sm p-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      <div>
-        <button onClick={handleClose}>Cancel</button>
-        <button onClick={handleReset} disabled={!isOverridden}>
+      <div className="flex justify-end gap-3 mt-4">
+        <button 
+          onClick={handleClose}
+          className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          Cancel
+        </button>
+        <button 
+          onClick={handleReset} 
+          disabled={!isOverridden}
+          className="px-4 py-2 text-sm font-medium text-amber-900 bg-amber-100 border border-amber-300 rounded hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-amber-500"
+        >
           Reset to Auto-Generated
         </button>
-        <button onClick={handleSave}>Save</button>
+        <button 
+          onClick={handleSave}
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-700 border border-transparent rounded hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          Save
+        </button>
       </div>
     </dialog>
   );
