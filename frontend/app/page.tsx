@@ -43,6 +43,7 @@ export default function Home() {
 
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [editorOpenCount, setEditorOpenCount] = useState(0);
+  const [unsavedSections, setUnsavedSections] = useState<Set<SectionKey>>(new Set());
 
   const handleSaveSection = (key: SectionKey, html: string) => {
     updateListing(prev => {
@@ -56,6 +57,7 @@ export default function Home() {
       };
     });
     setIsDirty(true);
+    setUnsavedSections(prev => new Set(prev).add(key));
   };
 
   const handleResetSection = (key: SectionKey) => {
@@ -68,6 +70,7 @@ export default function Home() {
       };
     });
     setIsDirty(true);
+    setUnsavedSections(prev => new Set(prev).add(key));
   };
 
   const refreshLists = useCallback(async () => {
@@ -211,6 +214,7 @@ export default function Home() {
       setProcessHeading("Generating Listing");
       setLocalLog([]);
       setIsDirty(false);
+      setUnsavedSections(new Set());
       setActiveCandidateSlug(null);
       setIsProductLoaded(false);
       startResearch(url.trim());
@@ -222,6 +226,7 @@ export default function Home() {
     setProcessHeading("Viewing Candidate");
     setLocalLog([]);
     setIsDirty(false);
+    setUnsavedSections(new Set());
     setIsProductLoaded(false);
     try {
       const token = await getIdToken();
@@ -244,6 +249,7 @@ export default function Home() {
     setProcessHeading("Viewing Product");
     setLocalLog([]);
     setIsDirty(false);
+    setUnsavedSections(new Set());
     try {
       const token = await getIdToken();
       const res = await fetch(
@@ -282,6 +288,7 @@ export default function Home() {
       setSaveStatus(prev => ({ ...prev, [target]: "Saved!" }));
       logMessage(`Successfully saved to NCADEMI ${label} repository.`);
       setIsDirty(false);
+      setUnsavedSections(new Set());
       setTimeout(() => {
         setSaveStatus(prev => ({ ...prev, [target]: "" }));
       }, 3000);
@@ -314,6 +321,7 @@ export default function Home() {
       setSaveStatus(prev => ({ ...prev, update: "Updated!" }));
       logMessage(`Candidate listing updated at ${timestamp}.`);
       setIsDirty(false);
+      setUnsavedSections(new Set());
       setTimeout(() => {
         setSaveStatus(prev => ({ ...prev, update: "" }));
       }, 3000);
@@ -730,6 +738,7 @@ export default function Home() {
                   setActiveCandidateSlug(null);
                   setIsProductLoaded(false);
                   setEditingSection(null);
+                  setUnsavedSections(new Set());
                 }}
                 className="border border-gray-300 text-sm px-4 py-2 rounded
                            hover:bg-gray-50 focus:outline-none focus:ring-2
@@ -751,10 +760,10 @@ export default function Home() {
                       className="relative text-xs border border-gray-300 rounded px-2 py-1 hover:bg-gray-50"
                     >
                       {label}
-                      {state.listing?.section_overrides?.[key] != null && (
+                      {unsavedSections.has(key) && (
                         <span
                           className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-blue-500"
-                          title="This section has been manually overridden"
+                          title="This section has unsaved changes"
                         />
                       )}
                     </button>
