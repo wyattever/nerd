@@ -14,7 +14,7 @@ import io
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal, Callable
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import escape
@@ -22,6 +22,7 @@ from markupsafe import escape
 # ---------------------------------------------------------------------------
 # Setup Jinja2
 # ---------------------------------------------------------------------------
+# Corrected path to root 'templates' directory
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 _jinja = Environment(
     loader=FileSystemLoader(str(_TEMPLATES_DIR)),
@@ -352,7 +353,9 @@ def _gen_acr_html(listing: ListingData) -> str:
     parts.append('</div>')
     return "\n".join(parts)
 
-def get_section_html(listing: ListingData, section_key: str) -> str:
+SectionKey = Literal["header", "vendor_resources", "other_resources", "support", "acr"]
+
+def get_section_html(listing: ListingData, section_key: SectionKey) -> str:
     """Returns the HTML a section should render: the override if
     present in listing.section_overrides, else the auto-generated HTML.
     Mirrors frontend/lib/ncademiPreview.ts's getSectionHtml (Step 3) —
@@ -362,7 +365,7 @@ def get_section_html(listing: ListingData, section_key: str) -> str:
     override = listing.section_overrides.get(section_key)
     if override is not None:  # empty string IS a valid override - see R6
         return override
-    generators = {
+    generators: dict[SectionKey, Callable[[ListingData], str]] = {
         "header": _gen_header_html,
         "vendor_resources": _gen_vendor_resources_html,
         "other_resources": _gen_other_resources_html,
