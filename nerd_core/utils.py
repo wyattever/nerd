@@ -54,7 +54,7 @@ async def resolve_and_validate_url(url):
         ) as client:
             # We follow redirects to get the direct URL
             resp = await client.head(url)
-            if resp.status_code == 405:
+            if resp.status_code in {405, 501, 403, 404}:
                 resp = await client.get(url)
             
             final_url = str(resp.url)

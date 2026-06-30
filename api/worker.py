@@ -20,6 +20,8 @@ from nerd_core.services import (
     QuotaExhaustedError,
 )
 from nerd_core.utils import resolve_and_validate_all, filter_broken_links
+from nerd_core.adaptive_validation import adaptive_validate
+from nerd_core.acr_validation import is_likely_vpat_acr
 from . import schemas
 from .conversions import dataclass_to_pydantic
 from .job_store import emit_event, complete_job, fail_job, claim_job
@@ -43,7 +45,7 @@ async def _validate(raw_urls: list[str], draft_markdown: str, url_cache: dict[st
     validated_markdown, rejections = await filter_broken_links(draft_markdown)
     return validated_markdown, rejections
 
-def _build_result_payload(
+async def _build_result_payload(
     raw_markdown: str, 
     validated_markdown: str, 
     url_cache: dict[str, str], 
@@ -53,9 +55,19 @@ def _build_result_payload(
     """Constructs the exact final payload expected by the Next.js React Hook Form."""
     listing_dc = parse_markdown_to_listing(validated_markdown)
 
+    # Step 3.2: Adaptive validation and ACR gate
+    listing_dc.vendor_resources = await adaptive_validate(listing_dc.vendor_resources)
+    listing_dc.other_resources = await adaptive_validate(listing_dc.other_resources)
+
+    if listing_dc.acr_reports:
+        is_valid, _ = await is_likely_vpat_acr(listing_dc.acr_reports[0].url)
+        if not is_valid:
+            listing_dc.acr_reports[0].url = "#"
+            listing_dc.acr_reports[0].title = "None found"
+
     if ENABLE_AI_INSIGHTS:
         try:
-            listing_dc.ai_insights = synthesize_insights(validated_markdown, timeout_min=timeout_min)
+            listing_dc.ai_insights = await asyncio.to_thread(synthesize_insights, validated_markdown, timeout_min=timeout_min)
         except Exception as e:
             logger.warning("synthesize_insights failed, leaving ai_insights empty: %s", e)
     else:
@@ -101,9 +113,7 @@ async def worker_initial(req: WorkerInitialRequest):
             print(f"[WORKER] Synthesizing AI insights for {job_id}...")
             await emit_event(job_id, "synthesizing")
 
-        result = await asyncio.to_thread(
-            _build_result_payload, draft, validated_md, url_cache, rejections, req.timeout_min
-        )
+        result = await _build_result_payload(draft, validated_md, url_cache, rejections, req.timeout_min)
         await complete_job(job_id, result)
         print(f"[WORKER] Job {job_id} COMPLETED successfully.")
 
@@ -141,9 +151,7 @@ async def worker_deep_dive(req: WorkerDeepDiveRequest):
         full_raw_markdown = req.current_draft + "\n\n" + new_draft
         full_validated_markdown = req.current_draft + "\n\n" + validated_delta
 
-        result = await asyncio.to_thread(
-            _build_result_payload, full_raw_markdown, full_validated_markdown, url_cache, rejections, req.timeout_min
-        )
+        result = await _build_result_payload(full_raw_markdown, full_validated_markdown, url_cache, rejections, req.timeout_min)
         await complete_job(job_id, result)
 
     except QuotaExhaustedError:
