@@ -162,7 +162,7 @@ export function getSectionHtml(listing: ListingData, key: SectionKey): string {
   }
 }
 
-export function buildNcademiListingHtml(listing: ListingData, showAiInsights: boolean = true): string {
+export function buildNcademiListingHtml(listing: ListingData, showAiInsights: boolean = false): string {
   const header = getSectionHtml(listing, "header");
   const vendorResources = getSectionHtml(listing, "vendor_resources");
   const otherResources = getSectionHtml(listing, "other_resources");
