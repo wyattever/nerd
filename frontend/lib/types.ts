@@ -24,6 +24,7 @@ export interface SectionOverrides {
   other_resources?: string;
   support?: string;
   acr?: string;
+  ai_insights?: string;
 }
 
 export interface ListingData {
@@ -41,7 +42,7 @@ export interface ListingData {
   section_overrides?: SectionOverrides;
 }
 
-export type SectionKey = "header" | "vendor_resources" | "other_resources" | "support" | "acr";
+export type SectionKey = "header" | "vendor_resources" | "other_resources" | "support" | "acr" | "ai_insights";
 
 export interface InvalidLink {
   section: string;

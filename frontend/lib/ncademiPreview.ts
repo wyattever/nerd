@@ -103,33 +103,50 @@ function genSupportHtml(listing: ListingData): string {
 }
 
 function genAcrHtml(listing: ListingData): string {
-  if (!listing.acr_reports || listing.acr_reports.length === 0) {
-    return "";
-  }
-
   const parts: string[] = [];
   parts.push('<div class="edtech-acr">');
   parts.push('<h3 class="section-heading">Accessibility Conformance Reports</h3>');
-  listing.acr_reports.forEach(acr => {
+
+  if (!listing.acr_reports || listing.acr_reports.length === 0) {
     parts.push('<div class="acr-report">');
-    parts.push(`<h4><a href="${escapeHtml(acr.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.title)}</a></h4>`);
+    parts.push('<h4><a href="#" rel="noopener noreferrer">None found</a></h4>');
     parts.push('<ul>');
-    if (acr.version) {
-      parts.push(`<li><strong>Version:</strong> ${escapeHtml(acr.version)}</li>`);
-    }
-    if (acr.date) {
-      parts.push(`<li><strong>Date:</strong> ${escapeHtml(acr.date)}</li>`);
-    }
-    if (acr.auditor_name) {
-      const auditor = acr.auditor_url
-        ? `<a href="${escapeHtml(acr.auditor_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.auditor_name)}</a>`
-        : escapeHtml(acr.auditor_name);
-      parts.push(`<li><strong>Completed by:</strong> ${auditor}</li>`);
-    }
+    parts.push('<li><strong>Version:</strong> </li>');
+    parts.push('<li><strong>Date:</strong> </li>');
+    parts.push('<li><strong>Completed by:</strong> </li>');
     parts.push('</ul></div>');
-  });
+  } else {
+    listing.acr_reports.forEach(acr => {
+      parts.push('<div class="acr-report">');
+      
+      const hasValidUrl = acr.url && acr.url !== "#";
+      const titleElement = hasValidUrl
+        ? `<a href="${escapeHtml(acr.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.title)}</a>`
+        : escapeHtml(acr.title);
+
+      parts.push(`<h4>${titleElement}</h4>`);
+      parts.push('<ul>');
+      parts.push('<li><strong>Version:</strong> </li>');
+      parts.push('<li><strong>Date:</strong> </li>');
+      parts.push('<li><strong>Completed by:</strong> </li>');
+      parts.push('</ul></div>');
+    });
+  }
+  
   parts.push('</div>');
   return parts.join("\n");
+}
+
+function genAiInsightsHtml(listing: ListingData): string {
+  if (!listing.ai_insights || listing.ai_insights === "Insufficient data") {
+    return "";
+  }
+  const parts = [];
+  parts.push('<div class="ai-insights">');
+  parts.push('<h3>AI Generated Insights</h3>');
+  parts.push(`<p>${escapeHtml(listing.ai_insights)}</p>`);
+  parts.push('</div>');
+  return parts.join('\n');
 }
 
 export function getSectionHtml(listing: ListingData, key: SectionKey): string {
@@ -141,6 +158,7 @@ export function getSectionHtml(listing: ListingData, key: SectionKey): string {
     case "other_resources":  return genOtherResourcesHtml(listing);
     case "support":          return genSupportHtml(listing);
     case "acr":              return genAcrHtml(listing);
+    case "ai_insights":      return genAiInsightsHtml(listing);
   }
 }
 
@@ -150,13 +168,7 @@ export function buildNcademiListingHtml(listing: ListingData): string {
   const otherResources = getSectionHtml(listing, "other_resources");
   const support = getSectionHtml(listing, "support");
   const acr = getSectionHtml(listing, "acr");
-
-  const aiInsightsHtml = listing.ai_insights
-    ? `<div class="ai-insights">
-         <h3>AI Generated Insights</h3>
-         <p>${escapeHtml(listing.ai_insights)}</p>
-       </div>`
-    : "";
+  const aiInsightsHtml = getSectionHtml(listing, "ai_insights");
 
   const lastUpdatedHtml = listing.last_updated
     ? `<p class="last-updated">Product information last updated ${escapeHtml(listing.last_updated)}</p>`

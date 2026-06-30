@@ -39,6 +39,8 @@ _jinja = Environment(
 class ResourceLink:
     url: str
     text: str
+    confidence: float = 0.0
+    justification: str = ""
 
 
 @dataclass
@@ -90,7 +92,32 @@ _LINK_RE = re.compile(
     r'(?P<url3>https?://\S+)'                          # Raw URL
     r')'
 )
+
+# Regex to capture confidence annotations like {confidence: 0.89, why: "..."}
+_ANNOTATED_LINK_RE = re.compile(
+    r'^\s*-\s*'
+    r'\[(?P<text>.+?)\]\((?P<url>https?://[^\)]+)\)'  # Markdown link [Text](URL)
+    r'(?:\s*\{\s*confidence:\s*(?P<confidence>0\.\d+),?\s*why:\s*"(?P<why>[^"]*)"\s*\})?' # Optional annotation
+)
+
 _HEADER_RE = re.compile(r'^(#{1,6})\s+(.+)')
+
+def _parse_confidence_annotation(line: str) -> tuple[float, str]:
+    """Parses a confidence annotation, returning (0.0, "") on failure."""
+    try:
+        match = re.search(r'confidence:\s*(?P<confidence>0\.\d+)', line)
+        confidence = float(match.group('confidence')) if match else 0.0
+        
+        match = re.search(r'why:\s*"(?P<why>[^"]*)"|\'why\':\s*\'(?P<why2>[^\']*)\'', line)
+        why = match.group('why') or match.group('why2') if match else ""
+        
+        return confidence, why
+    except (AttributeError, ValueError):
+        return 0.0, ""
+
+def _rank_and_cap_resources(resources: list[ResourceLink], cap: int = 5) -> list[ResourceLink]:
+    """Sorts resources by confidence (desc) and caps the list."""
+    return sorted(resources, key=lambda r: r.confidence, reverse=True)[:cap]
 
 def parse_markdown_to_listing(markdown: str) -> ListingData:
     """
@@ -144,34 +171,42 @@ def parse_markdown_to_listing(markdown: str) -> ListingData:
                     data.product_description += " " + stripped
                     
         elif current_section in ("vendor", "other"):
-            lm = _LINK_RE.match(stripped)
-            if lm:
-                text = lm.group('text1') or lm.group('text2') or lm.group('url3')
-                url = lm.group('url1') or lm.group('url2') or lm.group('url3')
-                
-                # If we matched a raw URL but it was part of a larger line, 
-                # try to extract the text preceding it.
-                if lm.group('url3') and not lm.group('text1') and not lm.group('text2'):
-                    raw_text = stripped[2:].replace(url, '').strip(' ()[]:-')
-                    if raw_text: text = raw_text
-                
-                link = ResourceLink(text=text.strip(), url=url.strip())
-                if current_section == "vendor":
-                    data.vendor_resources.append(link)
-                else:
-                    data.other_resources.append(link)
-            elif stripped.startswith("- ") and "http" in stripped:
-                # Last resort fallback if regex missed it
-                url_match = re.search(r'https?://\S+', stripped)
-                if url_match:
-                    url = url_match.group(0).rstrip(').')
-                    text = stripped[2:].replace(url, '').strip(' ()[]:-')
-                    if not text: text = url
-                    link = ResourceLink(text=text, url=url)
-                    if current_section == "vendor":
-                        data.vendor_resources.append(link)
+            # Try the new annotated regex first
+            annotated_match = _ANNOTATED_LINK_RE.match(stripped)
+            if annotated_match:
+                text = annotated_match.group('text').strip()
+                url = annotated_match.group('url').strip()
+                confidence, why = _parse_confidence_annotation(stripped)
+                link = ResourceLink(text=text, url=url, confidence=confidence, justification=why)
+            else:
+                # Fallback to the old, non-annotated regex
+                lm = _LINK_RE.match(stripped)
+                if lm:
+                    text = lm.group('text1') or lm.group('text2') or lm.group('url3')
+                    url = lm.group('url1') or lm.group('url2') or lm.group('url3')
+                    
+                    if lm.group('url3') and not lm.group('text1') and not lm.group('text2'):
+                        raw_text = stripped[2:].replace(url, '').strip(' ()[]:-')
+                        if raw_text: text = raw_text
+                    
+                    link = ResourceLink(text=text.strip(), url=url.strip()) # Confidence defaults to 0.0
+                elif stripped.startswith("- ") and "http" in stripped:
+                    # Last resort fallback if all regexes missed it
+                    url_match = re.search(r'https?://\S+', stripped)
+                    if url_match:
+                        url = url_match.group(0).rstrip(').')
+                        text = stripped[2:].replace(url, '').strip(' ()[]:-')
+                        if not text: text = url
+                        link = ResourceLink(text=text, url=url) # Confidence defaults to 0.0
                     else:
-                        data.other_resources.append(link)
+                        continue # Skip malformed line
+                else:
+                    continue # Skip non-link line
+
+            if current_section == "vendor":
+                data.vendor_resources.append(link)
+            else:
+                data.other_resources.append(link)
 
         elif current_section == "support":
             if "Support Contact:" in stripped:
@@ -219,6 +254,11 @@ def parse_markdown_to_listing(markdown: str) -> ListingData:
 
     data.ai_insights = " ".join(ai_lines).strip()
     data.last_updated = datetime.now().strftime('%B %d, %Y')
+    
+    # Rank and cap the resource lists before returning
+    data.vendor_resources = _rank_and_cap_resources(data.vendor_resources)
+    data.other_resources = _rank_and_cap_resources(data.other_resources)
+    
     return data
 
 
@@ -332,28 +372,50 @@ def _gen_support_html(listing: ListingData) -> str:
 
 def _gen_acr_html(listing: ListingData) -> str:
     """Reproduces the Accessibility Conformance Reports block."""
-    if not listing.acr_reports:
-        return ""
-        
     parts = []
     parts.append('<div class="edtech-acr">')
     parts.append('<h3 class="section-heading">Accessibility Conformance Reports</h3>')
-    for acr in listing.acr_reports:
+
+    if not listing.acr_reports:
         parts.append('<div class="acr-report">')
-        parts.append(f'<h4><a href="{escape(acr.url)}" target="_blank" rel="noopener noreferrer">{escape(acr.title)}</a></h4>')
+        parts.append('<h4><a href="#" rel="noopener noreferrer">None found</a></h4>')
         parts.append('<ul>')
-        if acr.version:
-            parts.append(f'<li><strong>Version:</strong> {escape(acr.version)}</li>')
-        if acr.date:
-            parts.append(f'<li><strong>Date:</strong> {escape(acr.date)}</li>')
-        if acr.auditor_name:
-            auditor = f'<a href="{escape(acr.auditor_url)}" target="_blank" rel="noopener noreferrer">{escape(acr.auditor_name)}</a>' if acr.auditor_url else escape(acr.auditor_name)
-            parts.append(f'<li><strong>Completed by:</strong> {auditor}</li>')
+        parts.append('<li><strong>Version:</strong> </li>')
+        parts.append('<li><strong>Date:</strong> </li>')
+        parts.append('<li><strong>Completed by:</strong> </li>')
         parts.append('</ul></div>')
+    else:
+        for acr in listing.acr_reports:
+            parts.append('<div class="acr-report">')
+            
+            has_valid_url = acr.url and acr.url != "#"
+            title_element = escape(acr.title)
+            if has_valid_url:
+                title_element = f'<a href="{escape(acr.url)}" target="_blank" rel="noopener noreferrer">{title_element}</a>'
+            
+            parts.append(f'<h4>{title_element}</h4>')
+            parts.append('<ul>')
+            parts.append('<li><strong>Version:</strong> </li>')
+            parts.append('<li><strong>Date:</strong> </li>')
+            parts.append('<li><strong>Completed by:</strong> </li>')
+            parts.append('</ul></div>')
+
     parts.append('</div>')
     return "\n".join(parts)
 
-SectionKey = Literal["header", "vendor_resources", "other_resources", "support", "acr"]
+def _gen_ai_insights_html(listing: ListingData) -> str:
+    """Reproduces the AI Generated Insights block."""
+    if not listing.ai_insights or listing.ai_insights == "Insufficient data":
+        return ""
+    
+    parts = []
+    parts.append('<div class="ai-insights">')
+    parts.append('<h3>AI Generated Insights</h3>')
+    parts.append(f'<p>{escape(listing.ai_insights)}</p>')
+    parts.append('</div>')
+    return "\n".join(parts)
+
+SectionKey = Literal["header", "vendor_resources", "other_resources", "support", "acr", "ai_insights"]
 
 def get_section_html(listing: ListingData, section_key: SectionKey) -> str:
     """Returns the HTML a section should render: the override if
@@ -371,6 +433,7 @@ def get_section_html(listing: ListingData, section_key: SectionKey) -> str:
         "other_resources": _gen_other_resources_html,
         "support": _gen_support_html,
         "acr": _gen_acr_html,
+        "ai_insights": _gen_ai_insights_html,
     }
     return generators[section_key](listing)
 
