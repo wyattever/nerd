@@ -162,13 +162,13 @@ export function getSectionHtml(listing: ListingData, key: SectionKey): string {
   }
 }
 
-export function buildNcademiListingHtml(listing: ListingData): string {
+export function buildNcademiListingHtml(listing: ListingData, showAiInsights: boolean = false): string {
   const header = getSectionHtml(listing, "header");
   const vendorResources = getSectionHtml(listing, "vendor_resources");
   const otherResources = getSectionHtml(listing, "other_resources");
   const support = getSectionHtml(listing, "support");
   const acr = getSectionHtml(listing, "acr");
-  const aiInsightsHtml = getSectionHtml(listing, "ai_insights");
+  const aiInsightsHtml = showAiInsights ? getSectionHtml(listing, "ai_insights") : "";
 
   const lastUpdatedHtml = listing.last_updated
     ? `<p class="last-updated">Product information last updated ${escapeHtml(listing.last_updated)}</p>`
