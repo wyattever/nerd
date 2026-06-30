@@ -44,6 +44,7 @@ export default function Home() {
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [editorOpenCount, setEditorOpenCount] = useState(0);
   const [unsavedSections, setUnsavedSections] = useState<Set<SectionKey>>(new Set());
+  const [showAiInsights, setShowAiInsights] = useState(false);
 
   const handleSaveSection = (key: SectionKey, html: string) => {
     updateListing(prev => {
@@ -787,6 +788,18 @@ export default function Home() {
             <section aria-label="Research results">
               <div className="relative bg-white border border-gray-200 rounded-lg p-6">
                 <div className="absolute top-4 right-4 flex gap-2">
+                  {state.listing && state.listing.ai_insights && state.listing.ai_insights !== "Insufficient data" && (
+                    <button
+                      onClick={() => setShowAiInsights(!showAiInsights)}
+                      className="inline-flex items-center gap-1.5 text-xs text-black
+                                 border border-black rounded px-2.5 py-1.5
+                                 hover:bg-gray-50 focus:outline-none focus:ring-2
+                                 focus:ring-gray-500 focus:ring-offset-2 transition-all"
+                    >
+                      {showAiInsights ? "Hide AI Insights" : "Show AI Insights"}
+                    </button>
+                  )}
+
                   {!activeCandidateSlug ? (
                     <button
                       onClick={() => handleSave("candidates")}
@@ -824,7 +837,7 @@ export default function Home() {
                   )}
                 </div>
 
-                <ListingCard listing={state.listing} />
+                <ListingCard listing={state.listing} showAiInsights={showAiInsights} />
               </div>
             </section>
           </>
