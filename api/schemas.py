@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 class ResourceLink(BaseModel):
     url: str
     text: str
+    confidence: float = 0.0
+    justification: str = ""
 
 
 class SupportContact(BaseModel):
