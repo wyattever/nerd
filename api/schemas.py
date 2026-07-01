@@ -29,6 +29,7 @@ class ACRReport(BaseModel):
     date: str = ""
     auditor_name: str = ""
     auditor_url: str = ""
+    preparation_type: str = "Internal"
 
 
 class SectionOverrides(BaseModel):

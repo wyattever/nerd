@@ -58,6 +58,7 @@ class ACRReport:
     date: str = ""
     auditor_name: str = ""
     auditor_url: str = ""
+    preparation_type: str = "Internal"
 
 
 @dataclass
@@ -304,7 +305,7 @@ def _gen_header_html(listing: ListingData) -> str:
     # Product Header
     parts.append('<header class="product-header">')
     if listing.vendor_name:
-        vendor_link = f'<a href="{escape(listing.vendor_directory_url)}">{escape(listing.vendor_name)}</a>' if listing.vendor_directory_url else escape(listing.vendor_name)
+        vendor_link = f'<a href="{escape(listing.vendor_directory_url)}">{escape(listing.vendor_name)}</a>' if listing.vendor_directory_url and listing.vendor_directory_url != "#" else escape(listing.vendor_name)
         parts.append(f'<p class="vendor-line"><strong>Vendor:</strong> {vendor_link}</p>')
 
     if listing.product_description:
