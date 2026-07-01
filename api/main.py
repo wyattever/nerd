@@ -1,16 +1,6 @@
-"""
-api/main.py — FastAPI wrapper around nerd_core (Phase 4 Update).
-
-Phase 4 changes:
-- Cloud Tasks tasks now include OIDC token for authenticated worker invocation.
-- TASKS_SA env var wires the service account for OIDC auth.
-- CORS origins locked to FRONTEND_URL env var (no wildcard in production).
-"""
-
 from __future__ import annotations
 
 import os
-import re
 import uuid
 import json
 import logging
@@ -36,97 +26,24 @@ from nerd_core.link_validator_engine import LinkValidatorEngine
 from . import schemas
 from .conversions import pydantic_to_dataclass
 from .job_store import create_job, stream_job_events
+from .store import (
+    slugify,
+    get_candidate,
+    get_product,
+    list_candidates,
+    list_products,
+    upsert_candidate,
+    upsert_product,
+    delete_candidate,
+    delete_product,
+)
 
-def slugify(text: str) -> str:
-    """Creates a URL-friendly slug from a string."""
-    text = text.lower()
-    return re.sub(r'[^a-z0-9]+', '-', text).strip('-')
+BASE_DIR = Path(__file__).parent.parent
 
 # ── Local Mode Config ─────────────────────────────────────────────────────────
 LOCAL_MODE = os.getenv("LOCAL_MODE", "false").lower() == "true"
 if LOCAL_MODE:
     from .worker import worker_initial, worker_deep_dive, WorkerInitialRequest, WorkerDeepDiveRequest
-# ──────────────────────────────────────────────────────────────────────────────
-
-# ── Storage Config ────────────────────────────────────────────────────────────
-BASE_DIR = Path(__file__).parent.parent
-# Deprecated filesystem paths (Phase 5)
-CANDIDATES_DIR = BASE_DIR / "NCADEMI_candidates"
-PRODUCTS_DIR = BASE_DIR / "NCADEMI_products"
-
-# In-memory stores for LOCAL_MODE
-_local_candidates: dict[str, dict] = {}
-_local_products: dict[str, dict] = {}
-
-if LOCAL_MODE:
-    # Seed from filesystem for local testing
-    for directory, store in [(CANDIDATES_DIR, _local_candidates), (PRODUCTS_DIR, _local_products)]:
-        if directory.exists():
-            for f in directory.glob("*.json"):
-                try:
-                    with open(f, "r") as json_file:
-                        data = json.load(json_file)
-                        slug = slugify(data.get("product_name", f.stem))
-                        store[slug] = data
-                except Exception as e:
-                    print(f"Failed to seed {f}: {e}")
-    print(f"[LOCAL_MODE] Seeded {len(_local_candidates)} candidates and {len(_local_products)} products.")
-
-# Firestore collections (production)
-CANDIDATES_COLLECTION = "nerd_candidates"
-PRODUCTS_COLLECTION = "nerd_products"
-
-# Use the existing db AsyncClient from job_store if available
-if not LOCAL_MODE:
-    from .job_store import db
-else:
-    db = None
-
-async def _get_record(collection: str, slug: str, local_store: dict) -> dict | None:
-    if LOCAL_MODE:
-        return local_store.get(slug)
-    doc_ref = db.collection(collection).document(slug)
-    doc = await doc_ref.get()
-    return doc.to_dict() if doc.exists else None
-
-async def _list_records(collection: str, local_store: dict) -> list[dict]:
-    if LOCAL_MODE:
-        items = [(slug, data) for slug, data in local_store.items()]
-    else:
-        docs = db.collection(collection).stream()
-        items = []
-        async for doc in docs:
-            items.append((doc.id, doc.to_dict()))
-    
-    results = []
-    for slug, data in items:
-        results.append({
-            "name": data.get("product_name", slug),
-            "slug": slug,
-            "url": data.get("product_website_url", data.get("url", ""))
-        })
-    return sorted(results, key=lambda x: x["name"])
-
-async def _upsert_record(collection: str, slug: str, data: schemas.ListingData, local_store: dict):
-    dumped = data.model_dump()
-    if LOCAL_MODE:
-        local_store[slug] = dumped
-    else:
-        await db.collection(collection).document(slug).set(dumped)
-
-async def _delete_record(collection: str, slug: str, local_store: dict) -> bool:
-    if LOCAL_MODE:
-        if slug in local_store:
-            del local_store[slug]
-            return True
-        return False
-    doc_ref = db.collection(collection).document(slug)
-    doc = await doc_ref.get()
-    if not doc.exists:
-        return False
-    await doc_ref.delete()
-    return True
-
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Firebase Admin Init ───────────────────────────────────────────────────────
@@ -405,30 +322,30 @@ async def get_batch_report():
 
 
 @app.get("/admin/candidates")
-async def list_candidates(uid: str = Depends(verify_token)):
+async def list_candidates_endpoint(uid: str = Depends(verify_token)):
     """Returns a list of all processed candidates."""
-    return await _list_records(CANDIDATES_COLLECTION, _local_candidates)
+    return await list_candidates()
 
 
 @app.get("/admin/candidates/{slug}")
 async def get_candidate_data(slug: str, uid: str = Depends(verify_token)):
     """Retrieves the full JSON data for a specific candidate."""
-    data = await _get_record(CANDIDATES_COLLECTION, slug, _local_candidates)
+    data = await get_candidate(slug)
     if not data:
         raise HTTPException(status_code=404, detail="Candidate not found")
     return data
 
 
 @app.get("/admin/products")
-async def list_products(uid: str = Depends(verify_token)):
+async def list_products_endpoint(uid: str = Depends(verify_token)):
     """Returns a list of all transformed products."""
-    return await _list_records(PRODUCTS_COLLECTION, _local_products)
+    return await list_products()
 
 
 @app.get("/admin/products/{slug}")
 async def get_product_data(slug: str, uid: str = Depends(verify_token)):
     """Retrieves the full JSON data for a specific published product."""
-    data = await _get_record(PRODUCTS_COLLECTION, slug, _local_products)
+    data = await get_product(slug)
     if not data:
         raise HTTPException(status_code=404, detail="Product not found")
     return data
@@ -437,23 +354,21 @@ async def get_product_data(slug: str, uid: str = Depends(verify_token)):
 @app.post("/admin/candidates")
 async def save_candidate(data: schemas.ListingData, uid: str = Depends(verify_token)):
     """Saves or updates a candidate."""
-    slug = slugify(data.product_name)
-    await _upsert_record(CANDIDATES_COLLECTION, slug, data, _local_candidates)
+    slug = await upsert_candidate(data.model_dump())
     return {"message": "Candidate saved successfully", "slug": slug}
 
 
 @app.post("/admin/products")
 async def save_product(data: schemas.ListingData, uid: str = Depends(verify_token)):
     """Saves or updates a product."""
-    slug = slugify(data.product_name)
-    await _upsert_record(PRODUCTS_COLLECTION, slug, data, _local_products)
+    slug = await upsert_product(data.model_dump())
     return {"message": "Product saved successfully", "slug": slug}
 
 
 @app.delete("/admin/candidates/{slug}")
-async def delete_candidate(slug: str, uid: str = Depends(verify_token)):
+async def delete_candidate_endpoint(slug: str, uid: str = Depends(verify_token)):
     """Deletes a candidate."""
-    success = await _delete_record(CANDIDATES_COLLECTION, slug, _local_candidates)
+    success = await delete_candidate(slug)
     if not success:
         raise HTTPException(status_code=404, detail="Candidate not found")
     return {"message": "Candidate deleted successfully"}
@@ -462,13 +377,37 @@ async def delete_candidate(slug: str, uid: str = Depends(verify_token)):
 @app.put("/admin/candidates/{slug}")
 async def update_candidate(slug: str, data: schemas.ListingData, uid: str = Depends(verify_token)):
     """Explicitly overwrites an existing candidate."""
-    # Check if exists first to maintain 404 behavior
-    existing = await _get_record(CANDIDATES_COLLECTION, slug, _local_candidates)
+    existing = await get_candidate(slug)
     if not existing:
         raise HTTPException(status_code=404, detail="Candidate not found")
-    
-    await _upsert_record(CANDIDATES_COLLECTION, slug, data, _local_candidates)
+    await upsert_candidate(data.model_dump())
     return {"message": "Candidate updated successfully", "slug": slug}
+
+
+@app.post("/admin/candidates/batch", response_model=schemas.BatchResearchResponse)
+async def batch_research_candidates(
+    req: schemas.BatchResearchRequest,
+    background_tasks: BackgroundTasks,
+    uid: str = Depends(verify_token),
+):
+    """Enqueues multiple product URLs for research and auto-persist as candidates."""
+    jobs = []
+    for url in req.urls:
+        job_id = str(uuid.uuid4())
+        await create_job(job_id)
+        payload = {
+            "job_id": job_id,
+            "product_url": url,
+            "timeout_min": 4,
+            "save_as_candidate": True,
+        }
+        if LOCAL_MODE:
+            worker_req = WorkerInitialRequest(**payload)
+            background_tasks.add_task(worker_initial, worker_req)
+        else:
+            _enqueue_task("/worker/initial", payload)
+        jobs.append(schemas.BatchResearchJob(url=url, job_id=job_id))
+    return schemas.BatchResearchResponse(jobs=jobs)
 
 
 @app.get("/healthz")

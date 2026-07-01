@@ -1,19 +1,3 @@
-"""
-api/schemas.py — Pydantic models for the N.E.R.D. FastAPI layer.
-
-These MIRROR the dataclasses in nerd_core/generators.py exactly. They are the
-API-side half of the Pydantic <-> Zod contract. They must NOT drift from the
-dataclass field names, types, or defaults, because /render converts an
-incoming payload straight into a nerd_core.generators.ListingData instance.
-
-Reference (nerd_core/generators.py):
-    ResourceLink(url, text)
-    SupportContact(type, value, label="")
-    ACRReport(title, url, version="", date="", auditor_name="", auditor_url="")
-    ListingData(product_name="Unknown Product", vendor_name="", ...,
-                ai_insights="", ..., last_updated="")
-"""
-
 from __future__ import annotations
 
 from typing import Literal, Optional
@@ -82,6 +66,17 @@ class ListingData(BaseModel):
     section_overrides: Optional[SectionOverrides] = None
 
 
+class CandidateRecord(ListingData):
+    """ListingData + storage-only raw_markdown field.
+
+    raw_markdown is silently ignored by /render — pydantic_to_dataclass does
+    not map it to any dataclass field, so it is stripped at conversion time.
+    It is stored alongside the parsed listing so that deep-dive jobs can
+    carry the raw text forward without a separate Firestore read.
+    """
+    raw_markdown: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Request models
 # ---------------------------------------------------------------------------
@@ -91,6 +86,9 @@ class InitialResearchRequest(BaseModel):
     # Legacy slider: min 1, max 4, default 4 (minutes). run_initial_research
     # signature is run_initial_research(product_url, timeout_min=4).
     timeout_min: int = Field(default=4, ge=1, le=4)
+    # When True, worker auto-persists the parsed listing to nerd_candidates
+    # after job completion. Non-fatal: failure logs a warning only.
+    save_as_candidate: bool = False
 
 
 class DeepDiveRequest(BaseModel):
@@ -150,3 +148,19 @@ class LinkValidationJobStatus(BaseModel):
 
 class LinkValidationResponse(BaseModel):
     unreachable_urls: list[str]
+
+
+# ── Batch research ───────────────────────────────────────────────────────────
+
+class BatchResearchRequest(BaseModel):
+    """Enqueue up to 50 product URLs for research in a single call."""
+    urls: list[str] = Field(min_length=1, max_length=50)
+
+
+class BatchResearchJob(BaseModel):
+    url: str
+    job_id: str
+
+
+class BatchResearchResponse(BaseModel):
+    jobs: list[BatchResearchJob]
