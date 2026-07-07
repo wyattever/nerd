@@ -150,3 +150,8 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 - **Decision:** `dangerouslySetInnerHTML` in `ListingCard.tsx` is guarded by `DOMPurify.sanitize` (frontend only). No backend allowlist sanitization is added.
 - **Rationale:** `html_override` and `section_overrides` are written only by authenticated researchers (Firebase Auth gate). The attack surface is narrow and the trust model supports frontend-only sanitization. Backend allowlist would add complexity and a maintenance burden without meaningful security benefit in this context.
 - **Status:** SETTLED. DOMPurify already wired; this closes the open question from the section editor sprint.
+
+### 25. LINK VALIDATION UI — Deprecated; removed from frontend.
+- **Decision:** The "Validate Links" button and all associated React state (`isValidating`) and logic (`handleValidateLinks`) have been removed from `frontend/app/page.tsx`.
+- **Rationale:** The manual validation feature was an expensive, resource-intensive process (Playwright/headless browser) that was non-critical to the primary mission of retrieving and editing NCADEMI listings. Removing the button prevents users from accidentally triggering cloud-expensive browser processes, while the backend endpoints (`/research/validate-links-async`) remain available for future administrative use if needed.
+- **Status:** SETTLED/VERIFIED.
