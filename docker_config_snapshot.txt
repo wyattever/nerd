@@ -1,7 +1,7 @@
 # Dockerfile.worker
 # Deploys api/worker.py as a standalone, scale-to-zero webhook.
 
-FROM python:3.12
+FROM python:3.12-slim
 
 # GCP environment best practices
 ENV PYTHONUNBUFFERED=1

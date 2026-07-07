@@ -1,0 +1,71 @@
+You are a senior Python engineer making specific, scoped changes to one file.
+Do NOT make any changes beyond what is explicitly listed below.
+Do NOT refactor, rename, reformat, or restructure anything not mentioned.
+Do NOT add imports, comments, or docstrings beyond what is specified.
+After making all changes, output a numbered summary of exactly what was changed
+and confirm the file path.
+
+FILE TO MODIFY: nerd_core/services.py
+
+CHANGES REQUIRED:
+
+1. MODEL CONSTANT
+   Find the line: MODEL = "gemini-2.5-flash"
+   Change to: MODEL = "gemini-3.1-flash-lite"
+
+2. DELETE _GROUNDING_CONFIG
+   Find and delete the module-level _GROUNDING_CONFIG object. It reads:
+     _GROUNDING_CONFIG = types.GenerateContentConfig(
+         tools=[types.Tool(google_search=types.GoogleSearch())],
+         temperature=1.0,
+     )
+   Delete the entire object including all lines. This is dead code that is
+   never called by any function in this file.
+
+3. THINKING LEVEL — run_initial_research()
+   Find the GenerateContentConfig inside run_initial_research(). It currently has:
+     tools=[types.Tool(google_search=types.GoogleSearch())],
+     temperature=1.0,
+     http_options=types.HttpOptions(timeout=timeout_min * 60 * 1000),
+   Add after the http_options line:
+     thinking_config=types.ThinkingConfig(thinking_budget=0),
+
+4. THINKING LEVEL — run_deep_dive()
+   Find the GenerateContentConfig inside run_deep_dive(). It has the same
+   structure as run_initial_research(). Add after the http_options line:
+     thinking_config=types.ThinkingConfig(thinking_budget=0),
+
+5. THINKING LEVEL — synthesize_insights()
+   Find the GenerateContentConfig inside synthesize_insights(). It currently has:
+     temperature=0.2,
+     http_options=types.HttpOptions(timeout=timeout_min * 60 * 1000),
+   Add after the http_options line:
+     thinking_config=types.ThinkingConfig(thinking_budget=0),
+
+6. DYNAMIC RETRIEVAL — run_initial_research()
+   Find the GoogleSearch() instantiation inside run_initial_research(). It reads:
+     tools=[types.Tool(google_search=types.GoogleSearch())],
+   Replace with:
+     tools=[types.Tool(
+         google_search=types.GoogleSearch(
+             dynamic_retrieval_config=types.DynamicRetrievalConfig(
+                 mode=types.DynamicRetrievalConfigMode.MODE_DYNAMIC,
+                 dynamic_threshold=0.7,
+             )
+         )
+     )],
+
+7. DYNAMIC RETRIEVAL — run_deep_dive()
+   Find the GoogleSearch() instantiation inside run_deep_dive(). It reads the same
+   as run_initial_research(). Apply the identical replacement as item 6.
+
+VERIFICATION:
+After all changes are complete, read nerd_core/services.py and confirm each of
+the following, reporting PASS or FAIL for each:
+  a. MODEL constant is "gemini-3.1-flash-lite"
+  b. _GROUNDING_CONFIG does not exist anywhere in the file
+  c. run_initial_research() GenerateContentConfig has thinking_config with thinking_budget=0
+  d. run_deep_dive() GenerateContentConfig has thinking_config with thinking_budget=0
+  e. synthesize_insights() GenerateContentConfig has thinking_config with thinking_budget=0
+  f. run_initial_research() GoogleSearch() has dynamic_retrieval_config
+  g. run_deep_dive() GoogleSearch() has dynamic_retrieval_config

@@ -1,0 +1,122 @@
+#!/bin/bash
+# scripts/deploy.sh — N.E.R.D. Phase 4 Deployment Script
+# Provisions infrastructure and deploys all three Cloud Run services.
+
+set -e
+
+PROJECT_ID="edtech-agent-2026"
+REGION="us-central1"
+QUEUE_NAME="nerd-research-queue"
+REPO="us-central1-docker.pkg.dev/${PROJECT_ID}/nerd-repo"
+
+# Service account used by Cloud Tasks to invoke the worker
+TASKS_SA="nerd-tasks-invoker@${PROJECT_ID}.iam.gserviceaccount.com"
+
+echo "==> N.E.R.D. Phase 4 Deployment: ${PROJECT_ID}"
+echo ""
+
+# ── 0. PRE-FLIGHT CHECKS ──────────────────────────────────────────────────────
+echo "[0] Pre-flight checks..."
+gcloud config set project "${PROJECT_ID}"
+
+gcloud services enable \
+  run.googleapis.com cloudtasks.googleapis.com firestore.googleapis.com \
+  secretmanager.googleapis.com artifactregistry.googleapis.com \
+  cloudbuild.googleapis.com firebase.googleapis.com --quiet
+
+if ! gcloud artifacts repositories describe nerd-repo --location="${REGION}" &>/dev/null; then
+  gcloud artifacts repositories create nerd-repo --repository-format=docker \
+    --location="${REGION}" --description="N.E.R.D. container images"
+fi
+
+# ── 1. CLOUD TASKS QUEUE ──────────────────────────────────────────────────────
+echo "[1] Provisioning Cloud Tasks queue..."
+if ! gcloud tasks queues describe "${QUEUE_NAME}" --location="${REGION}" &>/dev/null; then
+  gcloud tasks queues create "${QUEUE_NAME}" --location="${REGION}" --max-concurrent-dispatches=10 --max-attempts=1
+fi
+
+# ── 2. FIRESTORE ──────────────────────────────────────────────────────────────
+echo "[2] Firestore..."
+gcloud firestore fields ttls update expires_at \
+  --collection-group=nerd_research_jobs --project="${PROJECT_ID}" --enable-ttl || true
+
+# ── 3. SERVICE ACCOUNT ────────────────────────────────────────────────────────
+echo "[3] Cloud Tasks service account..."
+if ! gcloud iam service-accounts describe "${TASKS_SA}" &>/dev/null; then
+  gcloud iam service-accounts create nerd-tasks-invoker --display-name="N.E.R.D. Cloud Tasks Invoker"
+fi
+
+# ── 4. SECRET MANAGER ─────────────────────────────────────────────────────────
+echo "[4] Secret Manager..."
+if ! gcloud secrets describe gemini-api-key &>/dev/null; then
+  echo "PLACEHOLDER_KEY" | gcloud secrets create gemini-api-key --data-file=-
+fi
+
+# ── 5. BUILD AND DEPLOY WORKER ────────────────────────────────────────────────
+echo "[5] Building and deploying WORKER..."
+cp Dockerfile.worker Dockerfile
+gcloud builds submit --tag "${REPO}/nerd-worker" --quiet
+rm Dockerfile
+
+# Added --execution-environment gen2 for browser compatibility
+gcloud run deploy nerd-worker \
+  --image "${REPO}/nerd-worker" \
+  --platform managed \
+  --region "${REGION}" \
+  --execution-environment gen2 \
+  --no-allow-unauthenticated \
+  --memory 2Gi \
+  --concurrency 1 \
+  --min-instances 0 \
+  --max-instances 10 \
+  --timeout 300 \
+  --set-env-vars="ENABLE_AI_INSIGHTS=true,GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
+
+WORKER_URL=$(gcloud run services describe nerd-worker --platform managed --region "${REGION}" --format "value(status.url)")
+gcloud run services add-iam-policy-binding nerd-worker --member="serviceAccount:${TASKS_SA}" --role="roles/run.invoker" --region="${REGION}"
+gcloud tasks queues update "${QUEUE_NAME}" --location="${REGION}" --log-sampling-ratio=1.0
+
+# ── 6. BUILD AND DEPLOY API ───────────────────────────────────────────────────
+echo "[6] Building and deploying API..."
+cp Dockerfile.api Dockerfile
+gcloud builds submit --tag "${REPO}/nerd-api" --quiet
+rm Dockerfile
+
+gcloud run deploy nerd-api \
+  --image "${REPO}/nerd-api" \
+  --platform managed \
+  --region "${REGION}" \
+  --allow-unauthenticated \
+  --memory 2Gi \
+  --max-instances 1 \
+  --set-env-vars="WORKER_URL=${WORKER_URL},QUEUE_NAME=${QUEUE_NAME},GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},TASKS_SA=${TASKS_SA}" \
+  --set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
+
+API_URL=$(gcloud run services describe nerd-api --platform managed --region "${REGION}" --format "value(status.url)")
+API_SA=$(gcloud run services describe nerd-api --platform managed --region "${REGION}" --format "value(spec.template.spec.serviceAccountName)")
+if [ -z "${API_SA}" ] || [ "${API_SA}" = "default" ]; then
+  PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+  API_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+fi
+gcloud iam service-accounts add-iam-policy-binding "${TASKS_SA}" --member="serviceAccount:${API_SA}" --role="roles/iam.serviceAccountUser" --quiet
+
+# ── 7. BUILD AND DEPLOY FRONTEND ──────────────────────────────────────────────
+# (Ensuring export of env vars before this script runs is required)
+cd frontend
+gcloud builds submit --config cloudbuild.yaml \
+  --substitutions="_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID},_NEXT_PUBLIC_API_BASE_URL=${API_URL},_REPO=${REPO}" --quiet
+cd ..
+
+gcloud run deploy nerd-frontend \
+  --image "${REPO}/nerd-frontend" \
+  --platform managed \
+  --region "${REGION}" \
+  --allow-unauthenticated \
+  --set-env-vars="NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}" \
+  --no-traffic --tag=candidate
+
+FRONTEND_URL=$(gcloud run services describe nerd-frontend --platform managed --region "${REGION}" --format "value(status.url)")
+gcloud run services update nerd-api --platform managed --region "${REGION}" --update-env-vars="FRONTEND_URL=${FRONTEND_URL}"
+
+echo ""
+echo "==> Deployment Complete"

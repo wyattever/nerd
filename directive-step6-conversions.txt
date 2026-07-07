@@ -1,0 +1,69 @@
+You are a senior Python engineer making specific, scoped changes to one file.
+Do NOT make any changes beyond what is explicitly listed below.
+Do NOT refactor, rename, reformat, or restructure anything not mentioned.
+Do NOT add imports, comments, or docstrings beyond what is specified.
+After making all changes, output a numbered summary of exactly what was changed
+and confirm the file path.
+
+FILE TO MODIFY: api/conversions.py
+
+CONTEXT:
+This file has two functions: pydantic_to_dataclass() and dataclass_to_pydantic().
+Each builds ResourceLink and ACRReport objects. Currently those constructions
+omit confidence, justification, and preparation_type fields. All three need
+to be added to both functions.
+
+CHANGES REQUIRED:
+
+1. ResourceLink IN pydantic_to_dataclass()
+   Find the ResourceLink list comprehension inside pydantic_to_dataclass().
+   It currently reads (for both vendor_resources and other_resources):
+     gen.ResourceLink(url=r.url, text=r.text)
+   Change BOTH occurrences to:
+     gen.ResourceLink(url=r.url, text=r.text, confidence=r.confidence,
+                      justification=r.justification)
+
+2. ResourceLink IN dataclass_to_pydantic()
+   Find the ResourceLink list comprehension inside dataclass_to_pydantic().
+   It currently reads (for both vendor_resources and other_resources):
+     schemas.ResourceLink(url=r.url, text=r.text)
+   Change BOTH occurrences to:
+     schemas.ResourceLink(url=r.url, text=r.text, confidence=r.confidence,
+                          justification=r.justification)
+
+3. ACRReport IN pydantic_to_dataclass()
+   Find the ACRReport construction inside pydantic_to_dataclass(). It reads:
+     gen.ACRReport(
+         title=a.title, url=a.url, version=a.version, date=a.date,
+         auditor_name=a.auditor_name, auditor_url=a.auditor_url,
+     )
+   Add preparation_type=a.preparation_type after auditor_url=a.auditor_url:
+     gen.ACRReport(
+         title=a.title, url=a.url, version=a.version, date=a.date,
+         auditor_name=a.auditor_name, auditor_url=a.auditor_url,
+         preparation_type=a.preparation_type,
+     )
+
+4. ACRReport IN dataclass_to_pydantic()
+   Find the ACRReport construction inside dataclass_to_pydantic(). It reads:
+     schemas.ACRReport(
+         title=a.title, url=a.url, version=a.version, date=a.date,
+         auditor_name=a.auditor_name, auditor_url=a.auditor_url,
+     )
+   Add preparation_type=a.preparation_type after auditor_url=a.auditor_url:
+     schemas.ACRReport(
+         title=a.title, url=a.url, version=a.version, date=a.date,
+         auditor_name=a.auditor_name, auditor_url=a.auditor_url,
+         preparation_type=a.preparation_type,
+     )
+
+VERIFICATION:
+After all changes are complete, read api/conversions.py and confirm each of
+the following, reporting PASS or FAIL for each:
+  a. vendor_resources ResourceLink in pydantic_to_dataclass() maps confidence and justification
+  b. other_resources ResourceLink in pydantic_to_dataclass() maps confidence and justification
+  c. vendor_resources ResourceLink in dataclass_to_pydantic() maps confidence and justification
+  d. other_resources ResourceLink in dataclass_to_pydantic() maps confidence and justification
+  e. ACRReport in pydantic_to_dataclass() maps preparation_type
+  f. ACRReport in dataclass_to_pydantic() maps preparation_type
+  g. No other fields or functions were modified

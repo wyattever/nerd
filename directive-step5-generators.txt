@@ -1,0 +1,61 @@
+You are a senior Python engineer making specific, scoped changes to one file.
+Do NOT make any changes beyond what is explicitly listed below.
+Do NOT delete parse_markdown_to_listing() or any parser-related functions.
+Do NOT delete _gen_*_html() rendering functions or any dataclass definitions.
+Do NOT refactor, rename, reformat, or restructure anything not mentioned.
+Do NOT add imports, comments, or docstrings beyond what is specified.
+After making all changes, output a numbered summary of exactly what was changed
+and confirm the file path.
+
+FILE TO MODIFY: nerd_core/generators.py
+
+CHANGES REQUIRED:
+
+1. PREPARATION_TYPE FIELD — ACRReport dataclass
+   Find the ACRReport dataclass definition. It currently reads:
+     @dataclass
+     class ACRReport:
+         title: str
+         url: str
+         version: str = ""
+         date: str = ""
+         auditor_name: str = ""
+         auditor_url: str = ""
+
+   Add the following field as the last line of the dataclass, after auditor_url:
+     preparation_type: str = ""
+
+   The dataclass should now end with:
+         auditor_name: str = ""
+         auditor_url: str = ""
+         preparation_type: str = ""
+
+2. VENDOR DIRECTORY URL SENTINEL FIX — _gen_header_html()
+   Find the _gen_header_html() function. Inside it, find the vendor link
+   condition. It currently checks vendor_directory_url using truthiness only,
+   in a pattern similar to one of these:
+     if listing.vendor_directory_url:
+   or as part of a ternary:
+     if listing.vendor_directory_url else escape(listing.vendor_name)
+
+   Change the condition to also exclude the "#" sentinel value:
+     if listing.vendor_directory_url and listing.vendor_directory_url != "#"
+
+   If the condition appears in a ternary expression such as:
+     f'<a href="{escape(listing.vendor_directory_url)}"...>{escape(listing.vendor_name)}</a>'
+     if listing.vendor_directory_url else escape(listing.vendor_name)
+   Change only the condition portion to:
+     if listing.vendor_directory_url and listing.vendor_directory_url != "#"
+   Do not change the HTML template strings or any other logic in the function.
+
+   NOTE: Do not touch the product_website_url check — it already has the
+   != "#" guard at line 689 and is correct as-is.
+
+VERIFICATION:
+After all changes are complete, read nerd_core/generators.py and confirm each
+of the following, reporting PASS or FAIL for each:
+  a. ACRReport dataclass has preparation_type: str = "" as its last field
+  b. _gen_header_html() vendor_directory_url condition includes != "#" guard
+  c. _gen_header_html() product_website_url condition is unchanged (still has != "#" guard)
+  d. parse_markdown_to_listing() still exists and was not modified
+  e. All _gen_*_html() functions still exist and were not modified
