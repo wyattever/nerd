@@ -1,98 +1,31 @@
 import re
-import socket
-import ipaddress
-import hashlib
 import asyncio
+from typing import Dict, Any, Tuple
+from nerd_core.tools.liveness_validator import validate_link
+from dataclasses import dataclass, field
 from urllib.parse import urlparse, urlsplit, urlunsplit, parse_qsl, urlencode
 from functools import lru_cache
-import httpx
 import os
-from dataclasses import dataclass, field
 from url_normalize import url_normalize
-
-BROWSER_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
 
 # --- SECURITY & NETWORK UTILS ---
 
-def _is_blocked_ip(ip_str):
-    """True if the resolved IP is loopback/private/link-local/reserved (SSRF guard)."""
-    try:
-        ip = ipaddress.ip_address(ip_str)
-    except ValueError:
-        return True  # unparseable => block
-    return (
-        ip.is_private
-        or ip.is_loopback
-        or ip.is_link_local
-        or ip.is_reserved
-        or ip.is_multicast
-        or ip.is_unspecified
-    )
-
-
-async def resolve_and_validate_url(url):
-    """Resolve redirects (like Google Search Proxy) and validate the final destination.
-    
-    Returns (resolved_url, is_valid, reason). 
+async def resolve_and_validate_url(url: str) -> Tuple[str, bool, str]:
     """
-    is_proxy = "grounding-api-redirect" in url
-    
-    # 1. Sanity check for hallucinations/corruption
+    Wrapper to maintain API compatibility, now using the hardened liveness validator.
+    Returns (resolved_url, is_valid, reason).
+    """
+    # 1. Sanity checks
     if len(url) > 700:
         return url, False, "URL Too Long (Potential Hallucination)"
     if re.search(r"([^/])\1{20,}", url):
         return url, False, "Corrupted URL String"
 
-    try:
-        async with httpx.AsyncClient(
-            timeout=15.0,
-            follow_redirects=True,
-            headers={"User-Agent": BROWSER_UA},
-        ) as client:
-            # We follow redirects to get the direct URL
-            resp = await client.head(url)
-            if resp.status_code in {405, 501, 403, 404}:
-                resp = await client.get(url)
-            
-            final_url = str(resp.url)
-            
-            # 2. Safety/SSRF Validation on the FINAL URL
-            parsed = urlparse(final_url)
-            if parsed.scheme != "https":
-                return final_url, False, "HTTPS required"
-            
-            host = parsed.hostname
-            if not host or host.lower() in ("metadata.google.internal", "localhost"):
-                return final_url, False, "Restricted Host"
-
-            # Resolve IP to check for private ranges
-            try:
-                # socket.getaddrinfo is blocking, but fast enough for most DNS
-                # For high concurrency, consider aiodns
-                infos = socket.getaddrinfo(host, None)
-                resolved_ips = {info[4][0] for info in infos}
-                if any(_is_blocked_ip(ip) for ip in resolved_ips):
-                    return final_url, False, "Restricted IP Range"
-            except Exception:
-                return final_url, False, "DNS Error"
-
-            # 3. Status Validation
-            code = resp.status_code
-            if 200 <= code < 400:
-                return final_url, True, "OK"
-            if code in (401, 403, 429):
-                return final_url, True, f"Unverified ({code})"
-            
-            return final_url, False, f"Status {code}"
-
-    except (httpx.TimeoutException, httpx.ConnectError) as e:
-        # For proxies, if we can't resolve, keep the original but mark unverified
-        return url, True, f"Unverified ({type(e).__name__})"
-    except Exception as e:
-        return url, False, type(e).__name__
+    # 2. Use the hardened validator
+    result = await validate_link(url)
+    
+    # 3. Map result back to the expected (url, bool, reason) format
+    return url, result.is_live, result.reason
 
 
 async def resolve_and_validate_all(urls: list[str], cache: dict[str, str] = None) -> dict[str, str]:
@@ -129,7 +62,7 @@ async def resolve_and_validate_all(urls: list[str], cache: dict[str, str] = None
     return results
 
 
-async def filter_broken_links(md_text):
+async def filter_broken_links(md_text: str) -> Tuple[str, list[str]]:
     """Resolve and label links concurrently without deleting them."""
     markdown_link_pattern = r'\[(?P<text>.*?)\]\s?\((?P<url>https?://[^\)\s<>"]+)\)'
     raw_url_pattern = r'(?<!\()\bhttps?://[^\)\s<>"]+'
@@ -180,15 +113,11 @@ async def filter_broken_links(md_text):
     return processed_md, rejections
 
 
-# --- URL INTEGRITY & TOKEN PROTECTION ---
+# --- URL INTEGRITY, MASKING & NORMALIZATION ---
 
 @dataclass
 class URLMask:
-    """Masks URLs with short placeholders before an LLM call, restores after.
-
-    Placeholders use a format the model is highly unlikely to alter:
-    a sentinel word + integer, e.g. <<URL_1>>.
-    """
+    """Masks URLs with short placeholders before an LLM call, restores after."""
     _to_placeholder: dict[str, str] = field(default_factory=dict)
     _to_original: dict[str, str] = field(default_factory=dict)
     _counter: int = 0
@@ -197,7 +126,6 @@ class URLMask:
     _PLACEHOLDER_RE = re.compile(r'<<URL_(\d+)>>')
 
     def mask(self, text: str) -> str:
-        """Replace every URL in `text` with a stable placeholder."""
         def _sub(match: re.Match) -> str:
             url = match.group(0)
             if url not in self._to_placeholder:
@@ -209,7 +137,6 @@ class URLMask:
         return self._URL_RE.sub(_sub, text)
 
     def unmask(self, text: str, strict: bool = True) -> str:
-        """Swap placeholders back to original URLs."""
         def _sub(match: re.Match) -> str:
             token = match.group(0)
             if token in self._to_original:
@@ -220,7 +147,6 @@ class URLMask:
         return self._PLACEHOLDER_RE.sub(_sub, text)
 
     def audit(self, output_text: str) -> dict[str, list[str]]:
-        """Post-generation integrity check."""
         emitted = set(self._PLACEHOLDER_RE.findall(output_text))
         issued = {t.strip("<>").split("_")[1] for t in self._to_original}
         leaked_raw_urls = self._URL_RE.findall(output_text)
@@ -230,9 +156,6 @@ class URLMask:
             "leaked_raw_urls": leaked_raw_urls,
         }
 
-
-# --- URL NORMALIZATION FOR EVALUATION ---
-
 _TRACKING_PREFIXES = ("utm_",)
 _TRACKING_EXACT = {
     "fbclid", "gclid", "gclsrc", "dclid", "msclkid", "mc_eid", "mc_cid",
@@ -241,7 +164,6 @@ _TRACKING_EXACT = {
 }
 
 def _strip_tracking(url: str) -> str:
-    """Remove tracking params by denylist, preserving order of the rest."""
     parts = urlsplit(url)
     if not parts.query:
         return url
@@ -255,7 +177,6 @@ def _strip_tracking(url: str) -> str:
     return urlunsplit(parts._replace(query=new_query))
 
 def normalize_url(url: str) -> str:
-    """Canonicalize a URL for Recall comparison."""
     if not url or not url.strip():
         return ""
     url = url.strip()
@@ -267,16 +188,12 @@ def normalize_url(url: str) -> str:
         path = path.rstrip("/")
     return urlunsplit(parts._replace(path=path, fragment=""))
 
-
-# --- HELPERS ---
-
 @lru_cache(maxsize=4)
 def _load_css_cached(path, _mtime):
     with open(path, "r") as f:
         return f.read()
 
 def load_css():
-    """Read the large CSS once and cache it."""
     path = "ncademi_combined.css"
     if os.path.exists(path):
         mtime = os.path.getmtime(path)
@@ -284,5 +201,4 @@ def load_css():
     return "@import url('https://ncademi.org/wp-content/themes/ncademitheme/style.css');"
 
 def extract_known_urls(markdown_string):
-    """Extract all URLs from a markdown string."""
     return set(re.findall(r'https?://[^\)\s]+', markdown_string))

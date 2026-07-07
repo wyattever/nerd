@@ -1,4 +1,5 @@
-
+from dotenv import load_dotenv
+load_dotenv()
 import sys
 import logging
 import re
@@ -61,9 +62,6 @@ def run_e2e_live_test():
         if not listing.other_resources:
             errors.append("Other Resources (Third-Party) list is empty.")
             
-        if not listing.ai_insights:
-            errors.append("AI Generated Insights section is empty.")
-            
         if errors:
             logger.error("❌ E2E Validation Failed with structural errors:")
             for err in errors:
@@ -79,10 +77,9 @@ def run_e2e_live_test():
         required_html_elements = [
             listing.product_name,
             listing.vendor_name,
-            "Accessibility Documentation", # Partial match to avoid & vs &amp; issues
+            "Accessibility Conformance Reports",
             "From " + listing.vendor_name,
-            "From Other Sources",
-            "AI Generated Insights"
+            "From Other Sources"
         ]
         
         for elem in required_html_elements:

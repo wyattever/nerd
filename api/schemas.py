@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Contract models (mirror nerd_core.generators dataclasses 1:1)
 # ---------------------------------------------------------------------------
@@ -16,7 +15,6 @@ class ResourceLink(BaseModel):
 
 
 class SupportContact(BaseModel):
-    # Mirrors the dataclass comment: "email" | "url" | "text"
     type: Literal["email", "url", "text"]
     value: str
     label: str = ""
@@ -33,17 +31,13 @@ class ACRReport(BaseModel):
 
 
 class SectionOverrides(BaseModel):
-    """Per-section raw-HTML overrides. Each value, if present, replaces
-    the auto-generated HTML for that section in BOTH the live viewer and
-    /render. Closed key set — these are the only editable sections
-    (footer excluded)."""
     header: Optional[str] = Field(default=None, max_length=102400)
     vendor_resources: Optional[str] = Field(default=None, max_length=102400)
     other_resources: Optional[str] = Field(default=None, max_length=102400)
     support: Optional[str] = Field(default=None, max_length=102400)
     acr: Optional[str] = Field(default=None, max_length=102400)
 
-    model_config = {"extra": "forbid"}  # reject unknown section keys
+    model_config = {"extra": "forbid"}
 
 
 class ListingData(BaseModel):
@@ -54,15 +48,9 @@ class ListingData(BaseModel):
     product_website_url: str = "#"
     vendor_resources: list[ResourceLink] = Field(default_factory=list)
     other_resources: list[ResourceLink] = Field(default_factory=list)
-    ai_insights: str = ""
+    # AI_INSIGHTS REMOVED
     support_contacts: list[SupportContact] = Field(default_factory=list)
     acr_reports: list[ACRReport] = Field(default_factory=list)
-    # last_updated is intentionally Optional at the API boundary.
-    #   - If the client sends a value, /render uses it verbatim.
-    #   - If omitted/None, the server fills datetime.now() at render time,
-    #     matching the legacy parser's non-deterministic behavior.
-    # This is the documented escape hatch for Phase 5 byte-fidelity (mock the
-    # clock or pass an explicit date).
     last_updated: Optional[str] = None
     html_override: Optional[str] = Field(default=None, max_length=102400)
     last_updated_at: Optional[str] = None
@@ -70,44 +58,30 @@ class ListingData(BaseModel):
 
 
 class CandidateRecord(ListingData):
-    """ListingData + storage-only raw_markdown field.
-
-    raw_markdown is silently ignored by /render — pydantic_to_dataclass does
-    not map it to any dataclass field, so it is stripped at conversion time.
-    It is stored alongside the parsed listing so that deep-dive jobs can
-    carry the raw text forward without a separate Firestore read.
-    """
     raw_markdown: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
-# Request models
+# Request models (Unchanged)
 # ---------------------------------------------------------------------------
 
 class InitialResearchRequest(BaseModel):
     product_url: str
-    # Legacy slider: min 1, max 4, default 4 (minutes). run_initial_research
-    # signature is run_initial_research(product_url, timeout_min=4).
     timeout_min: int = Field(default=4, ge=1, le=4)
-    # When True, worker auto-persists the parsed listing to nerd_candidates
-    # after job completion. Non-fatal: failure logs a warning only.
     save_as_candidate: bool = False
 
 
 class DeepDiveRequest(BaseModel):
     product_url: str
     product_name: str
-    current_draft: str            # raw markdown from the initial job
-    job_id: Optional[str] = None  # correlates the SSE stream
-    # Legacy app hardcodes 4 for deep-dive; exposed but defaulted to match.
+    current_draft: str
+    job_id: Optional[str] = None
     timeout_min: int = Field(default=4, ge=1, le=4)
-    # url_cache carried back from the initial job so resolve_and_validate_all
-    # reuses prior resolutions (redirect_url -> canonical_url).
     url_cache: dict[str, str] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
-# Response models
+# Response models (Unchanged)
 # ---------------------------------------------------------------------------
 
 class EnqueueResponse(BaseModel):
@@ -115,15 +89,13 @@ class EnqueueResponse(BaseModel):
 
 
 class JobResultPayload(BaseModel):
-    """Final JSON yielded by the SSE stream on completion."""
-    raw_markdown: str             # pass back to /research/deep-dive
-    parsed_listing: ListingData   # populate the React Hook Form
-    url_cache: dict[str, str]     # carry forward to deep-dive
-    rejections: list[str] = Field(default_factory=list)  # flagged/broken links
+    raw_markdown: str
+    parsed_listing: ListingData
+    url_cache: dict[str, str]
+    rejections: list[str] = Field(default_factory=list)
 
 
 class RenderRequest(ListingData):
-    """/render accepts a full ListingData payload."""
     pass
 
 
@@ -131,7 +103,7 @@ class RenderResponse(BaseModel):
     html: str
 
 
-# ── Link Validation ──────────────────────────────────────────────────────────
+# ── Link Validation (Unchanged) ──────────────────────────────────────────
 class LinkValidationRequest(BaseModel):
     urls: list[str]
 
@@ -153,10 +125,9 @@ class LinkValidationResponse(BaseModel):
     unreachable_urls: list[str]
 
 
-# ── Batch research ───────────────────────────────────────────────────────────
+# ── Batch research (Unchanged) ───────────────────────────────────────────
 
 class BatchResearchRequest(BaseModel):
-    """Enqueue up to 50 product URLs for research in a single call."""
     urls: list[str] = Field(min_length=1, max_length=50)
 
 

@@ -250,12 +250,18 @@ async def get_product_data(slug: str, uid: str = Depends(verify_token)):
 
 @app.post("/admin/candidates")
 async def save_candidate(data: schemas.ListingData, uid: str = Depends(verify_token)):
-    slug = await upsert_candidate(data.model_dump())
+    # AI insights are stripped on ingestion/persistence
+    model_data = data.model_dump()
+    model_data.pop("ai_insights", None)
+    slug = await upsert_candidate(model_data)
     return {"message": "Candidate saved successfully", "slug": slug}
 
 @app.post("/admin/products")
 async def save_product(data: schemas.ListingData, uid: str = Depends(verify_token)):
-    slug = await upsert_product(data.model_dump())
+    # AI insights are stripped on ingestion/persistence
+    model_data = data.model_dump()
+    model_data.pop("ai_insights", None)
+    slug = await upsert_product(model_data)
     return {"message": "Product saved successfully", "slug": slug}
 
 @app.delete("/admin/candidates/{slug}")
@@ -270,7 +276,10 @@ async def update_candidate(slug: str, data: schemas.ListingData, uid: str = Depe
     existing = await get_candidate(slug)
     if not existing:
         raise HTTPException(status_code=404, detail="Candidate not found")
-    await upsert_candidate(data.model_dump())
+    # AI insights are stripped on update
+    model_data = data.model_dump()
+    model_data.pop("ai_insights", None)
+    await upsert_candidate(model_data)
     return {"message": "Candidate updated successfully", "slug": slug}
 
 @app.post("/admin/candidates/batch", response_model=schemas.BatchResearchResponse)

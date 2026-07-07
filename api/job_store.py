@@ -45,8 +45,7 @@ async def create_job(job_id: str) -> None:
 async def claim_job(job_id: str, worker_id: str = "unknown", stale_timeout_minutes: int = 10) -> bool:
     """
     Atomically attempt to claim a job for processing.
-    Returns True if the claim was successful (status transitioned from queued to searching_initial,
-    or a stale job was reclaimed).
+    Returns True if the claim was successful.
     """
     now = datetime.now(timezone.utc)
     stale_threshold = now - timedelta(minutes=stale_timeout_minutes)
@@ -125,6 +124,11 @@ async def emit_event(job_id: str, status: str, **extra: Any) -> None:
 async def complete_job(job_id: str, result: dict) -> None:
     """Mark the job as done and attach the final payload."""
     now = datetime.now(timezone.utc)
+    
+    # Ensure AI insights are stripped from persistence if present
+    if isinstance(result, dict) and "parsed_listing" in result:
+        result["parsed_listing"].pop("ai_insights", None)
+        
     if LOCAL_MODE:
         if job_id in _local_jobs:
             _local_jobs[job_id]["status"] = "complete"
@@ -182,22 +186,18 @@ async def stream_job_events(job_id: str, last_event_id: str | None = None) -> As
             
         events = data.get("events", [])
         
-        # Yield any new events
         while last_idx < len(events):
             evt = events[last_idx]
             last_idx += 1
             yield f"id: {last_idx}\nevent: status\ndata: {json.dumps(evt)}\n\n"
             last_heartbeat = datetime.now(timezone.utc)
             
-        # If the job is done, yield the payload and close the stream
         if data.get("done"):
             if data.get("result") is not None:
-                # We use 'result' as the ID for the final payload
                 yield f"id: result\nevent: result\ndata: {json.dumps(data['result'])}\n\n"
             yield "event: end\ndata: {}\n\n"
             break
             
-        # Heartbeat every 20 seconds to keep connection alive on Cloud Run
         if (datetime.now(timezone.utc) - last_heartbeat).total_seconds() > 20:
             yield ": heartbeat\n\n"
             last_heartbeat = datetime.now(timezone.utc)

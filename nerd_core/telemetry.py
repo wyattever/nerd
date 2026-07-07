@@ -7,11 +7,9 @@ from typing import Optional
 from google.cloud import bigquery
 
 # --- Local File Logging ---
-# File logging is best-effort: on read-only filesystems (e.g. Cloud Run) the
-# FileHandler cannot be created. Failure here must never crash module import.
 LOG_FILE = Path(__file__).parent.parent / "nerd_debug.log"
 
-logger = logging.getLogger("nerd")  # Root project logger
+logger = logging.getLogger("nerd")
 logger.setLevel(logging.DEBUG)
 
 try:
@@ -50,7 +48,7 @@ def log_event(
         "timestamp":         datetime.now(timezone.utc).isoformat(),
         "event_type":        event_type,
         "product_url":       product_url,
-        "original_markdown": original_markdown[:50_000],  # BQ cell size guard
+        "original_markdown": original_markdown[:50_000],
         "user_feedback":     user_feedback,
         "refined_markdown":  refined_markdown[:50_000],
         "error_code":        error_code,
