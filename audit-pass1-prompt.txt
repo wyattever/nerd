@@ -1,8 +1,0 @@
-You are a senior Python engineer performing a focused code audit. Do NOT make any changes. Read files and report only.
-
-Read nerd_core/services.py and report:
-1. The exact MODEL constant value and line number
-2. Every generate_content() call and whether thinking_level is set
-3. Every GoogleSearch() instantiation and whether dynamic_retrieval_config is present
-
-Write findings to nerd-migration-audit-pass1.md in the current working directory. Confirm when done.
