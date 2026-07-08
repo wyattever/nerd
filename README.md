@@ -14,7 +14,6 @@ Implement the asynchronous worker architecture to handle research jobs. The back
 1. **Async Jobs**: Convert `/research/initial` and `/research/deep-dive` to enqueue jobs.
 2. **SSE Status**: Implement the `GET /jobs/{id}` SSE endpoint to stream granular status updates (e.g., `searching_initial`, `validating_links`) and the final result payload.
 3. **Core Integrity**: Import and utilize `nerd_core`. **Do not modify the `nerd_core/` package.**
-4. **Byte-Fidelity**: Ensure the `ENABLE_AI_INSIGHTS` flag is respected to maintain 1:1 HTML output parity with the legacy system.
 
 ## Folder Structure (Scoped for Phase 2)
 - `api/`: FastAPI application, endpoints, and shared schemas.

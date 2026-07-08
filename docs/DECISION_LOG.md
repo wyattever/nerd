@@ -106,9 +106,9 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 - **Decision:** Do not rely on `/healthz` for post-deploy verification. Repointed to `curl ${API_URL}/admin/candidates`.
 - **Status:** SETTLED/VERIFIED.
 
-### 18. AI INSIGHTS — Built but gated OFF pending team approval.
-- **Decision:** `ENABLE_AI_INSIGHTS` stays `false` in production.
-- **Status:** SETTLED.
+### 18. AI INSIGHTS — Feature deprecated and removed.
+- **Decision:** The AI Insights feature is deprecated. The `ENABLE_AI_INSIGHTS` environment variable has been removed from all deployment configs, Dockerfiles, and test configs (2026-07-08). The `ai_insights` data field remains in the schema/frontend as inert dead weight (not currently removed) but is no longer synthesized or gated by any flag.
+- **Status:** SETTLED/VERIFIED.
 
 ### 19. HTML_OVERRIDE / LAST_UPDATED_AT — Backend support is core infrastructure.
 - **Decision:** `html_override` and `last_updated_at` are core backend infrastructure on `main`.
@@ -142,3 +142,12 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 - **Decision:** Removed `python -m venv` and `ENV VIRTUAL_ENV` steps from `Dockerfile.api`.
 - **Rationale:** Containers provide native filesystem isolation; an internal `venv` was redundant and caused build failures due to missing dependencies.
 - **Status:** SETTLED/VERIFIED.
+
+### 27. PRODUCTION GUARDRAILS — LOCAL_MODE and NEXT_PUBLIC_DISABLE_AUTH must never reach deployed environments.
+- **Decision:** Never set `LOCAL_MODE=true` or `NEXT_PUBLIC_DISABLE_AUTH=true` in any Dockerfile, cloudbuild.yaml, or deploy configuration. These bypass Firebase auth entirely and route research jobs in-process instead of through Cloud Tasks/nerd-worker.
+- **Rationale:** `LOCAL_MODE=true` was found live on production `nerd-api` on 2026-07-08, fully bypassing auth on every endpoint (confirmed via unauthenticated curl returning 200 instead of 401). Fixed via `--update-env-vars` removal and atomic traffic promotion to a verified revision. Root cause: believed to have been set during an attempt to get a local Google Cloud Code/emulator workflow running, then not reverted before a subsequent deploy.
+- **Status:** SETTLED/VERIFIED (production confirmed clean post-fix).
+
+### 28. WORKER AUTH — ADC only, no GEMINI_API_KEY on nerd-worker.
+- **Decision:** `nerd-worker` authenticates to Vertex AI/Gemini via Application Default Credentials (`roles/aiplatform.user` on the compute service account) and to Firestore via `roles/datastore.user`. Never add a `GEMINI_API_KEY` secret reference to the worker's deploy config — this differs intentionally from `nerd-api`, which does use `--set-secrets="GEMINI_API_KEY=..."`.
+- **Status:** SETTLED.
