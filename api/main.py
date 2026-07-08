@@ -10,11 +10,10 @@ from typing import Any
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pathlib import Path
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from google.cloud import tasks_v2
 import firebase_admin
 from firebase_admin import auth as fb_auth
@@ -46,8 +45,9 @@ if LOCAL_MODE:
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Firebase Admin Init ───────────────────────────────────────────────────────
-if not firebase_admin._apps:
-    firebase_admin.initialize_app()
+if not LOCAL_MODE:
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app()
 
 logger = logging.getLogger("nerd.api")
 
@@ -57,8 +57,6 @@ app = FastAPI(title="N.E.R.D. API", version="0.4.0-bearer-auth")
 # Ensure artifacts directory exists and mount it
 os.makedirs("artifacts", exist_ok=True)
 app.mount("/artifacts", StaticFiles(directory="artifacts"), name="artifacts")
-
-templates = Jinja2Templates(directory="templates")
 
 # ── Auth Dependency ───────────────────────────────────────────────────────────
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -94,11 +92,14 @@ QUEUE_NAME = os.getenv("QUEUE_NAME", "nerd-research-queue")
 WORKER_URL = os.getenv("WORKER_URL")
 TASKS_SA = os.getenv("TASKS_SA")
 
-try:
-    tasks_client = tasks_v2.CloudTasksClient()
-    queue_path = tasks_client.queue_path(PROJECT_ID, LOCATION, QUEUE_NAME)
-except Exception as e:
-    logger.warning("Failed to initialize Cloud Tasks client: %s", e)
+tasks_client = None
+queue_path = None
+if not LOCAL_MODE:
+    try:
+        tasks_client = tasks_v2.CloudTasksClient()
+        queue_path = tasks_client.queue_path(PROJECT_ID, LOCATION, QUEUE_NAME)
+    except Exception as e:
+        logger.warning("Failed to initialize Cloud Tasks client: %s", e)
 
 def _enqueue_task(endpoint_path: str, payload: dict) -> None:
     if not WORKER_URL:
