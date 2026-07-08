@@ -2,69 +2,17 @@
   "product_name": "CommonLit",
   "vendor_name": "CommonLit",
   "vendor_directory_url": "#",
-  "product_description": "CommonLit is a nonprofit education technology organization that provides a free digital library of high-quality reading passages and a comprehensive ELA curriculum for grades 3-12. It offers instructional materials, embedded assessments, and professional development to support teachers in enhancing students' reading, writing, and critical thinking skills.",
+  "product_description": "CommonLit is a non-profit educational technology platform that provides free reading and writing instruction, offering a library of literary and informational texts with integrated tools to support diverse learners. The platform aims to make high-quality literacy resources accessible to all students and teachers.",
   "product_website_url": "https://www.commonlit.org/",
   "vendor_resources": [
     {
       "url": "https://www.commonlit.org/accessibility",
-      "text": "Accessibility - CommonLit"
-    },
-    {
-      "url": "https://support.commonlit.org/hc/en-us/articles/1260803362191-What-accessibility-tools-and-supports-does-CommonLit-provide-for-struggling-readers-and-students-with-IEPs",
-      "text": "What accessibility tools and supports does CommonLit provide for struggling readers and students with IEPs?"
-    },
-    {
-      "url": "https://www.commonlit.org/blog/commonlit-accessibility-guide/",
-      "text": "CommonLit's Guide to Accessibility for Schools, Districts, and States"
+      "text": "Accessibility",
+      "confidence": 0.98,
+      "justification": "This page is titled 'Accessibility' and outlines CommonLit's commitment to WCAG 2.1 AA guidelines and the ADA."
     }
   ],
-  "other_resources": [
-    {
-      "url": "https://www.schlleadership.com/2024/02/16/commonlit-review/",
-      "text": "CommonLit Review - School Leadership 2.0"
-    },
-    {
-      "url": "https://edtechindex.com/products/commonlits-digital-library",
-      "text": "CommonLit's Digital Library - EdTech Index"
-    },
-    {
-      "url": "https://litwithlyns.com/8-reasons-commonlit-is-a-must-for-all-subject-areas/",
-      "text": "8 Reasons CommonLit is a MUST for ALL Subject Areas - Lit with Lyns"
-    },
-    {
-      "url": "https://overdeckfoundation.org/our-portfolio/commonlit/",
-      "text": "CommonLit - Overdeck Family Foundation"
-    },
-    {
-      "url": "https://help.bostonpublicschools.org/help/how-to-access-commonlit",
-      "text": "How to access CommonLit - BPSTechnology - HelpDocs"
-    },
-    {
-      "url": "https://hundred.org/en/innovations/commonlit",
-      "text": "HundrED Foundation - CommonLit Innovation"
-    },
-    {
-      "url": "https://www.edreports.org/",
-      "text": "EdReports - Common Lit: Final Instructional Materials Technology Information Document"
-    },
-    {
-      "url": "https://plug-in-and-teach.org/",
-      "text": "Plug in and Teach - CommonLit Accessibility Review"
-    },
-    {
-      "url": "https://www.acps.k12.va.us/cms/lib/VA01001956/Centricity/domain/80/technologyresources/technologyresources.html",
-      "text": "Alexandria City Public Schools - Technology Resources Library (CommonLit)"
-    },
-    {
-      "url": "https://www.pgcps.org/offices/student-services/school-psychology/online-academic-resources",
-      "text": "Prince George's County Public Schools - Online Academic Resources (CommonLit)"
-    },
-    {
-      "url": "https://www.iste.org/iste-ebook-closing-gap-digital-equity-strategies-k-12-classroom",
-      "text": "ISTE Ebook: Closing the Gap: Digital Equity Strategies for the K\u201312 Classroom (mentioning CommonLit)"
-    }
-  ],
-  "ai_insights": "CommonLit demonstrates a strong commitment to digital accessibility, aiming for compliance with WCAG 2.1 AA guidelines and the Americans with Disabilities Act. The platform integrates a suite of features designed to support diverse learners, including text-to-speech functionality, translation into over 30 languages, and digital annotation tools. It also offers a Guided Reading Mode, is optimized for mobile use, and is compatible with screen readers. These embedded accessibility tools are widely recognized and reviewed by various educational institutions and organizations. External evaluations often highlight their value for differentiated instruction and enhancing student engagement, particularly for students with disabilities and English language learners. Ongoing external scrutiny, including the use of accessibility testing tools, further indicates the platform's dedication to inclusive design and its role in broader digital equity discussions.",
+  "other_resources": [],
   "support_contacts": [
     {
       "type": "email",
@@ -74,13 +22,17 @@
   ],
   "acr_reports": [
     {
-      "title": "Not available",
+      "title": "N/A",
       "url": "#",
-      "version": "Not available",
-      "date": "Not available",
-      "auditor_name": "Not available",
-      "auditor_url": ""
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }

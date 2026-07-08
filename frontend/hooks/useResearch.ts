@@ -60,6 +60,12 @@ export function useResearch() {
   }, []);
 
   const startResearch = useCallback(async (productUrl: string) => {
+    // FIX 1: Guard against re-entry while streaming
+    if (abortControllerRef.current) {
+        console.warn("Research already in progress. Aborting previous job.");
+        abortControllerRef.current.abort();
+    }
+
     setState({ 
       status: "streaming", 
       log: [`--- Research Started for ${productUrl} ---`, "Queuing research job..."], 
@@ -68,7 +74,6 @@ export function useResearch() {
     });
 
     try {
-      // Get the token (handles local bypass via getIdToken)
       const token = await getIdToken();
       if (!token && process.env.NEXT_PUBLIC_DISABLE_AUTH !== "true") {
         window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`;
@@ -77,7 +82,6 @@ export function useResearch() {
       
       const authHeader = `Bearer ${token ?? "local-bypass"}`;
 
-      // Step 1: enqueue the job
       const enqueueRes = await fetch(`${API_BASE}/research/initial`, {
         method: "POST",
         headers: { 
@@ -95,7 +99,6 @@ export function useResearch() {
         log: [...prev.log, `Job queued: ${job_id}. Opening SSE stream...`] 
       }));
 
-      // Step 2: open SSE stream for this job using fetchEventSource
       const ctrl = new AbortController();
       abortControllerRef.current = ctrl;
 
@@ -103,13 +106,8 @@ export function useResearch() {
         headers: { 'Authorization': authHeader },
         signal: ctrl.signal,
         onopen: async (res) => {
-          if (res.status >= 400 && res.status < 500 && res.status !== 429) {
-            if (res.status === 401) {
-               // Token might be expired, though getIdToken(true) above should prevent this.
-               // We could attempt a retry loop here if needed.
-            }
-            throw new Error(`Fatal error from SSE: ${res.status}`);
-          }
+          if (res.ok) return; 
+          throw new Error(`Fatal error from SSE: ${res.status}`);
         },
         onmessage: (msg) => {
           if (msg.event === "status") {
@@ -120,7 +118,9 @@ export function useResearch() {
             }));
           } else if (msg.event === "result") {
             const data = JSON.parse(msg.data);
-            ctrl.abort(); // Close the stream
+            // Cleanup controller before updating state to prevent race conditions
+            abortControllerRef.current = null; 
+            ctrl.abort(); 
             setState((prev) => ({
               ...prev,
               status: "complete",
@@ -130,15 +130,15 @@ export function useResearch() {
           }
         },
         onerror: (err) => {
-          // fetch-event-source retries by default.
-          if (ctrl.signal.aborted) return; // ignore if we closed it
+          // FIX 2: Stop retry loop on error
+          if (ctrl.signal.aborted) return;
           console.error("SSE Error:", err);
           setState((prev) => ({
             ...prev,
             status: "error",
-            error: "Research stream failed. Check API logs.",
+            error: "Research stream failed.",
           }));
-          throw err; // rethrow to stop or allow retry
+          throw err; // Stop retries by rethrowing to the fetchEventSource handler
         }
       });
 

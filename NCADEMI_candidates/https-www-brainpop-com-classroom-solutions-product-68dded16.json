@@ -2,77 +2,37 @@
   "product_name": "BrainPOP ELL",
   "vendor_name": "BrainPOP",
   "vendor_directory_url": "#",
-  "product_description": "BrainPOP ELL is an interactive language learning platform that provides English language learners with engaging content, including animated movies, games, quizzes, and interactive features, to develop their listening, speaking, reading, and writing skills. The platform supports skill development through conversational English modeled by characters and integrates vocabulary, language, and content lessons.",
+  "product_description": "BrainPOP ELL is an online English language learning program designed for students of all ages. It utilizes short, animated movies, games, quizzes, and interactive features to develop vocabulary, grammar, reading, writing, speaking, and listening skills. The program aims to teach English to new language learners in an accessible and engaging way.",
   "product_website_url": "https://www.brainpop.com/classroom-solutions/products/brainpop-ell",
   "vendor_resources": [
     {
-      "url": "https://www.brainpop.com/discover/post/spotlight-on-accessibility-new-on-brainpop-and-brainpop-jr",
-      "text": "Spotlight on Accessibility: New on BrainPOP and BrainPOP Jr."
-    },
-    {
-      "url": "https://www.brainpop.com/discover/post/how-brainpop-aligns-to-universal-design-for-learning-udl-guidelines",
-      "text": "How BrainPOP Aligns to Universal Design for Learning (UDL) Guidelines"
-    },
-    {
-      "url": "https://www.brainpop.com/discover/post/accessible-ways-for-students-to-show-their-learning",
-      "text": "Accessible Ways for Students to Show Their Learning - BrainPOP"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Special Education - BrainPOP"
-    },
-    {
-      "url": "https://help.brainpop.com/hc/en-us/articles/5383317200532-Our-Content-Principles",
-      "text": "Our Content Principles - BrainPOP Help Center"
-    },
-    {
-      "url": "https://help.brainpop.com/hc/en-us/articles/360028195392-BrainPOP-ELL",
-      "text": "BrainPOP ELL Help Center"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Multilingual Learners - BrainPOP"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "BrainPOP LLC Accessibility Conformance Report WCAG Edition (Based on VPAT\u00ae Version 2.4, March 20, 2023)"
-    },
-    {
-      "url": "https://www.brainpop.com/discover/post/accessible-ways-for-students-to-show-their-learning",
-      "text": "Accessible Ways for Students to Show Their Learning - BrainPOP"
-    },
-    {
-      "url": "https://www.brainpop.com/discover/post/spotlight-on-accessibility-new-on-brainpop-and-brainpop-jr",
-      "text": "Spotlight on Accessibility: New on BrainPOP and BrainPOP Jr."
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEG9haT4bBeQ2Tk5BKJ6VrhHfqedOB7SLEYY-0HFcX7GRPLP7IhESsh-b2NDBjIrzf0AmATkXdt45s8d4-qjHUAriy-a2n3FnwEoke-eLbCWcafoTQCZvNj3XzKCDbE-j2GUZJQo7VSLuBD",
+      "text": "Accessibility Statement",
+      "confidence": 0.98,
+      "justification": "Official accessibility statement detailing BrainPOP's commitment to WCAG 2.1 Level AA and Section 508, listing general features like screen reader support, keyboard navigation, captions, and audio descriptions, and mentioning per-product VPATs."
     }
   ],
-  "other_resources": [
-    {
-      "url": "https://www.berkeleyschools.net/wp-content/uploads/2023/09/Web-Accessibility-Testing-Checklist-v3-BrainPop.pdf",
-      "text": "Web Accessibility Testing Checklist v3 - BrainPop - Berkeley Public Schools"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Technology Resources Library (All ages, listing BrainPOP ELL under accessibility)"
-    }
-  ],
-  "ai_insights": "BrainPOP ELL is designed with Universal Design for Learning principles to support diverse learners, including English language learners and students with special needs. The platform integrates features such as closed captions, audio descriptions for movies, adjustable playback speed, and full transcripts. It also leverages Microsoft Immersive Reader for literacy support and offers multilingual movie options in Spanish and French. The product provides various interactive activities that allow students to demonstrate understanding through different modalities. While extensive documentation highlights ongoing feature enhancements, a conformance report indicates partial support for specific WCAG criteria, notably focus order and elements having discernible names, roles, and values.",
+  "other_resources": [],
   "support_contacts": [
     {
       "type": "email",
-      "value": "accessibility@brainpop.com, 212.574.6000, 866.54.BRAIN",
+      "value": "accessibility@brainpop.com",
       "label": ""
     }
   ],
   "acr_reports": [
     {
       "title": "BrainPOP LLC Accessibility Conformance Report WCAG Edition",
-      "url": "https://drive.google.com/file/d/1CllXLod1MyVhwBkR5K9VSl8j-gQXKwCI/view?usp=sharing",
-      "version": "2.4",
-      "date": "March 20, 2023",
-      "auditor_name": "BrainPOP LLC",
-      "auditor_url": ""
+      "url": "#",
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }

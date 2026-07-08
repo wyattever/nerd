@@ -2,101 +2,37 @@
   "product_name": "BrainPOP",
   "vendor_name": "BrainPOP",
   "vendor_directory_url": "#",
-  "product_description": "BrainPOP is an educational technology platform offering animated movies, interactive quizzes, and activities across various subjects for students in grades K-8. It focuses on making complex topics engaging and accessible through multimedia content and supporting diverse learning styles.",
+  "product_description": "BrainPOP provides animated educational content and interactive learning activities for students from kindergarten through high school, covering various subjects like ELA, Math, Science, and Social Studies. It aims to deliver engaging and accessible learning experiences, supporting diverse student needs through a range of features and multimodal content.",
   "product_website_url": "https://www.brainpop.com/classroom-solutions/products/brainpop",
   "vendor_resources": [
     {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Spotlight on Accessibility: New on BrainPOP and BrainPOP Jr."
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "How BrainPOP Aligns to Universal Design for Learning (UDL) Guidelines"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Accessible Ways for Students to Show Their Learning"
-    },
-    {
-      "url": "https://help.brainpop.com/hc/en-us/articles/5383317200532-Our-Content-Principles",
-      "text": "Our Content Principles"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "AI Guiding Principles - BrainPOP"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Search By Standards - BrainPOP"
-    },
-    {
-      "url": "https://cdn.brainpop.com/assets/documents/accessibility-report/BrainPOP_Web_VPAT_WCAG-2.1_04-2023.pdf",
-      "text": "BrainPOP LLC Accessibility Conformance Report WCAG Edition (VPAT)"
+      "url": "https://www.brainpop.com/accessibility/",
+      "text": "Accessibility Statement",
+      "confidence": 0.99,
+      "justification": "This page is explicitly titled 'Accessibility Statement' and details BrainPOP's commitment to WCAG 2.1 AA and Section 508 standards, accessibility features, and contact information for feedback."
     }
   ],
-  "other_resources": [
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "We Tried BrainPOP: What We Liked, What We Didn't - OpenEd"
-    },
-    {
-      "url": "https://www.g2.com/products/brainpop/reviews",
-      "text": "BrainPOP Reviews 2026: Details, Pricing, & Features - G2"
-    },
-    {
-      "url": "https://www.berkeleyschools.net/wp-content/uploads/2023/09/Web-Accessibility-Testing-Checklist-v3-BrainPop.pdf",
-      "text": "Web Accessibility Testing Checklist v3 - BrainPop - Berkeley Public Schools"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Our Favorite Educational Platform - BrainPOP Homeschool Review - Monkey and Mom"
-    },
-    {
-      "url": "http://coeweb2.astate.edu/hmadsen/BrainPOP%20Evaluation.pdf",
-      "text": "3.1.9 (one of a series) Publisher: BrainPOP Target Audience"
-    },
-    {
-      "url": "https://studentbehaviorblog.org/brainpop-jr/",
-      "text": "BrainPop Jr. - Student Behavior Blog"
-    },
-    {
-      "url": "https://www.berkeleyschools.net/wp-content/uploads/2023/09/Web-Accessibility-Testing-Checklist-v3-BrainPop.pdf",
-      "text": "Web Accessibility Testing Checklist v3 - BrainPop - Berkeley Public Schools"
-    },
-    {
-      "url": "https://info.iu13.org/ims/brainpop-january-2022-feature-release",
-      "text": "BrainPOP January 2022 Feature Release - IU13"
-    },
-    {
-      "url": "https://resources.k12albemarle.org/",
-      "text": "Technology Resources Library (ACPS)"
-    },
-    {
-      "url": "https://www.schools.nyc.gov/about-us/policies/data-privacy-and-security-policies/supplemental-information-for-parents-about-doe-agreements-with-outside-entities/vendors-a-h",
-      "text": "Vendors A-H - NYC Public Schools"
-    },
-    {
-      "url": "https://centerononlinelearning.ku.edu/wp-content/uploads/2017/04/InvitedIn4-18ALB.pdf",
-      "text": "Measuring UDL in Online Learning"
-    }
-  ],
-  "ai_insights": "BrainPOP demonstrates a strong commitment to accessibility, offering features like closed captioning, adjustable playback speeds, movie transcripts, and multilingual support. It integrates Microsoft Immersive Reader to assist students with reading challenges and provides embedded audio descriptions for visually impaired learners. The platform actively aligns with Universal Design for Learning principles, offering multiple means of representation, engagement, and expression through various multimedia and creative tools. While efforts to meet accessibility standards are confirmed, assessments indicate areas needing improvement in programmatic elements, focus order, and minimum contrast ratios. BrainPOP continuously introduces new accessibility-focused features, highlighting an ongoing effort to enhance inclusivity and support differentiated instruction for diverse learners.",
+  "other_resources": [],
   "support_contacts": [
     {
       "type": "email",
-      "value": "accessibility@brainpop.com, 212.574.6000, Toll-Free 866.54.BRAIN",
+      "value": "accessibility@brainpop.com, 212.574.6000, 866.54.BRAIN (866.542.7246)",
       "label": ""
     }
   ],
   "acr_reports": [
     {
-      "title": "BrainPOP LLC Accessibility Conformance Report WCAG Edition",
-      "url": "https://drive.google.com/file/d/1CllXLod1MyVhwBkR5K9VSl8j-gQXKwCI/view?usp=share_link",
-      "version": "WCAG 2.1",
-      "date": "March 20, 2023",
-      "auditor_name": "Internal",
-      "auditor_url": ""
+      "title": "BrainPOP Voluntary Product Accessibility Templates (VPATs)",
+      "url": "#",
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }

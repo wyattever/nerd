@@ -1,90 +1,30 @@
 {
   "product_name": "ReadWorks",
-  "vendor_name": "ReadWorks, Inc.",
+  "vendor_name": "ReadWorks",
   "vendor_directory_url": "#",
-  "product_description": "ReadWorks is an EdTech nonprofit offering free, research-based resources like K-12 texts, instructional routines, and professional development to enhance reading comprehension. Its online platform provides a vast library of reading materials, digital tools, and assessment features to support teachers and students, with a particular focus on under-resourced communities.",
+  "product_description": "ReadWorks is a nonprofit organization that offers free, high-quality reading comprehension content and tools for K-12 students and teachers. Its mission is to support the growth of successful, joyful readers through research-based resources and digital supports.",
   "product_website_url": "https://www.readworks.org/",
   "vendor_resources": [
     {
-      "url": "https://www.readworks.org/accessibility-statement",
-      "text": "ReadWorks Accessibility Statement"
+      "url": "https://www.readworks.org/blog/posts/scaffolding-made-easy-7-tools-and-resources-to-adapt-readworks-for-special-education",
+      "text": "Scaffolding Made Easy: 7+ Tools and Resources to Adapt ReadWorks for Special Education",
+      "confidence": 0.9,
+      "justification": "This blog post from ReadWorks describes various student-facing features and tools designed to support students with visual impairments, dyslexia, and other disabilities, including adjustable font size, focus tools, and text-to-speech."
     },
     {
-      "url": "https://www.readworks.org/privacy-policy",
-      "text": "ReadWorks Privacy Policy"
+      "url": "https://www.readworks.org/blog/posts/differentiation-with-digital-supports",
+      "text": "Differentiation with Digital Supports",
+      "confidence": 0.9,
+      "justification": "This blog post highlights student tools such as distraction-free mode, text magnification, split screen, guided reading strip, and text-to-speech, which enhance accessibility."
     },
     {
-      "url": "https://www.readworks.org/terms",
-      "text": "ReadWorks, Inc. Website Terms of Use"
-    },
-    {
-      "url": "https://readworks.helpscoutdocs.com/",
-      "text": "ReadWorks Support Center"
-    },
-    {
-      "url": "https://readworks.helpscoutdocs.com/collection/2-contact",
-      "text": "Contact Support"
-    },
-    {
-      "url": "https://www.readworks.org/partners",
-      "text": "ReadWorks Partners"
-    },
-    {
-      "url": "https://www.readworks.org/about",
-      "text": "About ReadWorks"
-    },
-    {
-      "url": "https://www.readworks.org/about/mission-core-values",
-      "text": "ReadWorks Mission & Core Values"
-    },
-    {
-      "url": "https://www.readworks.org/blog/post/make-sure-readworks-is-ready-to-go-for-your-students",
-      "text": "Make Sure ReadWorks Is Ready to Go for Your Students - ReadWorks Blog"
-    },
-    {
-      "url": "https://www.readworks.org/blog/post/validating-edtech-excellence-readworks-and-the-five-core-qualities-plus-an-extra",
-      "text": "Validating EdTech Excellence: ReadWorks and the Five Core Qualities (Plus an Extra!)"
-    },
-    {
-      "url": "https://www.readworks.org/blog/post/exciting-partnership-with-google-for-education-enhances-readworks-accessibility-and-integration",
-      "text": "Exciting Partnership with Google for Education Enhances ReadWorks Accessibility and Integration"
-    },
-    {
-      "url": "https://www.readworks.org/blog/post/readworks-resources-fit-directly-into-the-science-of-reading-and-daily-teaching",
-      "text": "ReadWorks Resources Fit Directly into the Science of Reading and Daily Teaching"
-    },
-    {
-      "url": "https://www.readworks.org/blog/post/readworks-produces-high-quality-diverse-and-representative-content-with-an-in-depth-tagging-system",
-      "text": "ReadWorks Produces High-Quality, Diverse and Representative Content with an In-Depth Tagging System"
-    },
-    {
-      "url": "https://www.readworks.org/resources",
-      "text": "Resources, Tools, and Content for Reading Comprehension - ReadWorks"
+      "url": "https://www.readworks.org/accessibility",
+      "text": "ReadWorks Accessibility Statement",
+      "confidence": 0.0,
+      "justification": "This is the official accessibility statement page for ReadWorks.org, detailing adherence to WCAG 2.1 Level AA and outlining known issues and features."
     }
   ],
-  "other_resources": [
-    {
-      "url": "https://www.techlearning.com/how-to/what-is-readworks-and-how-does-it-work",
-      "text": "What is ReadWorks and How Does It Work? Best Tips and Tricks - Tech & Learning"
-    },
-    {
-      "url": "https://lincs.ed.gov/state-resources/federal-initiatives/techexchange/readworksorg",
-      "text": "Readworks.org | Adult Education and Literacy - LINCS"
-    },
-    {
-      "url": "https://www.edtechindex.com/products/readworks",
-      "text": "ReadWorks | EdTech Index"
-    },
-    {
-      "url": "https://www.teq.com/news/readworks-distance-learning-platform/",
-      "text": "ReadWorks: A Distance Learning Platform for Reading Comprehension - Teq"
-    },
-    {
-      "url": "https://leadiq.com/companies/readworks-inc-contact-info-and-firmographics",
-      "text": "ReadWorks Company Overview, Contact Details & Competitors | LeadIQ"
-    }
-  ],
-  "ai_insights": "ReadWorks demonstrates an ongoing commitment to accessibility, striving to meet WCAG 2.1 Level AA standards, a conformance level also acknowledged by educational organizations. The platform undergoes both manual and automated testing across various browsers and with assistive technologies like VoiceOver and Lighthouse. While aiming for full operability with keyboard navigation and assistive technologies, some areas for improvement exist, including specific keyboard interaction limitations, color contrast issues, unlabeled form fields, and missing image text alternatives. These identified non-conformities are actively audited and addressed. Users can readily access support contact information to report accessibility issues.",
+  "other_resources": [],
   "support_contacts": [
     {
       "type": "email",
@@ -94,13 +34,17 @@
   ],
   "acr_reports": [
     {
-      "title": "ReadWorks Accessibility Statement",
-      "url": "https://www.readworks.org/accessibility-statement",
-      "version": "WCAG 2.1 Level AA referenced",
-      "date": "Not explicitly dated as a separate report; ongoing assessment",
-      "auditor_name": "Internal",
-      "auditor_url": ""
+      "title": "Accessibility Conformance Report (ACR) (linked from Accessibility Statement)",
+      "url": "#",
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }

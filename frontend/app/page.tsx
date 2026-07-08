@@ -194,6 +194,13 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Safety guard to prevent duplicate triggers
+    if (state.status === "streaming") {
+      logMessage("Research already in progress. Please wait or Stop.");
+      return;
+    }
+
     if (url.trim()) {
       setProcessHeading("Generating Listing");
       setLocalLog([]);

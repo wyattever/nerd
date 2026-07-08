@@ -2,65 +2,30 @@
   "product_name": "Science4Us",
   "vendor_name": "ExploreLearning",
   "vendor_directory_url": "#",
-  "product_description": "Science4Us is a research-based STEM program designed for K-2 students, offering interactive online activities, games, songs, virtual notebooks, and hands-on experiments to introduce foundational science topics and skills. It aligns with the 5E instructional model and aims to support diverse learning styles.",
+  "product_description": "Science4Us is an online science curriculum designed for K-2 students, offering interactive lessons, games, and activities across physical science, life science, earth and space science, and scientific inquiry. It aims to introduce foundational science concepts through engaging digital resources, with content primarily delivered via images and read-aloud text to support early readers.",
   "product_website_url": "https://www.explorelearning.com/our-products/science4us",
-  "vendor_resources": [
-    {
-      "url": "https://www.explorelearning.com/our-products/science4us/accessibility/",
-      "text": "Accessibility Features in Science4Us"
-    },
-    {
-      "url": "https://www.explorelearning.com/resources/articles/discover-explorelearnings-classroom-accessibility-features/",
-      "text": "Discover ExploreLearning's Classroom Accessibility Features"
-    },
-    {
-      "url": "https://www.explorelearning.com/help/science4us/",
-      "text": "Science4Us Help Center"
-    },
-    {
-      "url": "https://www.explorelearning.com/help/science4us/support/",
-      "text": "Science4Us Support"
-    }
-  ],
-  "other_resources": [
-    {
-      "url": "https://www.edtechdigest.com/2024-cool-tool-awards/2024-cool-tool-award-winner-explorelearning-science4us/",
-      "text": "EdTech Digest Cool Tool Award: ExploreLearning Science4Us"
-    },
-    {
-      "url": "https://ies.ed.gov/sbir/detail.asp?sbirId=1063",
-      "text": "Science4Us: Game-Based K-2 STEM Education For Teachers And Students | IES"
-    },
-    {
-      "url": "https://www.pgcps.org/uploadedFiles/Schools/PGCPS/OnlineAcademicResources.pdf",
-      "text": "Online Academic Resources - Prince George's County Public Schools"
-    },
-    {
-      "url": "https://www.seattleschools.org/wp-content/uploads/2022/07/board-action-report-elem-science-adoption.pdf",
-      "text": "Board Action Report - Elementary Science Adoption, April 2019 - Seattle Public Schools"
-    },
-    {
-      "url": "https://www.fldoe.org/core/fileparse.php/7740/urlt/S282A200017-Florida-Department-of-Education.pdf",
-      "text": "S282A200017-Florida-Department-of-Education.pdf"
-    }
-  ],
-  "ai_insights": "Science4Us prioritizes accessibility for pre- to emerging readers through its design, which heavily incorporates images alongside read-aloud text, alt text, and text-to-speech capabilities. The platform employs a simple, linear navigation structure, avoids reliance on color for critical information, and provides audio controls for all content. While supporting keyboard input in some games, certain interactive elements still require mouse input. High color contrast ratios are maintained, and printable text is available, though some animated activities may occasionally lack written instructions. Despite these features, no dedicated Accessibility Conformance Reports or technical accessibility reviews from expert firms were found. Third-party documents indicate its use in various educational contexts, but one instance noted its removal from consideration in a school adoption due to unspecified requirements.",
+  "vendor_resources": [],
+  "other_resources": [],
   "support_contacts": [
     {
-      "type": "text",
-      "value": "866-882-4141 or +1-434-293-7043",
+      "type": "email",
+      "value": "Email Technical Support at support@science4us.com or call 866.882.4141, Option 2, Option 4",
       "label": ""
     }
   ],
   "acr_reports": [
     {
-      "title": "No dedicated ACR/VPAT found for Science4Us.",
+      "title": "",
       "url": "#",
-      "version": "N/A",
-      "date": "N/A",
-      "auditor_name": "N/A",
-      "auditor_url": ""
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }

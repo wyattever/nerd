@@ -2,85 +2,37 @@
   "product_name": "BrainPOP Jr.",
   "vendor_name": "BrainPOP",
   "vendor_directory_url": "#",
-  "product_description": "BrainPOP Jr. is an educational platform offering animated movies, interactive quizzes, games, and activities across various subjects for students in kindergarten through third grade. It aims to make learning engaging and accessible by providing content through multiple modalities, fostering curiosity, and supporting diverse learning styles.",
+  "product_description": "BrainPOP Jr. provides educational content for students in grades K-3, utilizing animated movies, interactive activities, and educational games across various subjects like ELA, Math, Science, and Social Studies to build foundational knowledge and essential skills.",
   "product_website_url": "https://www.brainpop.com/classroom-solutions/products/brainpop-jr",
   "vendor_resources": [
     {
-      "url": "https://www.brainpop.com/about/accessibility/",
-      "text": "Accessibility Statement"
-    },
-    {
-      "url": "https://cdn.brainpop.com/assets/documents/accessibility-report/BrainPOP_Web_VPAT_WCAG-2.1_04-2023.pdf",
-      "text": "BrainPOP LLC Accessibility Conformance Report WCAG Edition"
-    },
-    {
-      "url": "https://www.brainpop.com/discover/post/spotlight-on-accessibility-new-on-brainpop-and-brainpop-jr",
-      "text": "Spotlight on Accessibility: New on BrainPOP and BrainPOP Jr."
-    },
-    {
-      "url": "https://www.brainpop.com/discover/post/how-brainpop-aligns-to-universal-design-for-learning-udl-guidelines",
-      "text": "How BrainPOP Aligns to Universal Design for Learning (UDL) Guidelines"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Special Education - BrainPOP"
-    },
-    {
-      "url": "https://help.brainpop.com/hc/en-us/articles/5383317200532-Our-Content-Principles",
-      "text": "Our Content Principles - BrainPOP Help Center"
-    },
-    {
-      "url": "https://help.brainpop.com/hc/en-us/articles/360028195332-BrainPOP-Jr",
-      "text": "BrainPOP Jr. \u2013 Help Center"
-    },
-    {
-      "url": "https://www.brainpop.com/blog/spotlight-on-accessibility-new-on-brainpop-and-brainpop-jr/",
-      "text": "Spotlight on Accessibility: New on BrainPOP and BrainPOP Jr."
-    },
-    {
-      "url": "https://www.brainpop.com/uploaded/2023-BrainPOP-VPAT_WCAG.pdf",
-      "text": "BrainPOP LLC Accessibility Conformance Report WCAG Edition"
-    },
-    {
-      "url": "https://help.brainpop.com/hc/en-us/articles/360010991953-Feature-Availability-on-Mobile-Browsers",
-      "text": "Feature Availability on Mobile Browsers - BrainPOP Help Center"
+      "url": "https://www.brainpop.com/accessibility/",
+      "text": "Accessibility Statement",
+      "confidence": 0.98,
+      "justification": "Official BrainPOP accessibility page detailing commitment to WCAG 2.1 Level AA and Section 508, and listing features applicable to BrainPOP Jr."
     }
   ],
-  "other_resources": [
-    {
-      "url": "https://opened.co/tools/brainpop",
-      "text": "We Tried BrainPOP: What We Liked, What We Didn't - OpenEd"
-    },
-    {
-      "url": "https://www.g2.com/products/brainpop/reviews",
-      "text": "BrainPOP Reviews 2026: Details, Pricing, & Features - G2"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Our Favorite Educational Platform - BrainPOP Homeschool Review - Monkey and Mom"
-    },
-    {
-      "url": "https://ioer.ilsharedlearning.org/resource/635988/internet_safety__brainpop_junior_free_resource_set",
-      "text": "Internet Safety: BrainPOP Junior free resource set - Illinois Open Education Resources"
-    }
-  ],
-  "ai_insights": "BrainPOP Jr. demonstrates a strong commitment to accessibility, providing features such as closed captions, embedded audio descriptions, and adjustable playback speeds for its educational movies. The platform integrates Microsoft Immersive Reader for quizzes and offers text-to-speech for all text content, supporting diverse learning needs, including those with reading challenges and visual impairments. It aligns with Universal Design for Learning principles, offering multiple modalities for content access and expression. A Voluntary Product Accessibility Template from March 2023 confirms WCAG conformance, though it notes some areas of partial support, such as auto-playing media lacking pause or stop mechanisms. The platform is also accessible on mobile devices and tablets, reflecting continuous efforts to enhance its accessibility posture.",
+  "other_resources": [],
   "support_contacts": [
     {
       "type": "email",
-      "value": "help.brainpop.com (Help Center), accessibility@brainpop.com, Phone: 212.574.6000, Toll-Free 866.54.BRAIN",
+      "value": "accessibility@brainpop.com, 212.574.6000, 866.54.BRAIN",
       "label": ""
     }
   ],
   "acr_reports": [
     {
       "title": "BrainPOP LLC Accessibility Conformance Report WCAG Edition",
-      "url": "https://cdn.brainpop.com/assets/documents/accessibility-report/BrainPOP_Web_VPAT_WCAG-2.1_04-2023.pdf",
-      "version": "2.4",
-      "date": "March 20, 2023",
-      "auditor_name": "Internal",
-      "auditor_url": ""
+      "url": "#",
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }

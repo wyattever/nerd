@@ -1,74 +1,24 @@
 {
   "product_name": "Book Creator",
-  "vendor_name": "Tools for Schools Limited",
+  "vendor_name": "Book Creator",
   "vendor_directory_url": "#",
-  "product_description": "Book Creator is an intuitive EdTech platform designed to empower students and teachers to create and publish interactive digital books incorporating text, images, audio, and video. It supports diverse learning styles and encourages creative expression, making learning accessible and engaging for all users.",
+  "product_description": "Book Creator is a digital tool that enables students and teachers to create and read multimodal digital books, with a strong focus on inclusive learning environments and accessibility features.",
   "product_website_url": "https://bookcreator.com/",
   "vendor_resources": [
     {
-      "url": "https://bookcreator.com/accessibility/",
-      "text": "Accessibility Statement"
+      "url": "https://support.bookcreator.com/en/articles/4514574-keyboard-navigation-in-book-creator",
+      "text": "Keyboard Navigation in Book Creator (Book Creator Help Center)",
+      "confidence": 0.95,
+      "justification": "Official help article specifically detailing keyboard navigation functionality and shortcuts."
     },
     {
-      "url": "https://support.bookcreator.com/en/articles/9355452-download-our-acr",
-      "text": "Download our ACR | Book Creator Help Center"
-    },
-    {
-      "url": "https://bookcreator.com/accessibility/",
-      "text": "Accessibility Compliance Letter"
-    },
-    {
-      "url": "https://bookcreator.com/blog/accessible-books/",
-      "text": "Tips for Creating Accessible Books in Book Creator"
-    },
-    {
-      "url": "https://bookcreator.com/blog/230-accessibility-improvements-book-creator/",
-      "text": "230+ accessibility improvements added to Book Creator"
-    },
-    {
-      "url": "https://bookcreator.com/support/",
-      "text": "Support - Book Creator app"
-    },
-    {
-      "url": "https://bookcreator.com/blog/tips-for-creating-accessible-books/",
-      "text": "Tips for Creating Accessible Books in Book Creator"
+      "url": "https://www.youtube.com/watch?v=kYJzEw1F7dY",
+      "text": "Accessibility Features in Book Creator (Book Creator YouTube)",
+      "confidence": 0.9,
+      "justification": "Official YouTube video from Book Creator explaining various accessibility features including screen reader support and keyboard navigation."
     }
   ],
-  "other_resources": [
-    {
-      "url": "https://www.iset.org/bust-barriers-with-book-creator",
-      "text": "Bust Barriers with Book Creator - ISET"
-    },
-    {
-      "url": "https://www.perkins.org/resource/book-creator-accessibility-updates/",
-      "text": "Book Creator Accessibility Updates - Perkins School For The Blind"
-    },
-    {
-      "url": "https://aem.cast.org/create/features-accessibility-book-creator",
-      "text": "Features in Accessibility: Book Creator - AEM Center"
-    },
-    {
-      "url": "https://www.perkins.org/resource/using-book-creator-to-make-engaging-literacy-materials/",
-      "text": "Using Book Creator To Make Engaging Literacy Materials"
-    },
-    {
-      "url": "https://www.tcea.org/blog/accessibility/",
-      "text": "Accessibility \u2013 TCEA TechNotes Blog"
-    },
-    {
-      "url": "https://www.iste.org/resources/iste-ebooks/resources-and-support-online-educator",
-      "text": "Resources and Support for the Online Educator (ISTE)"
-    },
-    {
-      "url": "https://www.acps.k12.va.us/cms/lib/VA01918730/Centricity/Domain/760/Screen%20Time%20Data%20Review_2.22.24%20(1",
-      "text": "Screen Time Data Review (PDF)"
-    },
-    {
-      "url": "https://www.researchgate.net/publication/369041264_Guidelines_for_the_Development_of_e-Content_for_Children_with_Disabilities",
-      "text": "(PDF) Guidelines for the Development of e-Content for Children with Disabilities"
-    }
-  ],
-  "ai_insights": "Book Creator demonstrates a strong commitment to accessibility, guided by Universal Design for Learning principles. The platform offers robust accessible authoring tools, including AI-generated alt text, speech-to-text in numerous languages, customizable fonts, and high-contrast color options. Compliance with WCAG 2.2 Level AA, EN 301 549, and Revised Section 508 is affirmed through its Accessibility Conformance Report, updated in March 2026. Proactive testing with various assistive technologies ensures broad compatibility, and the platform provides practical guidance for users to create inclusive digital content. Educational institutions recognize Book Creator as a valuable \"Accessible Content Creator,\" integrating features like text-to-speech, voice recording, and translation to support diverse learning needs. While the platform offers robust accessibility, the ultimate accessibility of individual books depends on author adherence to accessible design practices, reinforcing its dedication to inclusive design and ongoing improvements.",
+  "other_resources": [],
   "support_contacts": [
     {
       "type": "email",
@@ -79,12 +29,16 @@
   "acr_reports": [
     {
       "title": "Accessibility Conformance Report",
-      "url": "https://support.bookcreator.com/en/articles/9355452-download-our-acr",
-      "version": "Aligns with WCAG 2.2 Level AA, EN 301 549, and Revised Section 508",
-      "date": "March 2026",
-      "auditor_name": "Internal",
-      "auditor_url": ""
+      "url": "#",
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }

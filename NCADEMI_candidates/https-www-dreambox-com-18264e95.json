@@ -1,86 +1,38 @@
 {
-  "product_name": "DreamBox",
-  "vendor_name": "DreamBox Learning",
+  "product_name": "DreamBox Math",
+  "vendor_name": "Discovery Education",
   "vendor_directory_url": "#",
-  "product_description": "DreamBox offers adaptive digital math and reading programs for students in grades K-8, designed to deliver personalized instruction within an engaging, gamified learning environment. The platform aims to build conceptual understanding, promote critical thinking, and support a variety of learning styles.",
+  "product_description": "DreamBox Math is an adaptive online math program for K-8 students that provides personalized instruction. It has recently undergone accessibility enhancements to align with Web Content Accessibility Guidelines, including improved compatibility with assistive technology, enhanced screen reader support, intuitive keyboard navigation, and features for low vision and color blindness.",
   "product_website_url": "https://www.dreambox.com/",
   "vendor_resources": [
     {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Discovery Education Accessibility Conformance Report WCAG Edition"
-    },
-    {
-      "url": "https://dreamboxlearning.zendesk.com/hc/en-us/articles/28340239247891-Closed-Captions-in-DreamBox-Math",
-      "text": "Closed-Captions in DreamBox Math"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "DreamBox: Get Help and Support"
-    },
-    {
-      "url": "https://www.dreambox.com/terms",
-      "text": "DreamBox Terms of Use"
-    },
-    {
-      "url": "https://www.dreambox.com/wp-content/uploads/2025/06/DreamBox-Website-Privacy-Notice-May-15-2025.pdf",
-      "text": "DreamBox Website Privacy Notice"
-    },
-    {
-      "url": "https://software.psdschools.org/ApplicationsPublic/GetDocument/27f6c49f-0a17-439e-8c5a-0db8fd0e8b17",
-      "text": "Discovery Education Accessibility Conformance Report WCAG Edition"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "New Enhancements to DreamBox Math by Discovery Education Improves Accessibility for Elementary Students"
-    },
-    {
-      "url": "https://dreamboxlearning.zendesk.com/hc/en-us/articles/28340239247891-Closed-Captions-in-DreamBox-Math",
-      "text": "Closed-Captions in DreamBox Math"
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHttfPZQzoI4CARltsBpKdsKrW14blJgOL8POlRugr97IyWuYcy61Q7ef5BNqbQh4oISyIFf4aIQYsZjvSs_qzHQ4VSB7I9rGlxGhMnj7QqSuwxcnh06iuvJQSNmjCPmUhaqQSqa8E10zOvrk0Up8-c9G6fjxRoxs3o8k16u39PVWeZKJL9sXFDUJU4WduX-Ajf2vq7Dq4yKAFPNVJX_ceXaw7hwA2alFgjtjBDqhTc4clBlBt6Te5NLLgVV7-zv3odtzqA9kBDO7Z-497FSoA=",
+      "text": "New Enhancements to DreamBox Math by Discovery Education Improves Accessibility for Elementary Students",
+      "confidence": 0.95,
+      "justification": "Official press release from Discovery Education announcing accessibility enhancements to DreamBox Math, detailing specific features like screen reader support and keyboard navigation, and stating goal to surpass WCAG compliance."
     }
   ],
-  "other_resources": [
-    {
-      "url": "https://www.edtechdigest.com/2025/01/27/the-enhanced-dreambox-math-by-discovery-education/",
-      "text": "The Enhanced DreamBox Math by Discovery Education - EdTech Digest"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "New Enhancements to DreamBox Math by Discovery Education Improves Accessibility for Elementary Students"
-    },
-    {
-      "url": "https://thejournal.com/articles/2025/01/29/discovery-education-announces-accessibility-enhancements-for-dreambox-math.aspx",
-      "text": "Discovery Education Announces Accessibility Enhancements for DreamBox Math"
-    },
-    {
-      "url": "https://clarabarton.lwsd.org/academics/dreambox-learning-program",
-      "text": "DreamBox Learning Program - Clara Barton Elementary - Lake Washington School District"
-    },
-    {
-      "url": "https://ed.sc.gov/newsroom/school-district-resources/weekly-school-district-memorandum-communications/school-district-memorandum-april-20-2021/",
-      "text": "School District Memorandum - April 20, 2021 - South Carolina Department of Education"
-    },
-    {
-      "url": "https://www.spedlessonplanner.com/learn/compare/math-for-inclusive-classrooms",
-      "text": "Best Math Options for Inclusive Classrooms | SPED Lesson Planner"
-    }
-  ],
-  "ai_insights": "DreamBox Math, a Discovery Education product, has undergone significant accessibility enhancements, particularly for K-5 students, aiming to exceed Web Content Accessibility Guidelines. These improvements include enhanced compatibility with assistive technologies like screen readers and magnification tools, intuitive keyboard navigation, and clear visuals for users with low vision or color blindness. The platform also features an improved screen reader with alternative descriptions and offers closed captions for all K-8 math lessons and academic videos in both English and Spanish. While a Voluntary Product Accessibility Template for K-5 math generally indicates support for WCAG criteria, approximately five percent of K-5 lessons are noted as not yet meeting all requirements, with ongoing efforts to address these areas. Educational sources recommend DreamBox Math for inclusive classrooms due to its adaptive pathways and engaging visual interface.",
+  "other_resources": [],
   "support_contacts": [
     {
       "type": "email",
-      "value": "support@dreambox.com, 1 (877) 451-7845, or the DreamBox Learning Help Center linked via the DreamBox Support page.",
+      "value": "productmanagement@dreambox.com",
       "label": ""
     }
   ],
   "acr_reports": [
     {
       "title": "Discovery Education Accessibility Conformance Report WCAG Edition",
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "version": "2.4Rev",
-      "date": "January 2025",
-      "auditor_name": "Internal and External Experts",
-      "auditor_url": ""
+      "url": "#",
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }

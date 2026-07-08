@@ -2,73 +2,17 @@
   "product_name": "DeltaMath",
   "vendor_name": "DeltaMath",
   "vendor_directory_url": "#",
-  "product_description": "DeltaMath is an online platform designed for math practice and assessment for middle and high school students. It provides interactive problems, immediate feedback, and covers a wide array of mathematical topics from basic arithmetic to advanced calculus. Teachers can create customizable assignments, quizzes, and tests, while students can track their progress and receive step-by-step solutions for incorrect answers.",
+  "product_description": "DeltaMath is an online educational platform designed to provide practice and mastery in mathematics through a wide range of interactive problems and immediate feedback for students from lower elementary through 12th grade. The platform offers customizable assignments, auto-grading, and content aligned with Common Core standards.",
   "product_website_url": "https://www.deltamath.com/",
   "vendor_resources": [
     {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Accessibility Statement - DeltaMath Help Center"
-    },
-    {
-      "url": "https://help.deltamath.com/",
-      "text": "DeltaMath Help Center"
-    },
-    {
-      "url": "https://help.deltamath.com/contact-us",
-      "text": "Contact Us - DeltaMath Help Center"
-    },
-    {
-      "url": "https://help.deltamath.com/en_US/deltamath/faq",
-      "text": "FAQ - DeltaMath Help Center"
-    },
-    {
-      "url": "https://help.deltamath.com/en_US/getting-started-c",
-      "text": "Getting Started - DeltaMath Help Center"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Accessibility Statement - DeltaMath Help Center"
-    },
-    {
-      "url": "https://help.deltamath.com/en_US/getting-started-c",
-      "text": "Getting Started - DeltaMath Help Center"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Class Settings - DeltaMath Help Center"
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEFe_9iXniWLssPZfVN9eKygmZTg8sHPBY42d945K3yxAk8i6lJ6NyHvBcys-R8p3tx1GAZ_vjr_E46w5g_iQoKePl4Y9hCrINH5XbVtzUhBbBm_I3RRAF5PqLYdFwJZtIj75A=",
+      "text": "Accessibility Statement",
+      "confidence": 0.98,
+      "justification": "The page is titled 'Accessibility Statement' and details conformance to WCAG 2.2, screen reader support, keyboard navigation, alt text for images, Braille printouts, video captioning, and high-contrast mode."
     }
   ],
-  "other_resources": [
-    {
-      "url": "https://forum.benchmarkreviews.com/t/can-anyone-explain-what-delta-math-is/1733",
-      "text": "Can anyone explain what Delta Math is? - Benchmark Forum"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "DeltaMath for Home: Is it a good fit for your child? - The Modulo Community"
-    },
-    {
-      "url": "https://www.modulo.app/all-resources/delta-math-review",
-      "text": "Delta Math Review: Expert Insights from a Math Educator | Modulo"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Complete Guide to Accessing and Using DeltaMath Accounts - The Mathematic Solver"
-    },
-    {
-      "url": "https://www.youtube.com/watch?v=VjZRAph3YA4",
-      "text": "Accessing DeltaMath in BCSC Canvas - YouTube"
-    },
-    {
-      "url": "https://www.youtube.com/watch?v=NV5-1xZ9_ss",
-      "text": "DeltaMath Overview - YouTube"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Online Academic Resources - Prince George's County Public Schools"
-    }
-  ],
-  "ai_insights": "DeltaMath aims to provide an accessible learning experience, explicitly stating conformance with WCAG 2.2 for its student application. The platform includes screen-readable content, alt text for static images, video captioning, and extensive keyboard functionality for many interactive elements. Instructions are provided for accessing tactile or Braille versions of complex diagrams. However, the vendor acknowledges that some interactive components may lack full screen reader or keyboard accessibility, with a few being inaccessible by either method. Teachers are advised to refer to a list of inaccessible content and suitable alternatives. This detailed accessibility statement is prominently featured within the platform's help center and support resources.",
+  "other_resources": [],
   "support_contacts": [
     {
       "type": "email",
@@ -78,13 +22,17 @@
   ],
   "acr_reports": [
     {
-      "title": "Accessibility Statement",
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "version": "N/A",
-      "date": "N/A",
-      "auditor_name": "Internal",
-      "auditor_url": ""
+      "title": "Not found",
+      "url": "#",
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }

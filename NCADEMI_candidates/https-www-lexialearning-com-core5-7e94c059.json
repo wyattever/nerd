@@ -1,78 +1,44 @@
 {
   "product_name": "Lexia\u00ae Core5\u00ae Reading",
-  "vendor_name": "Lexia",
+  "vendor_name": "Lexia Learning",
   "vendor_directory_url": "#",
-  "product_description": "Lexia\u00ae Core5\u00ae Reading is a technology-based, personalized reading program designed for students in PreK through 5th grade. It provides explicit and systematic instruction in six areas of reading, leveraging an adaptive blended learning model to deliver differentiated literacy instruction and accelerate skill development for all students.",
+  "product_description": "Lexia\u00ae Core5\u00ae Reading is a technology-based, personalized reading program that provides explicit and systematic learning in six areas of reading instruction for students in PreK through 5. It delivers adaptive and individualized learning experiences to help students of all abilities advance their reading skills.",
   "product_website_url": "https://www.lexialearning.com/core5",
   "vendor_resources": [
     {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Lexia Accessibility Conformance Report WCAG Edition (Based on VPAT\u00ae Version 2.4Rev)"
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEUwbq3yE66p5r2E5bbgESJ2s8VG0y8eR8GyJ2a0xch0W_QdV4Zhery-58ab1PtiUorTlQl7sq0nIAzyTHCsE0EfJuW5F1mozQUZLq3N5OvfQxAJhENvZZZOhwcPOgkyVFrm6XZEJcB2MQ0iZZj6tVFExPLSV-P6twzgYh531FcPqFp518Dt7jcI_bzKziVz08BOASFJkdtq4dTDKq55A==",
+      "text": "Lexia Accessibility Conformance Report WCAG Edition",
+      "confidence": 0.99,
+      "justification": "Document explicitly titled 'Lexia Accessibility Conformance Report WCAG Edition' for 'Lexia\u00ae Core5\u00ae Reading' and includes detailed conformance tables."
     },
     {
-      "url": "https://software.psdschools.org/ApplicationsPublic/GetDocument/7f8af98a-6149-47f4-8f26-2cdb02c5de1d",
-      "text": "How does Lexia address accessibility standards?"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "How Lexia's Literacy Solutions Stay Current, Relevant, and Effective"
-    },
-    {
-      "url": "https://community.lexialearning.com/product-updates/product-news-and-updates-core5-1509",
-      "text": "Product News and Updates: Core5"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "2020-2021 Instructional Materials Universal Design Learning (UDL) Questionnaire"
-    },
-    {
-      "url": "https://www.lexialearning.com/why-lexia/our-approach",
-      "text": "Our Personalized Literacy Approach"
-    },
-    {
-      "url": "https://software.psdschools.org/ApplicationsPublic/GetDocument/df0a68ab-4dbe-4081-8450-67b61d8d2ed6",
-      "text": "Lexia Accessibility Conformance Report WCAG Edition"
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEYvvHZMzT5t7xXkqMGNztjA4U7EwO5FsjyPRLoB8U-4U-rNOpvTmktDUJzBPCqI8cIQJA6mM7kJruawAVn6ZnDIvGukZlOS4FotlSCtqw4dfNgSuvRHd-MNZ9OzJfE-K6Day74H0BS_Hd-YfZRis6MpwuhKeH0I-hWXueERTYv0on3UAsWbY6V021sYYVv1m-frb3Qgc2r5SRFT5zwsNs=",
+      "text": "How Lexia's Literacy Solutions Stay Current, Relevant, and Effective",
+      "confidence": 0.88,
+      "justification": "Article from Lexia discussing Core5's alignment with WCAG accessibility standards, improved keyboard navigation, and volume control."
     }
   ],
-  "other_resources": [
-    {
-      "url": "https://education.ohio.gov/getattachment/Topics/Learning-in-Ohio/English-Language-Art/Resources-for-English-Language-Arts/High-Quality-Instructional-Materials-in-ELA/Approved-List-of-Evidence-Based-Reading-Interventi/HQIM-ELA-Intervention-Approved-List-Program-and-Vendor-Information.pdf",
-      "text": "Approved List of Evidence-Based Reading Intervention Programs Program and Vendor Information - Ohio Department of Education"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "Special Education - Families of Students with Disabilities in Private or Home School - Cobb County School District"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "How does Lexia Core5 Reading integrate with NWEA's MAP Growth Data? - NYC Department of Education"
-    },
-    {
-      "url": "https://resources.finalsite.net/images/v1746668222/smmusdorg/akwwym2pggfb5vlknggv/2024spsaedison.pdf",
-      "text": "School Plan for Student Achievement (SPSA) Template - Los Angeles Unified School District"
-    },
-    {
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "text": "The ALT Text - Using Technology to Achieve Differentiated Instruction and Improve Accessibility"
-    }
-  ],
-  "ai_insights": "Lexia Core5 Reading demonstrates a strong commitment to accessibility, integrating it into its product development lifecycle and actively aligning with WCAG 2.0 and 2.1 A and AA criteria. A recent conformance report details its support levels, noting full or partial support across various criteria such as use of color, audio control, and image alternatives. Identified areas needing improvement include full keyboard operability, text resizing without assistive technology, and consistent focus visibility. The program continuously releases updates to enhance accessibility features like keyboard navigation, color contrast, and sensory characteristics. It also offers native language support, audio support, and visual aids to support diverse learning needs and differentiated instruction. This comprehensive approach aims to provide customized learning opportunities and improve accessibility for all students within an an inclusive learning environment.",
+  "other_resources": [],
   "support_contacts": [
     {
       "type": "email",
-      "value": "accessibility@lexialearning.com, 1-800-507-2772",
+      "value": "accessibility@lexialearning.com, 1-800-507-2772, https://www.lexialearning.com/support",
       "label": ""
     }
   ],
   "acr_reports": [
     {
-      "title": "Lexia Accessibility Conformance Report WCAG Edition (Based on VPAT\u00ae Version 2.4Rev)",
-      "url": "https://example.com/broken-link?reason=redirect_expired",
-      "version": "2.4Rev",
-      "date": "December 2024",
-      "auditor_name": "Lexia and third-party accessibility auditors",
-      "auditor_url": ""
+      "title": "Lexia Accessibility Conformance Report WCAG Edition (for Lexia\u00ae Core5\u00ae Reading)",
+      "url": "#",
+      "version": "",
+      "date": "",
+      "auditor_name": "",
+      "auditor_url": "",
+      "preparation_type": "Internal"
     }
   ],
-  "last_updated": "June 15, 2026"
+  "last_updated": "July 08, 2026",
+  "html_override": "",
+  "last_updated_at": "",
+  "section_overrides": {}
 }
