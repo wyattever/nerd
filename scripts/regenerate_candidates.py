@@ -12,12 +12,16 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN", "local-bypass")
 # Maximum wall-clock seconds to wait for a single job to complete.
 JOB_TIMEOUT_SEC = 600  # 10 minutes
 
-# Paths to candidate JSON files, relative to repo root.
+# Directory containing candidate JSON files, relative to repo root
+# (or an absolute path if CANDIDATES_DIR is set).
+CANDIDATES_DIR = os.getenv("CANDIDATES_DIR", "NCADEMI_candidates")
+
+# Paths to candidate JSON files, relative to CANDIDATES_DIR.
 # Update this list to the full set before running the batch.
 CANDIDATE_FILES = [
-    "NCADEMI_candidates/https-www-brainpop-com-classroom-solutions-product-0a57ed16.json",
-    "NCADEMI_candidates/https-www-ck12-org-07e1b41a.json",
-    "NCADEMI_candidates/https-www-deltamath-com-95a68574.json",
+    f"{CANDIDATES_DIR}/https-www-brainpop-com-classroom-solutions-product-0a57ed16.json",
+    f"{CANDIDATES_DIR}/https-www-ck12-org-07e1b41a.json",
+    f"{CANDIDATES_DIR}/https-www-deltamath-com-95a68574.json",
 ]
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -133,7 +137,10 @@ async def regenerate_candidate(
 
 
 async def main() -> None:
-    candidate_paths = [REPO_ROOT / p for p in CANDIDATE_FILES]
+    candidate_paths = [
+        Path(p) if Path(p).is_absolute() else REPO_ROOT / p
+        for p in CANDIDATE_FILES
+    ]
 
     headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
     # read timeout is None here — stream_to_completion sets its own per-call.

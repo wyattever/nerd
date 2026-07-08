@@ -45,7 +45,7 @@ logging.basicConfig(
 logger = logging.getLogger("nerd.batch")
 
 # Directory Setup
-OUTPUT_DIR = PROJECT_ROOT / "NCADEMI_candidates"
+OUTPUT_DIR = Path(os.getenv("CANDIDATES_DIR", str(PROJECT_ROOT / "NCADEMI_candidates")))
 TEMPLATES_DIR = PROJECT_ROOT / "templates"
 OUTPUT_DIR.mkdir(exist_ok=True)
 

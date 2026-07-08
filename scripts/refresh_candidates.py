@@ -1,4 +1,5 @@
 import sys
+import os
 import json
 import asyncio
 from datetime import datetime
@@ -12,7 +13,7 @@ from nerd_core.utils import resolve_and_validate_all
 from api.schemas import ListingData
 
 ROOT = Path(".")
-CANDIDATES_DIR = ROOT / "NCADEMI_candidates"
+CANDIDATES_DIR = Path(os.getenv("CANDIDATES_DIR", str(ROOT / "NCADEMI_candidates")))
 
 def find_file(name_part):
     """Searches for a file in the directory that contains the name_part."""

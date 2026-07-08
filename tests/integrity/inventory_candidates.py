@@ -7,7 +7,7 @@ def run_inventory():
     Scans all candidate JSON files and reports on data quality issues
     as defined in DECISION_LOG.md (Decision 16).
     """
-    candidates_dir = Path(__file__).parent.parent.parent / "NCADEMI_candidates"
+    candidates_dir = Path(os.getenv("CANDIDATES_DIR", str(Path(__file__).parent.parent.parent / "NCADEMI_candidates")))
     if not candidates_dir.is_dir():
         print("ERROR: Directory not found: ")
         print(candidates_dir)

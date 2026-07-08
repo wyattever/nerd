@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("nerd.reprocess")
 
-CANDIDATES_DIR = PROJECT_ROOT / "NCADEMI_candidates"
+CANDIDATES_DIR = Path(os.getenv("CANDIDATES_DIR", str(PROJECT_ROOT / "NCADEMI_candidates")))
 
 async def resolve_url_map(urls: list[str]) -> dict[str, str]:
     """Resolves a list of URLs concurrently."""

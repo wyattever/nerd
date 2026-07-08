@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 REQUIRED_FIELDS = {
@@ -16,7 +17,7 @@ REQUIRED_FIELDS = {
 }
 
 def validate():
-    candidates_dir = Path("NCADEMI_candidates")
+    candidates_dir = Path(os.getenv("CANDIDATES_DIR", "NCADEMI_candidates"))
     json_files = list(candidates_dir.glob("*.json"))
     errors = 0
     

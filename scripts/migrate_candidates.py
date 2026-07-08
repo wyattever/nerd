@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 # Define the fields required by the frontend ListingData interface
@@ -17,7 +18,7 @@ ALLOWED_FIELDS = {
 }
 
 def migrate():
-    candidates_dir = Path("NCADEMI_candidates")
+    candidates_dir = Path(os.getenv("CANDIDATES_DIR", "NCADEMI_candidates"))
     json_files = list(candidates_dir.glob("*.json"))
     
     print(f"Found {len(json_files)} candidates to migrate.")
