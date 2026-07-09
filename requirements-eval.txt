@@ -1,0 +1,9 @@
+-c constraints.txt
+
+# Eval/test-only dependencies for the prompt-optimization harness (eval/optimize.py)
+# and tests/system_test.py. NOT used anywhere in api/ or nerd_core/ — confirmed via
+# grep -rln "litellm\|dspy\|gepa" . 2026-07-09. Do not add these to requirements.txt;
+# they do not belong in the production Cloud Run image.
+dspy-ai~=3.0.0
+gepa
+litellm[proxy]==1.83.10
