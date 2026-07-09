@@ -42,14 +42,10 @@ async def adaptive_validate(resources: List[ResourceLink], cap: int = 5) -> List
     all_urls = [res.url for res in resources]
     fast_pass_results = await _fast_pass(all_urls)
     
-    # Update each ResourceLink object based on validation results
-    for res in resources:
-        if not fast_pass_results.get(res.url, False):
-            res.is_broken = True
-    
-    # Survivors are resources that passed the check.
-    # The order is preserved from the original sorted resources list.
-    survivors = [res for res in resources if not res.is_broken]
+ # Survivors are resources whose URL passed the liveness check.
+    # ResourceLink has no is_broken field, so we filter directly against
+    # the validity map rather than mutating and re-reading a missing attribute.
+    survivors = [res for res in resources if fast_pass_results.get(res.url, False)]
     
     # Return the top `cap` resources.
     return survivors[:cap]
