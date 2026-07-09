@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from "react";
 import { ListingData } from "@/lib/types";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { getIdToken } from "@/lib/firebase";
+import { debugLog, debugWarn } from "@/lib/debugLog";
 
 export type ResearchStatus = "idle" | "streaming" | "complete" | "error";
 
@@ -27,11 +28,13 @@ export function useResearch() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const reset = useCallback(() => {
+    debugLog("research", "reset:called");
     abortControllerRef.current?.abort();
     setState(INITIAL_STATE);
   }, []);
 
   const stopResearch = useCallback(() => {
+    debugLog("research", "stopResearch:called");
     abortControllerRef.current?.abort();
     setState(prev => ({
       ...prev,
@@ -51,6 +54,7 @@ export function useResearch() {
   );
 
   const injectListing = useCallback((data: ListingData, message?: string) => {
+    debugLog("research", "injectListing:called", { message });
     setState({
       status: "complete",
       log: [message ?? "Injected data from saved candidate."],
@@ -60,8 +64,11 @@ export function useResearch() {
   }, []);
 
   const startResearch = useCallback(async (productUrl: string) => {
+    debugLog("research", "startResearch:called", { productUrl });
+
     // FIX 1: Guard against re-entry while streaming
     if (abortControllerRef.current) {
+        debugWarn("research", "startResearch:reentry-abort", { productUrl });
         console.warn("Research already in progress. Aborting previous job.");
         abortControllerRef.current.abort();
     }
@@ -76,6 +83,7 @@ export function useResearch() {
     try {
       const token = await getIdToken();
       if (!token && process.env.NEXT_PUBLIC_DISABLE_AUTH !== "true") {
+        debugWarn("research", "startResearch:no-token-redirect");
         window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`;
         return;
       }
@@ -93,6 +101,7 @@ export function useResearch() {
 
       if (!enqueueRes.ok) throw new Error(`Enqueue failed: ${enqueueRes.status}`);
       const { job_id } = await enqueueRes.json();
+      debugLog("research", "enqueue:success", { job_id });
       
       setState(prev => ({ 
         ...prev, 
@@ -106,17 +115,20 @@ export function useResearch() {
         headers: { 'Authorization': authHeader },
         signal: ctrl.signal,
         onopen: async (res) => {
+          debugLog("sse", "onopen", { status: res.status, job_id });
           if (res.ok) return; 
           throw new Error(`Fatal error from SSE: ${res.status}`);
         },
         onmessage: (msg) => {
           if (msg.event === "status") {
             const data = JSON.parse(msg.data);
+            debugLog("sse", "message:status", data);
             setState((prev) => ({
               ...prev,
               log: [...prev.log, data.message ?? data.status],
             }));
           } else if (msg.event === "result") {
+            debugLog("sse", "message:result", { job_id });
             const data = JSON.parse(msg.data);
             // Cleanup controller before updating state to prevent race conditions
             abortControllerRef.current = null; 
@@ -132,6 +144,7 @@ export function useResearch() {
         onerror: (err) => {
           // FIX 2: Stop retry loop on error
           if (ctrl.signal.aborted) return;
+          debugWarn("sse", "onerror", err);
           console.error("SSE Error:", err);
           setState((prev) => ({
             ...prev,
@@ -143,8 +156,12 @@ export function useResearch() {
       });
 
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') return;
+      if (err instanceof Error && err.name === 'AbortError') {
+        debugLog("research", "startResearch:abort-caught");
+        return;
+      }
       const message = err instanceof Error ? err.message : "Unknown error";
+      debugWarn("research", "startResearch:catch", { message });
       setState((prev) => ({ ...prev, status: "error", error: message }));
     }
   }, []);

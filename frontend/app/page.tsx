@@ -1,4 +1,5 @@
 "use client";
+import { debugLog } from "@/lib/debugLog";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useResearch } from "@/hooks/useResearch";
 import { ListingCard } from "@/components/ListingCard";
@@ -70,7 +71,8 @@ export default function Home() {
     setUnsavedSections(prev => new Set(prev).add(key));
   };
 
-  const refreshLists = useCallback(async () => {
+const refreshLists = useCallback(async () => {
+    debugLog("lists", "refreshLists:called");
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
     try {
       const token = await getIdToken();
@@ -82,6 +84,7 @@ export default function Home() {
       const [candData, prodData] = await Promise.all([candRes.json(), prodRes.json()]);
       setCandidates(candData);
       setProducts(prodData);
+      debugLog("lists", "refreshLists:success", { candidates: candData.length, products: prodData.length });
       console.log(`Refreshed: ${candData.length} candidates, ${prodData.length} products`);
     } catch (err) {
       console.error("Failed to refresh lists:", err);
@@ -185,7 +188,8 @@ export default function Home() {
     return () => stopHeartbeat();
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
+    debugLog("lists", "init-effect:fired");
     const init = async () => {
       await refreshLists();
     };
