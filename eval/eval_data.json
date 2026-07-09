@@ -1856,5 +1856,27 @@
       "difficulty": "unset",
       "known_failure_mode": ""
     }
+  },
+  {
+    "product_name": "Desmos",
+    "input_url": "https://www.desmos.com/",
+    "ground_truth_vendor": [
+      "https://www.desmos.com/accessibility",
+      "https://help.desmos.com/hc/en-us/articles/202528769-Accessibility-Features",
+      "https://help.desmos.com/hc/en-us/sections/200677565-Accessibility"
+    ],
+    "ground_truth_other": [
+      "https://www.perkins.org/resource/accessible-interactive-math-with-desmos/",
+      "https://citl.illinois.edu/citl-101/online-strategy-development-and-production/learning-design/accessibility/desmos-accessible-graphing-calculator-guide",
+      "https://www.prcvi.org/resources/desmos-accessible-graphing-calculator/",
+      "https://www.tsbvi.edu/mayer/desmos-accessibility-information"
+    ],
+    "metadata": {
+      "vendor_name": "Desmos Studio PBC",
+      "scraped_at": "2026-07-09T10:55:00Z",
+      "source_page": "https://www.desmos.com/",
+      "difficulty": "easy",
+      "known_failure_mode": ""
+    }
   }
 ]

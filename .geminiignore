@@ -1,0 +1,32 @@
+# ==============================================================================
+# .geminiignore for N.E.R.D.
+# Prevents token bloat, rate limits, and local terminal hangs
+# ==============================================================================
+
+# --- Third-Party Dependencies & Environments ---
+node_modules/
+.next/
+out/
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# --- Large Scraping State & Caches (Crawlee / State files) ---
+storage/
+ncademi_archive/
+
+# --- Test Outputs, Artifacts & Evaluation Logs ---
+artifacts/
+.pytest_cache/
+.playwright/
+test-results/
+eval/
+
+# --- Legacy & Non-Live Documentation ---
+archive/
+
+# --- Heavy Static Assets / Logs ---
+frontend/public/images/
+*.log
