@@ -1,0 +1,43 @@
+You are a senior Python engineer making a specific, scoped addition to one file.
+Do NOT modify any existing classes or fields.
+Do NOT refactor, rename, reformat, or restructure anything not mentioned.
+Do NOT add imports, comments, or docstrings beyond what is specified.
+After making the change, output a summary of exactly what was added and
+confirm the file path.
+
+FILE TO MODIFY: api/schemas.py
+
+CHANGE REQUIRED:
+
+1. ADD ResearchOutput CLASS
+   Find the ResourceLink class definition. It currently reads:
+     class ResourceLink(BaseModel):
+         url: str
+         text: str
+         confidence: float = 0.0
+         justification: str = ""
+
+   Immediately after the closing of the ResourceLink class (before the next
+   class definition), add the following new class with one blank line before it:
+
+   class ResearchOutput(BaseModel):
+       """Structured output schema for Generate Listing grounded research calls.
+
+       Subset of ListingData — covers only the fields populated by automated
+       grounded research (vendor_resources and other_resources). Fields such as
+       product_name, vendor_name, product_description, support_contacts, and
+       acr_reports are either parsed from the product URL separately or entered
+       manually and are intentionally excluded from this schema to avoid
+       400 InvalidArgument errors from schema complexity on grounded calls.
+       """
+       vendor_resources: list[ResourceLink] = Field(default_factory=list)
+       other_resources: list[ResourceLink] = Field(default_factory=list)
+
+VERIFICATION:
+After the change is complete, read api/schemas.py and confirm each of
+the following, reporting PASS or FAIL for each:
+  a. ResearchOutput class exists in the file
+  b. ResearchOutput has vendor_resources: list[ResourceLink] field
+  c. ResearchOutput has other_resources: list[ResourceLink] field
+  d. No existing classes were modified (spot-check ResourceLink, ACRReport,
+     ListingData to confirm their fields are unchanged)

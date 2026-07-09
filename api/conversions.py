@@ -41,7 +41,6 @@ def pydantic_to_dataclass(payload: schemas.ListingData) -> gen.ListingData:
         product_website_url=payload.product_website_url,
         vendor_resources=[gen.ResourceLink(url=r.url, text=r.text) for r in payload.vendor_resources],
         other_resources=[gen.ResourceLink(url=r.url, text=r.text) for r in payload.other_resources],
-        ai_insights=payload.ai_insights,
         support_contacts=[
             gen.SupportContact(type=c.type, value=c.value, label=c.label)
             for c in payload.support_contacts
@@ -78,7 +77,6 @@ def dataclass_to_pydantic(listing: gen.ListingData) -> schemas.ListingData:
         product_website_url=listing.product_website_url,
         vendor_resources=[schemas.ResourceLink(url=r.url, text=r.text) for r in listing.vendor_resources],
         other_resources=[schemas.ResourceLink(url=r.url, text=r.text) for r in listing.other_resources],
-        ai_insights=listing.ai_insights,
         support_contacts=[
             schemas.SupportContact(type=c.type, value=c.value, label=c.label)
             for c in listing.support_contacts

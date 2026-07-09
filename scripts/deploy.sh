@@ -111,7 +111,7 @@ gcloud run deploy nerd-worker \
   --min-instances 0 \
   --max-instances 10 \
   --timeout 300 \
-  --set-env-vars="ENABLE_AI_INSIGHTS=true,GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
 
 WORKER_URL=$(gcloud run services describe nerd-worker \
   --platform managed --region "${REGION}" \

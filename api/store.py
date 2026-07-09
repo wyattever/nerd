@@ -27,8 +27,8 @@ from pathlib import Path
 LOCAL_MODE = os.getenv("LOCAL_MODE", "false").lower() == "true"
 
 BASE_DIR = Path(__file__).parent.parent
-CANDIDATES_DIR = BASE_DIR / "NCADEMI_candidates"
-PRODUCTS_DIR = BASE_DIR / "NCADEMI_products"
+CANDIDATES_DIR = Path(os.getenv("CANDIDATES_DIR", str(BASE_DIR / "NCADEMI_candidates")))
+PRODUCTS_DIR = Path(os.getenv("PRODUCTS_DIR", str(BASE_DIR / "NCADEMI_products")))
 
 CANDIDATES_COLLECTION = "nerd_candidates"
 PRODUCTS_COLLECTION = "nerd_products"
@@ -154,6 +154,8 @@ async def list_products() -> list[dict]:
 async def upsert_candidate(data: dict) -> str:
     """Persists a candidate dict. Returns the slug."""
     slug = slugify(data.get("product_name", "unknown"))
+    # Ensure AI insights are not stored in the record
+    data.pop("ai_insights", None)
     await _upsert_record(CANDIDATES_COLLECTION, slug, data, _local_candidates)
     return slug
 
@@ -161,6 +163,8 @@ async def upsert_candidate(data: dict) -> str:
 async def upsert_product(data: dict) -> str:
     """Persists a product dict. Returns the slug."""
     slug = slugify(data.get("product_name", "unknown"))
+    # Ensure AI insights are not stored in the record
+    data.pop("ai_insights", None)
     await _upsert_record(PRODUCTS_COLLECTION, slug, data, _local_products)
     return slug
 

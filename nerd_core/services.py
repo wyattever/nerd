@@ -5,7 +5,6 @@ from google import genai
 from google.genai import types
 from google.genai.errors import APIError
 from jinja2 import Environment, FileSystemLoader
-from nerd_core.utils import URLMask
 from nerd_core.telemetry import log_event
 
 logger = logging.getLogger(__name__)
@@ -125,28 +124,3 @@ def run_deep_dive(product_url: str, product_name: str, current_draft: str, timeo
     raw_urls = extract_grounding_urls(response)
     log_event("deep_dive", product_url, current_draft, response.text)
     return response.text, raw_urls
-
-
-# --- Phase 3: AI Insights synthesis (with URL masking) ---
-def synthesize_insights(draft_markdown: str, timeout_min: int = 2) -> str:
-    """Synthesize the AI Generated Insights paragraph with URL masking."""
-    masker = URLMask()
-    masked = masker.mask(draft_markdown)
-
-    template = _jinja.get_template("synthesis_prompt.j2")
-    prompt = template.render(masked_draft=masked)
-    
-    response = _client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.2,
-            http_options=types.HttpOptions(timeout=timeout_min * 60 * 1000),
-        ),
-    )
-
-    audit = masker.audit(response.text)
-    if audit["leaked_raw_urls"]:
-        logger.error("Model leaked raw URLs during synthesis: %s", audit["leaked_raw_urls"])
-
-    return masker.unmask(response.text, strict=False)

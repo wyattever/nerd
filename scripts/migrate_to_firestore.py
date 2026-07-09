@@ -32,8 +32,8 @@ def slugify(text: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', text).strip('-')
 
 BASE_DIR = Path(__file__).parent.parent
-CANDIDATES_DIR = BASE_DIR / "NCADEMI_candidates"
-PRODUCTS_DIR = BASE_DIR / "NCADEMI_products"
+CANDIDATES_DIR = Path(os.getenv("CANDIDATES_DIR", str(BASE_DIR / "NCADEMI_candidates")))
+PRODUCTS_DIR = Path(os.getenv("PRODUCTS_DIR", str(BASE_DIR / "NCADEMI_products")))
 
 CANDIDATES_COLLECTION = "nerd_candidates"
 PRODUCTS_COLLECTION = "nerd_products"

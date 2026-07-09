@@ -1,11 +1,12 @@
 import json
 import re
+import os
 from pathlib import Path
 from bs4 import BeautifulSoup
 
 # Define directories
 ARCHIVE_DIR = Path("ncademi_archive/clean_content")
-OUTPUT_DIR = Path("NCADEMI_products")
+OUTPUT_DIR = Path(os.getenv("PRODUCTS_DIR", "NCADEMI_products"))
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 def extract_product_data(html_content):

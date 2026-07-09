@@ -11,7 +11,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'cd .. && source venv312/bin/activate && export PYTHONPATH=$PYTHONPATH:. && LOCAL_MODE=true ENABLE_AI_INSIGHTS=false uvicorn api.main:app --port 8000',
+      command: 'cd .. && source venv312/bin/activate && export PYTHONPATH=$PYTHONPATH:. && LOCAL_MODE=true uvicorn api.main:app --port 8000',
       port: 8000,
       reuseExistingServer: !process.env.CI,
       stdout: 'pipe',

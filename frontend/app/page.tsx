@@ -1,9 +1,9 @@
 "use client";
+import { debugLog } from "@/lib/debugLog";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useResearch } from "@/hooks/useResearch";
 import { ListingCard } from "@/components/ListingCard";
-import { InvalidLinksModal } from "@/components/InvalidLinksModal";
-import { InvalidLink, SectionKey } from "@/lib/types";
+import { SectionKey } from "@/lib/types";
 import { SectionEditor } from "@/components/SectionEditor";
 import { getSectionHtml } from "@/lib/ncademiPreview";
 import { getIdToken } from "@/lib/firebase";
@@ -25,9 +25,6 @@ const SECTION_KEYS: { key: SectionKey; label: string }[] = [
 export default function Home() {
   const { state, startResearch, reset, stopResearch, updateListing, injectListing } = useResearch();
   const [url, setUrl] = useState("");
-  const [showValidationModal, setShowValidationModal] = useState(false);
-  const [invalidLinks, setInvalidLinks] = useState<InvalidLink[]>([]);
-  const [isValidating, setIsValidating] = useState(false);
   const [candidates, setCandidates] = useState<CandidateRef[]>([]);
   const [products, setProducts] = useState<{ name: string; slug: string }[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("");
@@ -74,7 +71,8 @@ export default function Home() {
     setUnsavedSections(prev => new Set(prev).add(key));
   };
 
-  const refreshLists = useCallback(async () => {
+const refreshLists = useCallback(async () => {
+    debugLog("lists", "refreshLists:called");
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
     try {
       const token = await getIdToken();
@@ -86,6 +84,7 @@ export default function Home() {
       const [candData, prodData] = await Promise.all([candRes.json(), prodRes.json()]);
       setCandidates(candData);
       setProducts(prodData);
+      debugLog("lists", "refreshLists:success", { candidates: candData.length, products: prodData.length });
       console.log(`Refreshed: ${candData.length} candidates, ${prodData.length} products`);
     } catch (err) {
       console.error("Failed to refresh lists:", err);
@@ -104,18 +103,6 @@ export default function Home() {
       "Resolving vendor directory paths...",
       "Analyzing accessibility landmarks...",
       "Scoping vendor support resources...",
-    ],
-    validating: [
-      "Checking SSL certificate validity...",
-      "Verifying server response headers...",
-      "Detecting soft-404 redirects...",
-      "Checking for broken anchor tags...",
-      "Validating CORS headers...",
-      "Testing link aria-labels...",
-      "Timing out slow responses...",
-      "Validating resource patterns...",
-      "Fetching remote screenshot...",
-      "Verifying content-type headers...",
     ],
     synthesizing: [
       "Assembling research fragments...",
@@ -161,7 +148,6 @@ export default function Home() {
     if (state.status === "streaming") {
       const lastMacroMsg = state.log[state.log.length - 1];
       if (lastMacroMsg) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLocalLog(prev => {
           if (prev[prev.length - 1] === lastMacroMsg) return prev;
           return [...prev, lastMacroMsg];
@@ -202,7 +188,8 @@ export default function Home() {
     return () => stopHeartbeat();
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
+    debugLog("lists", "init-effect:fired");
     const init = async () => {
       await refreshLists();
     };
@@ -211,6 +198,13 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Safety guard to prevent duplicate triggers
+    if (state.status === "streaming") {
+      logMessage("Research already in progress. Please wait or Stop.");
+      return;
+    }
+
     if (url.trim()) {
       setProcessHeading("Generating Listing");
       setLocalLog([]);
@@ -238,7 +232,6 @@ export default function Home() {
       const data = await res.json();
       injectListing(data);
       setActiveCandidateSlug(selectedSlug);
-      console.log(`Active candidate slug set to: ${selectedSlug}`);
       setSelectedSlug("");
     } catch (err) {
       console.error("Failed to fetch candidate data:", err);
@@ -282,7 +275,6 @@ export default function Home() {
       if (target === "candidates" && resData.slug) {
         setActiveCandidateSlug(resData.slug);
         setIsProductLoaded(false);
-        console.log(`Active candidate slug updated to: ${resData.slug}`);
       } else if (target === "products") {
         setActiveCandidateSlug(null);
       }
@@ -370,145 +362,6 @@ export default function Home() {
     }
   };
 
-  const handleValidateLinks = async () => {
-    if (!state.listing) return;
-    setIsValidating(true);
-    logMessage("--- Link Validation Started ---");
-    try {
-      const listing = state.listing;
-      const candidateLinks: InvalidLink[] = SECTION_KEYS.flatMap(({ key, label }) => {
-        const html = getSectionHtml(listing, key);
-        if (!html) return [];
-        const doc = new DOMParser().parseFromString(html, "text/html");
-        const links = Array.from(doc.querySelectorAll("a"));
-        return links
-          .map(link => {
-            const href = link.getAttribute("href");
-            return {
-              section: label,
-              sectionKey: key,
-              text: link.textContent || "",
-              url: href || "",
-            };
-          })
-          .filter(link => link.url && link.url.startsWith("http"));
-      });
-
-      const uniqueUrls = [...new Set(candidateLinks.map(link => link.url))];
-
-      if (uniqueUrls.length === 0) {
-        logMessage("No valid http(s) links found in rendered HTML for validation.");
-        setIsValidating(false);
-        return;
-      }
-
-      logMessage(`Validating ${uniqueUrls.length} unique URLs...`);
-      startHeartbeat("validating");
-      const token = await getIdToken();
-      const authHeader = `Bearer ${token ?? "local-bypass"}`;
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links-async`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: authHeader,
-          },
-          body: JSON.stringify({ urls: uniqueUrls }),
-        }
-      );
-      if (!response.ok) {
-        throw new Error(`Validation service failed with status: ${response.status}`);
-      }
-      const { job_id } = await response.json();
-      logMessage(`Job queued: ${job_id}. Polling for results...`);
-      let results: Record<string, { is_valid: boolean; reason?: string; screenshot_path?: string }> | null = null;
-      let iterations = 0;
-      const MAX_POLLS = 90;
-      while (iterations < MAX_POLLS) {
-        iterations++;
-        const statusRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/research/validate-links/${job_id}`,
-          {
-            headers: { Authorization: authHeader },
-          }
-        );
-        if (!statusRes.ok) {
-          const detail =
-            statusRes.status === 404
-              ? "Validation job not found (may have been lost to an instance restart)"
-              : `Server error (${statusRes.status})`;
-          throw new Error(detail);
-        }
-        const statusData = await statusRes.json();
-        if (statusData.status === "complete") {
-          results = statusData.results;
-          logMessage("Validation backend processing complete.");
-          stopHeartbeat();
-          break;
-        } else if (statusData.status === "error") {
-          throw new Error(statusData.error || "Validation job failed");
-        }
-        if (iterations % 4 === 0) {
-          logMessage(`Polling validation status (Attempt ${iterations}/${MAX_POLLS})...`);
-        }
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-      if (!results) {
-        throw new Error("Validation timed out after 3 minutes. Partial results may be available — please retry.");
-      }
-      const finalResults = results; // for type safety
-      const brokenLinksToDisplay = candidateLinks
-        .map(link => {
-          const res = finalResults[link.url];
-          if (res && !res.is_valid) {
-            return {
-              ...link,
-              reason: res.reason,
-              screenshot_path: res.screenshot_path
-                ? `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}${res.screenshot_path}`
-                : undefined,
-            } as InvalidLink;
-          }
-          return null;
-        })
-        .filter((l): l is InvalidLink => l !== null);
-      logMessage(`Validation complete. Found ${brokenLinksToDisplay.length} broken links.`);
-      setInvalidLinks(brokenLinksToDisplay);
-      setShowValidationModal(true);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : "Unknown error";
-      logMessage(`ERROR during validation: ${msg}`);
-      console.error("Link validation encountered an error:", error);
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
-  const handleApplyChanges = (toDelete: InvalidLink[]) => {
-    if (!state.listing) return;
-    const toDeleteUrls = new Set(toDelete.map(l => l.url));
-    if (toDeleteUrls.size === 0) {
-        logMessage("No links selected for deletion.");
-        return;
-    }
-
-    const updated = {
-      ...state.listing,
-      vendor_resources: state.listing.vendor_resources.filter(r => !toDeleteUrls.has(r.url)),
-      other_resources: state.listing.other_resources.filter(r => !toDeleteUrls.has(r.url)),
-      support_contacts: state.listing.support_contacts.filter(c => c.type !== 'url' || !toDeleteUrls.has(c.value)),
-      acr_reports: state.listing.acr_reports.filter(a => !toDeleteUrls.has(a.url)),
-    };
-
-    updateListing(updated);
-    logMessage(`Validation applied: ${toDelete.length} link(s) removed.`);
-    setTimeout(() => {
-      setIsDirty(true);
-      logMessage("Ready to update candidate repository.");
-    }, 100);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -538,7 +391,7 @@ export default function Home() {
                 )}
                 {localLog.map((line, i) => {
                   const isLast = i === localLog.length - 1;
-                  const isActive = isLast && (state.status === "streaming" || isValidating);
+                  const isActive = isLast && state.status === "streaming";
                   return (
                     <p key={i}>
                       <span className="text-gray-600 select-none mr-2">›</span>
@@ -564,14 +417,14 @@ export default function Home() {
                       onChange={e => setUrl(e.target.value)}
                       placeholder="https://vendor.com/product"
                       required
-                      disabled={state.status === "streaming" || isValidating}
+                      disabled={state.status === "streaming"}
                       className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                  focus:outline-none focus:ring-2 focus:ring-blue-500
                                  disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                     <button
                       type="submit"
-                      disabled={!url.trim() || state.status === "streaming" || isValidating}
+                      disabled={!url.trim() || state.status === "streaming"}
                       className="w-44 bg-blue-700 text-white text-sm font-medium px-5 py-2
                                  rounded hover:bg-blue-800 focus:outline-none
                                  focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
@@ -602,7 +455,7 @@ export default function Home() {
                     aria-label="Select NCADEMI Product"
                     value={selectedProductSlug}
                     onChange={e => setSelectedProductSlug(e.target.value)}
-                    disabled={state.status === "streaming" || isValidating}
+                    disabled={state.status === "streaming"}
                     className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
                                bg-white text-gray-700 disabled:bg-gray-100 
@@ -618,7 +471,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handleInjectProduct}
-                    disabled={!selectedProductSlug || state.status === "streaming" || isValidating}
+                    disabled={!selectedProductSlug || state.status === "streaming"}
                     className="w-44 bg-[#333] text-white text-sm font-medium px-6 py-2 rounded
                                hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500
                                disabled:opacity-30 disabled:cursor-not-allowed transition-all
@@ -636,7 +489,7 @@ export default function Home() {
                     aria-label="Select NCADEMI Candidate"
                     value={selectedSlug}
                     onChange={e => setSelectedSlug(e.target.value)}
-                    disabled={state.status === "streaming" || isValidating}
+                    disabled={state.status === "streaming"}
                     className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
                                bg-white text-gray-700 disabled:bg-gray-100 
@@ -652,7 +505,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handleInject}
-                    disabled={!selectedSlug || state.status === "streaming" || isValidating}
+                    disabled={!selectedSlug || state.status === "streaming"}
                     className="w-44 bg-[#333] text-white text-sm font-medium px-6 py-2 rounded
                                hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500
                                disabled:opacity-30 disabled:cursor-not-allowed transition-all
@@ -660,7 +513,6 @@ export default function Home() {
                   >
                     View Candidate
                   </button>
-
                 </div>
               </div>
             </div>
@@ -707,17 +559,6 @@ export default function Home() {
                            focus:ring-blue-500 focus:ring-offset-2"
               >
                 Download HTML
-              </button>
-              <button
-                onClick={handleValidateLinks}
-                disabled={isValidating}
-                aria-disabled={isValidating}
-                className="border border-gray-300 text-sm px-4 py-2 rounded
-                           hover:bg-gray-50 focus:outline-none focus:ring-2
-                           focus:ring-blue-500 focus:ring-offset-2
-                           disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {isValidating ? "Validating..." : "Validate Links"}
               </button>
               <button
                 onClick={() => {
@@ -791,7 +632,7 @@ export default function Home() {
                   {activeCandidateSlug && (
                     <button
                       onClick={handleUpdateCandidate}
-                      disabled={!isDirty || isValidating}
+                      disabled={!isDirty}
                       className="inline-flex items-center gap-1.5 text-xs text-black
                                  border border-black rounded px-2.5 py-1.5
                                  hover:bg-gray-50 focus:outline-none focus:ring-2
@@ -822,17 +663,6 @@ export default function Home() {
         )}
       </main>
 
-      {showValidationModal && (
-        <InvalidLinksModal
-          links={invalidLinks}
-          vendorName={state.listing?.vendor_name || ""}
-          onClose={() => setShowValidationModal(false)}
-          onApplyChanges={handleApplyChanges}
-          readOnly={isProductLoaded}
-          overriddenSections={Object.keys(state.listing?.section_overrides ?? {}) as SectionKey[]}
-        />
-      )}
-
       {editingSection && state.listing && (
         <SectionEditor
           key={`${editingSection}-${editorOpenCount}`}
@@ -840,7 +670,7 @@ export default function Home() {
           label={SECTION_KEYS.find(k => k.key === editingSection)?.label || "Section"}
           initialHtml={getSectionHtml(state.listing, editingSection)}
           isOverridden={state.listing.section_overrides?.[editingSection] != null}
-          generatedHtml={""} // This prop is for conceptual completeness. Reset logic is handled by the parent.
+          generatedHtml={""}
           isOpen={!!editingSection}
           onSave={handleSaveSection}
           onReset={handleResetSection}

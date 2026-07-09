@@ -7,7 +7,7 @@ from api.schemas import ListingData
 # Note: This test validates the source-of-truth JSON files in the filesystem,
 # not the Firestore state. Firestore state is validated by integration tests.
 
-CANDIDATES_DIR = Path(__file__).parent.parent.parent / "NCADEMI_candidates"
+CANDIDATES_DIR = Path(os.getenv("CANDIDATES_DIR", str(Path(__file__).parent.parent.parent / "NCADEMI_candidates")))
 LOCAL_MODE = os.getenv("LOCAL_MODE", "false").lower() == "true"
 
 def get_candidate_files():

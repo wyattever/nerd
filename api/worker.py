@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import logging
+import traceback
 import asyncio
 import uuid
 from fastapi import FastAPI
@@ -11,9 +12,10 @@ from nerd_core.generators import parse_markdown_to_listing
 from nerd_core.services import (
     run_initial_research,
     run_deep_dive,
-    synthesize_insights,
     QuotaExhaustedError,
 )
+# Integration: Using hardened liveness validator
+from nerd_core.tools.liveness_validator import validate_link
 from nerd_core.utils import resolve_and_validate_all, filter_broken_links
 from nerd_core.adaptive_validation import adaptive_validate
 from nerd_core.acr_validation import is_likely_vpat_acr
@@ -23,7 +25,6 @@ from .conversions import dataclass_to_pydantic
 from .job_store import emit_event, complete_job, fail_job, claim_job
 
 logger = logging.getLogger("nerd.worker")
-ENABLE_AI_INSIGHTS = os.getenv("ENABLE_AI_INSIGHTS", "true").lower() == "true"
 
 app = FastAPI(title="N.E.R.D. Worker API")
 
@@ -51,6 +52,7 @@ async def _build_result_payload(
 ) -> dict:
     listing_dc = parse_markdown_to_listing(validated_markdown)
 
+    # Note: adaptive_validate now utilizes the hardened liveness_validator internally
     listing_dc.vendor_resources = await adaptive_validate(listing_dc.vendor_resources)
     listing_dc.other_resources = await adaptive_validate(listing_dc.other_resources)
 
@@ -59,16 +61,6 @@ async def _build_result_payload(
         if not is_valid:
             listing_dc.acr_reports[0].url = "#"
             listing_dc.acr_reports[0].title = "None found"
-
-    if ENABLE_AI_INSIGHTS:
-        try:
-            listing_dc.ai_insights = await asyncio.to_thread(
-                synthesize_insights, validated_markdown, timeout_min=timeout_min
-            )
-        except Exception as e:
-            logger.warning("synthesize_insights failed, leaving ai_insights empty: %s", e)
-    else:
-        listing_dc.ai_insights = ""
 
     parsed = dataclass_to_pydantic(listing_dc)
     payload = schemas.JobResultPayload(
@@ -102,10 +94,6 @@ async def worker_initial(req: WorkerInitialRequest):
         validated_md, rejections = await _validate(raw_urls, draft, url_cache)
         print(f"[WORKER] Validation done for {job_id}. Rejections: {len(rejections)}")
 
-        if ENABLE_AI_INSIGHTS:
-            print(f"[WORKER] Synthesizing AI insights for {job_id}...")
-            await emit_event(job_id, "synthesizing")
-
         result = await _build_result_payload(draft, validated_md, url_cache, rejections, req.timeout_min)
         await complete_job(job_id, result)
         print(f"[WORKER] Job {job_id} COMPLETED successfully.")
@@ -126,6 +114,8 @@ async def worker_initial(req: WorkerInitialRequest):
     except QuotaExhaustedError:
         await fail_job(job_id, "quota_exhausted", 429)
     except Exception as e:
+        print(f"[WORKER] Initial research job {job_id} FAILED: {type(e).__name__}: {e}")
+        traceback.print_exc()
         logger.exception("Initial research job failed")
         await fail_job(job_id, type(e).__name__)
 
@@ -163,6 +153,8 @@ async def worker_deep_dive(req: WorkerDeepDiveRequest):
     except QuotaExhaustedError:
         await fail_job(job_id, "quota_exhausted", 429)
     except Exception as e:
+        print(f"[WORKER] Deep-dive job {job_id} FAILED: {type(e).__name__}: {e}")
+        traceback.print_exc()
         logger.exception("Deep-dive job failed")
         await fail_job(job_id, type(e).__name__)
 
