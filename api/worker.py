@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import logging
+import traceback
 import asyncio
 import uuid
 from fastapi import FastAPI
@@ -113,6 +114,8 @@ async def worker_initial(req: WorkerInitialRequest):
     except QuotaExhaustedError:
         await fail_job(job_id, "quota_exhausted", 429)
     except Exception as e:
+        print(f"[WORKER] Initial research job {job_id} FAILED: {type(e).__name__}: {e}")
+        traceback.print_exc()
         logger.exception("Initial research job failed")
         await fail_job(job_id, type(e).__name__)
 
@@ -150,6 +153,8 @@ async def worker_deep_dive(req: WorkerDeepDiveRequest):
     except QuotaExhaustedError:
         await fail_job(job_id, "quota_exhausted", 429)
     except Exception as e:
+        print(f"[WORKER] Deep-dive job {job_id} FAILED: {type(e).__name__}: {e}")
+        traceback.print_exc()
         logger.exception("Deep-dive job failed")
         await fail_job(job_id, type(e).__name__)
 
