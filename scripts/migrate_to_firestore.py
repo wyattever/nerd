@@ -1,13 +1,13 @@
 """
-scripts/migrate_to_firestore.py — Idempotent migration of JSON files to Firestore.
+scripts/migrate_to_firestore.py — Idempotent migration of JSON data to Firestore.
 
 Requirements:
-- Reads from NCADEMI_candidates/ and NCADEMI_products/
+- Reads from eval/eval_data.json
 - Validates against schemas.ListingData
 - Skips test fixtures (name contains "test" or "e2e")
 - Rejects grounding-api-redirect URLs
-- Idempotent upserts to nerd_candidates and nerd_products
-- Supports --dry-run and --collection [candidates|products]
+- Idempotent upserts to nerd_candidates
+- Supports --dry-run
 """
 
 import os
@@ -32,35 +32,31 @@ def slugify(text: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', text).strip('-')
 
 BASE_DIR = Path(__file__).parent.parent
-CANDIDATES_DIR = Path(os.getenv("CANDIDATES_DIR", str(BASE_DIR / "NCADEMI_candidates")))
-PRODUCTS_DIR = Path(os.getenv("PRODUCTS_DIR", str(BASE_DIR / "NCADEMI_products")))
+JSON_SOURCE = BASE_DIR / "eval" / "eval_data.json"
 
 CANDIDATES_COLLECTION = "nerd_candidates"
-PRODUCTS_COLLECTION = "nerd_products"
-
 REDIRECT_URL_PATTERN = re.compile(r"grounding-api-redirect")
 
-async def migrate(collection_name: str, source_dir: Path, dry_run: bool, db: Optional[AsyncClient]):
-    if not source_dir.exists():
-        print(f"Source directory {source_dir} does not exist. Skipping.")
+async def migrate_from_json(collection_name: str, source_file: Path, dry_run: bool, db: Optional[AsyncClient]):
+    if not source_file.exists():
+        print(f"Source file {source_file} does not exist. Skipping.")
         return 0, 0, 0
 
-    files = list(source_dir.glob("*.json"))
+    with open(source_file, "r") as jf:
+        candidates = json.load(jf)
+    
     migrated = 0
     skipped = 0
     failed = 0
 
-    print(f"\nMigrating {len(files)} files to {collection_name}...")
+    print(f"\nMigrating {len(candidates)} records from {source_file} to {collection_name}...")
 
-    for f in files:
+    for raw_data in candidates:
         try:
-            with open(f, "r") as jf:
-                raw_data = json.load(jf)
-            
             # 1. Skip test fixtures
-            product_name = raw_data.get("product_name", f.stem)
+            product_name = raw_data.get("product_name", "unknown")
             if "test" in product_name.lower() or "e2e" in product_name.lower():
-                print(f"  [SKIP] {f.name} (test fixture)")
+                print(f"  [SKIP] {product_name} (test fixture)")
                 skipped += 1
                 continue
 
@@ -68,13 +64,11 @@ async def migrate(collection_name: str, source_dir: Path, dry_run: bool, db: Opt
             try:
                 data = schemas.ListingData(**raw_data)
             except Exception as e:
-                print(f"  [FAIL] {f.name} (validation error): {e}")
+                print(f"  [FAIL] {product_name} (validation error): {e}")
                 failed += 1
                 continue
 
             # 3. Check for redirect URLs
-            found_redirect = False
-            # Check all fields in model_dump
             dumped = data.model_dump()
             def check_redirects(val):
                 if isinstance(val, str):
@@ -91,31 +85,30 @@ async def migrate(collection_name: str, source_dir: Path, dry_run: bool, db: Opt
                 return False
 
             if check_redirects(dumped):
-                print(f"  [FAIL] {f.name} (contains grounding-api-redirect URL)")
+                print(f"  [FAIL] {product_name} (contains grounding-api-redirect URL)")
                 failed += 1
                 continue
 
             # 4. Upsert
             slug = slugify(data.product_name)
             if dry_run:
-                print(f"  [DRY-RUN] Would migrate {f.name} -> {slug}")
+                print(f"  [DRY-RUN] Would migrate {product_name} -> {slug}")
                 migrated += 1
             else:
                 doc_ref = db.collection(collection_name).document(slug)
                 await doc_ref.set(dumped)
-                print(f"  [OK] Migrated {f.name} -> {slug}")
+                print(f"  [OK] Migrated {product_name} -> {slug}")
                 migrated += 1
 
         except Exception as e:
-            print(f"  [ERROR] Failed to process {f.name}: {e}")
+            print(f"  [ERROR] Failed to process {product_name}: {e}")
             failed += 1
 
     return migrated, skipped, failed
 
 async def main():
-    parser = argparse.ArgumentParser(description="Migrate NCADEMI data to Firestore")
+    parser = argparse.ArgumentParser(description="Migrate eval_data.json to Firestore")
     parser.add_argument("--dry-run", action="store_true", help="Do not write to Firestore")
-    parser.add_argument("--collection", choices=["candidates", "products"], help="Specific collection to migrate")
     args = parser.parse_args()
 
     project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
@@ -127,23 +120,15 @@ async def main():
     if not args.dry_run:
         db = AsyncClient(project=project_id)
 
-    c_migrated, c_skipped, c_failed = 0, 0, 0
-    p_migrated, p_skipped, p_failed = 0, 0, 0
-
-    if not args.collection or args.collection == "candidates":
-        c_migrated, c_skipped, c_failed = await migrate(CANDIDATES_COLLECTION, CANDIDATES_DIR, args.dry_run, db)
-
-    if not args.collection or args.collection == "products":
-        p_migrated, p_skipped, p_failed = await migrate(PRODUCTS_COLLECTION, PRODUCTS_DIR, args.dry_run, db)
+    migrated, skipped, failed = await migrate_from_json(CANDIDATES_COLLECTION, JSON_SOURCE, args.dry_run, db)
 
     print("\n" + "="*40)
     print("MIGRATION SUMMARY")
     print("="*40)
-    print(f"Candidates: {c_migrated} migrated, {c_skipped} skipped, {c_failed} failed")
-    print(f"Products:   {p_migrated} migrated, {p_skipped} skipped, {p_failed} failed")
+    print(f"Candidates: {migrated} migrated, {skipped} skipped, {failed} failed")
     print("="*40)
 
-    if c_failed > 0 or p_failed > 0:
+    if failed > 0:
         print("Migration completed with failures. See log above.")
         sys.exit(1)
 
