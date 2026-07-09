@@ -107,13 +107,22 @@ async def migrate_from_json(collection_name: str, source_file: Path, dry_run: bo
     return migrated, skipped, failed
 
 async def main():
+    print("ERROR: This script's eval_data.json -> nerd_candidates import path is retired.")
+    print("Golden Set data (eval_data.json) does not belong in the candidate pipeline —")
+    print("see fix_user_screwup.md Section 2/10 for why. Real candidates should be")
+    print("generated via /research/initial or scripts/ingest_ai_studio_draft.py instead.")
+    import sys as _sys
+    _sys.exit(1)
+
     parser = argparse.ArgumentParser(description="Migrate eval_data.json to Firestore")
     parser.add_argument("--dry-run", action="store_true", help="Do not write to Firestore")
     args = parser.parse_args()
 
+    EXPECTED_PROJECT = "edtech-agent-2026"
     project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-    if not project_id and not args.dry_run:
-        print("ERROR: GOOGLE_CLOUD_PROJECT env var must be set for live migration.")
+    if not args.dry_run and project_id != EXPECTED_PROJECT:
+        print(f"ERROR: GOOGLE_CLOUD_PROJECT is '{project_id}', expected '{EXPECTED_PROJECT}'.")
+        print(f"Run: GOOGLE_CLOUD_PROJECT={EXPECTED_PROJECT} python3 scripts/migrate_to_firestore.py")
         sys.exit(1)
 
     db = None
