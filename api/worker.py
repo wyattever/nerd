@@ -24,6 +24,11 @@ from . import store
 from .conversions import dataclass_to_pydantic
 from .job_store import emit_event, complete_job, fail_job, claim_job
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
 logger = logging.getLogger("nerd.worker")
 
 app = FastAPI(title="N.E.R.D. Worker API")

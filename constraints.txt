@@ -1,14 +1,24 @@
 # N.E.R.D. — constraints for Python 3.12
 # Use with: pip install -r requirements.txt -c constraints.txt
 #
-# These are the transitive pins that litellm==1.83.10 imposes. Listing them
-# here makes the "load-bearing" versions explicit, so an accidental bump to
-# any of them surfaces as a clear conflict instead of a silent downgrade.
+# Two clusters of pins here:
 #
-# If you ever change the litellm version, RE-VERIFY every line below — these
-# pins move every litellm release (e.g. openai was 2.30.0 in 1.83.1, rolled
-# back to 2.24.0 in 1.83.10).
+# 1. Transitive pins that litellm==1.83.10 imposes. Listing them here makes
+#    the "load-bearing" versions explicit, so an accidental bump to any of
+#    them surfaces as a clear conflict instead of a silent downgrade.
+#    If you ever change the litellm version, RE-VERIFY every line below —
+#    these pins move every litellm release (e.g. openai was 2.30.0 in
+#    1.83.1, rolled back to 2.24.0 in 1.83.10).
+#
+# 2. Pins for the google-cloud-tasks / google-cloud-bigquery / firebase-admin
+#    dependency graph, added 2026-07-09 after a clean --no-cache build showed
+#    pip's resolver explicitly backtracking on these packages (confirmed via
+#    pip's own "This is taking longer than usual" warning). Versions below
+#    are what pip converged on anyway after backtracking — pinning them
+#    upfront skips the wasted resolution time. If you bump google-cloud-tasks,
+#    google-cloud-bigquery, or firebase-admin, RE-VERIFY this cluster too.
 
+# --- litellm transitive pins ---
 pydantic==2.12.5
 pydantic-core==2.41.5
 openai==2.24.0
@@ -18,3 +28,15 @@ python-dotenv==1.0.1
 importlib-metadata==8.5.0
 jsonschema==4.23.0
 typer==0.23.1
+
+# --- google-cloud / firebase-admin transitive pins ---
+uvicorn==0.33.0
+grpcio-status==1.62.3
+google-api-core==2.29.0
+proto-plus==1.27.1
+googleapis-common-protos==1.73.0
+huggingface-hub==1.16.1
+pyopenssl==26.2.0
+google-cloud-firestore==2.26.0
+fastapi==0.124.4
+grpc-google-iam-v1==0.14.3

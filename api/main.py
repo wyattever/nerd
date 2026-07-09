@@ -4,6 +4,7 @@ import os
 import uuid
 import json
 import logging
+
 import asyncio
 from typing import Any
 
@@ -48,6 +49,11 @@ if LOCAL_MODE:
 if not LOCAL_MODE:
     if not firebase_admin._apps:
         firebase_admin.initialize_app()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 logger = logging.getLogger("nerd.api")
 
