@@ -31,7 +31,7 @@ async def validate_link(url: str, max_redirects: int = 3) -> ValidationResult:
     """
     Hardened validator: follows redirects manually to check SSRF safety at each hop.
     """
-    async with httpx.AsyncClient(http2=True, timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=10.0) as client:
         current_url = url
         for _ in range(max_redirects + 1):
             try:

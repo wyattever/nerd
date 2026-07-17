@@ -49,6 +49,7 @@ def pydantic_to_dataclass(payload: schemas.ListingData) -> gen.ListingData:
             gen.ACRReport(
                 title=a.title, url=a.url, version=a.version, date=a.date,
                 auditor_name=a.auditor_name, auditor_url=a.auditor_url,
+                preparation_type=a.preparation_type,
             )
             for a in payload.acr_reports
         ],
@@ -85,6 +86,7 @@ def dataclass_to_pydantic(listing: gen.ListingData) -> schemas.ListingData:
             schemas.ACRReport(
                 title=a.title, url=a.url, version=a.version, date=a.date,
                 auditor_name=a.auditor_name, auditor_url=a.auditor_url,
+                preparation_type=a.preparation_type,
             )
             for a in listing.acr_reports
         ],

@@ -180,6 +180,15 @@ def parse_markdown_to_listing(markdown: str) -> ListingData:
         elif current_section == "acr":
             if "Report Title:" in stripped:
                 data.acr_reports.append(ACRReport(title=stripped.replace("Report Title:", "").strip(), url="#"))
+            elif stripped.startswith("Link:") and data.acr_reports:
+                link_body = "- " + stripped[len("Link:"):].strip()
+                lm = _ANNOTATED_LINK_RE.match(link_body)
+                if lm:
+                    data.acr_reports[-1].url = lm.group("url").strip()
+                else:
+                    fallback = _LINK_RE.match(link_body)
+                    if fallback:
+                        data.acr_reports[-1].url = (fallback.group("url1") or fallback.group("url2") or fallback.group("url3")).strip()
             # Metadata scraping lines removed to ensure frugal/template-only behavior.
 
     data.last_updated = datetime.now().strftime('%B %d, %Y')

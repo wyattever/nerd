@@ -123,6 +123,18 @@ export function useResearch() {
           if (msg.event === "status") {
             const data = JSON.parse(msg.data);
             debugLog("sse", "message:status", data);
+            if (data.status === "error") {
+              debugWarn("sse", "message:status-error", data);
+              abortControllerRef.current = null;
+              ctrl.abort();
+              setState((prev) => ({
+                ...prev,
+                status: "error",
+                log: [...prev.log, data.message ?? "Research failed."],
+                error: data.message ?? "Research failed",
+              }));
+              return;
+            }
             setState((prev) => ({
               ...prev,
               log: [...prev.log, data.message ?? data.status],
@@ -139,6 +151,17 @@ export function useResearch() {
               log: [...prev.log, "Research complete. Hydrating results..."],
               listing: data.parsed_listing,
             }));
+          } else if (msg.event === "end") {
+            if (abortControllerRef.current) {
+              debugWarn("sse", "message:end-without-result", { job_id });
+              abortControllerRef.current = null;
+              ctrl.abort();
+              setState((prev) => (
+                prev.status === "streaming"
+                  ? { ...prev, status: "error", error: "Stream ended without result." }
+                  : prev
+              ));
+            }
           }
         },
         onerror: (err) => {
