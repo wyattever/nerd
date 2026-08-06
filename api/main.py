@@ -6,6 +6,7 @@ import json
 import logging
 
 import asyncio
+from dataclasses import asdict
 from typing import Any
 
 from bs4 import BeautifulSoup
@@ -21,9 +22,10 @@ from firebase_admin import auth as fb_auth
 
 from nerd_core.generators import render_listing_html
 from nerd_core.utils import resolve_and_validate_all
+from nerd_core.pipeline import validate_draft
 
 from . import schemas
-from .conversions import pydantic_to_dataclass
+from .conversions import pydantic_to_dataclass, dataclass_to_pydantic
 from .job_store import create_job, stream_job_events
 from .store import (
     slugify,
@@ -220,6 +222,26 @@ async def validate_links(request: schemas.LinkValidationRequest, uid: str = Depe
     except Exception as e:
         logger.exception("Link validation failed")
         raise HTTPException(status_code=500, detail=f"Link validation engine failed: {str(e)}")
+
+# ── Draft Ingest (Import Data feature) ────────────────────────────────────────
+# See nerd-import-data-architecture-v4.md §4.2. Not under /admin/ (does not
+# touch the store) and not under /research/ (does not call Gemini).
+
+@app.post("/ingest/draft", response_model=schemas.IngestDraftResponse)
+async def ingest_draft(req: schemas.IngestDraftRequest, uid: str = Depends(verify_token)):
+    try:
+        result = await validate_draft(req.draft_markdown)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.exception("Draft ingest failed")
+        raise HTTPException(status_code=502, detail="Draft validation failed -- see server logs.")
+
+    return schemas.IngestDraftResponse(
+        parsed_listing=dataclass_to_pydantic(result.listing),
+        rejections=result.rejections,
+        diagnostics=schemas.DraftDiagnostics(**asdict(result.diagnostics)),
+    )
 
 # ── Administrative Endpoints ──────────────────────────────────────────────────
 

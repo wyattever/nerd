@@ -41,10 +41,7 @@ import httpx
 
 sys.path.append(os.getcwd())
 
-from nerd_core.generators import parse_markdown_to_listing
-from nerd_core.utils import resolve_and_validate_all, filter_broken_links
-from nerd_core.adaptive_validation import adaptive_validate
-from nerd_core.acr_validation import is_likely_vpat_acr
+from nerd_core.pipeline import validate_draft
 from api.conversions import dataclass_to_pydantic
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
@@ -54,34 +51,35 @@ _URL_RE = re.compile(r'https?://[^\s<>"\')\]]+')
 
 
 async def validate_and_build(draft_markdown: str) -> dict:
-    """Mirrors api/worker.py's _validate + _build_result_payload sequence exactly."""
+    """Calls nerd_core.pipeline.validate_draft -- the same sequence
+    api/worker.py runs, extracted in Commit 1 of the Import Data build.
+    See nerd-import-data-architecture-v4.md §4.1, §11.2.
+
+    raw_urls is still deduped and extracted here (not left to
+    validate_draft's default) to preserve this script's original
+    behavior exactly -- validate_draft's own extraction does not dedupe,
+    since api/worker.py never needed to (its raw_urls come from Gemini's
+    return value, not a regex scan of markdown)."""
     raw_urls = list(set(_URL_RE.findall(draft_markdown)))
-    url_cache: dict[str, str] = {}
 
-    await resolve_and_validate_all(raw_urls, url_cache)
-    validated_markdown, rejections = await filter_broken_links(draft_markdown)
+    result = await validate_draft(draft_markdown, raw_urls=raw_urls)
 
-    listing_dc = parse_markdown_to_listing(validated_markdown)
-
-    listing_dc.vendor_resources = await adaptive_validate(listing_dc.vendor_resources)
-    listing_dc.other_resources = await adaptive_validate(listing_dc.other_resources)
-
-    if listing_dc.acr_reports:
-        is_valid, _ = await is_likely_vpat_acr(listing_dc.acr_reports[0].url)
-        if not is_valid:
-            listing_dc.acr_reports[0].url = "#"
-            listing_dc.acr_reports[0].title = "None found"
-
-    parsed = dataclass_to_pydantic(listing_dc)
+    parsed = dataclass_to_pydantic(result.listing)
     payload = parsed.model_dump(mode="json")
     payload["raw_markdown"] = draft_markdown
 
-    print(f"Rejections during link validation: {len(rejections)}")
-    for r in rejections:
+    print(f"Rejections during link validation: {len(result.rejections)}")
+    for r in result.rejections:
         print(f"  - {r}")
-    print(f"Vendor resources: {len(listing_dc.vendor_resources)}")
-    print(f"Other resources: {len(listing_dc.other_resources)}")
-    print(f"ACR reports: {len(listing_dc.acr_reports)}")
+    print(f"Vendor resources: {result.diagnostics.surviving_vendor_count} surviving of {result.diagnostics.parsed_vendor_count} parsed")
+    print(f"Other resources: {result.diagnostics.surviving_other_count} surviving of {result.diagnostics.parsed_other_count} parsed")
+    if result.diagnostics.dropped_urls:
+        print(f"Dropped URLs ({len(result.diagnostics.dropped_urls)}):")
+        for u in result.diagnostics.dropped_urls:
+            print(f"  - {u}")
+    print(f"ACR reports: {len(result.listing.acr_reports)}")
+    if result.diagnostics.acr_reset:
+        print("ACR was reset to 'None found' (failed liveness/format check)")
 
     return payload
 

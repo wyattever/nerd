@@ -1,6 +1,8 @@
 export interface ResourceLink {
   url: string;
   text: string;
+  confidence?: number;
+  justification?: string;
 }
 
 export interface SupportContact {

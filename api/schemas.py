@@ -138,3 +138,26 @@ class BatchResearchJob(BaseModel):
 
 class BatchResearchResponse(BaseModel):
     jobs: list[BatchResearchJob]
+
+# ── Draft ingest (Import Data feature) ────────────────────────────────────
+# See nerd-import-data-architecture-v4.md §4.2
+
+class IngestDraftRequest(BaseModel):
+    draft_markdown: str = Field(min_length=1, max_length=102400)
+
+    model_config = {"extra": "forbid"}
+
+
+class DraftDiagnostics(BaseModel):
+    parsed_vendor_count: int
+    surviving_vendor_count: int
+    parsed_other_count: int
+    surviving_other_count: int
+    dropped_urls: list[str] = Field(default_factory=list)
+    acr_reset: bool = False
+
+
+class IngestDraftResponse(BaseModel):
+    parsed_listing: ListingData
+    rejections: list[str] = Field(default_factory=list)
+    diagnostics: DraftDiagnostics

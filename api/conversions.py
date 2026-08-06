@@ -39,8 +39,14 @@ def pydantic_to_dataclass(payload: schemas.ListingData) -> gen.ListingData:
         vendor_directory_url=payload.vendor_directory_url,
         product_description=payload.product_description,
         product_website_url=payload.product_website_url,
-        vendor_resources=[gen.ResourceLink(url=r.url, text=r.text) for r in payload.vendor_resources],
-        other_resources=[gen.ResourceLink(url=r.url, text=r.text) for r in payload.other_resources],
+        vendor_resources=[
+            gen.ResourceLink(url=r.url, text=r.text, confidence=r.confidence, justification=r.justification)
+            for r in payload.vendor_resources
+        ],
+        other_resources=[
+            gen.ResourceLink(url=r.url, text=r.text, confidence=r.confidence, justification=r.justification)
+            for r in payload.other_resources
+        ],
         support_contacts=[
             gen.SupportContact(type=c.type, value=c.value, label=c.label)
             for c in payload.support_contacts
@@ -76,8 +82,14 @@ def dataclass_to_pydantic(listing: gen.ListingData) -> schemas.ListingData:
         vendor_directory_url=listing.vendor_directory_url,
         product_description=listing.product_description,
         product_website_url=listing.product_website_url,
-        vendor_resources=[schemas.ResourceLink(url=r.url, text=r.text) for r in listing.vendor_resources],
-        other_resources=[schemas.ResourceLink(url=r.url, text=r.text) for r in listing.other_resources],
+        vendor_resources=[
+            schemas.ResourceLink(url=r.url, text=r.text, confidence=r.confidence, justification=r.justification)
+            for r in listing.vendor_resources
+        ],
+        other_resources=[
+            schemas.ResourceLink(url=r.url, text=r.text, confidence=r.confidence, justification=r.justification)
+            for r in listing.other_resources
+        ],
         support_contacts=[
             schemas.SupportContact(type=c.type, value=c.value, label=c.label)
             for c in listing.support_contacts
