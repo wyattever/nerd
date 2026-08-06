@@ -44,6 +44,21 @@ export interface ListingData {
   section_overrides?: SectionOverrides;
 }
 
+export interface DraftDiagnostics {
+  parsed_vendor_count: number;
+  surviving_vendor_count: number;
+  parsed_other_count: number;
+  surviving_other_count: number;
+  dropped_urls: string[];
+  acr_reset: boolean;
+}
+
+export interface IngestDraftResponse {
+  parsed_listing: ListingData;
+  rejections: string[];
+  diagnostics: DraftDiagnostics;
+}
+
 export type SectionKey = "header" | "vendor_resources" | "other_resources" | "support" | "acr" | "ai_insights";
 
 export interface InvalidLink {

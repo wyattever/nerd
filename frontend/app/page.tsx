@@ -7,6 +7,8 @@ import { SectionKey } from "@/lib/types";
 import { SectionEditor } from "@/components/SectionEditor";
 import { getSectionHtml } from "@/lib/ncademiPreview";
 import { getIdToken } from "@/lib/firebase";
+import { ImportDataModal } from "@/components/ImportDataModal";
+import { IngestDraftResponse } from "@/lib/types";
 
 interface CandidateRef {
   name: string;
@@ -21,6 +23,40 @@ const SECTION_KEYS: { key: SectionKey; label: string }[] = [
   { key: "support", label: "Support" },
   { key: "acr", label: "ACR" },
 ];
+
+function diagnosticLines(result: IngestDraftResponse): string[] {
+  // See nerd-import-data-architecture-v4.md §6.1-6.2: rejections (flagged,
+  // retained) and drops (removed, data loss) are reported as distinct
+  // groups, never merged into a single count.
+  const { diagnostics, rejections } = result;
+  const lines: string[] = [];
+
+  const vendorDropped = diagnostics.parsed_vendor_count - diagnostics.surviving_vendor_count;
+  const otherDropped = diagnostics.parsed_other_count - diagnostics.surviving_other_count;
+
+  if (vendorDropped > 0 || otherDropped > 0) {
+    lines.push(
+      `WARNING: ${vendorDropped + otherDropped} resource(s) dropped during validation (failed liveness check).`
+    );
+    diagnostics.dropped_urls.forEach(u => lines.push(`  - Dropped: ${u}`));
+  } else {
+    lines.push("All parsed resources passed validation -- none dropped.");
+  }
+
+  if (diagnostics.acr_reset) {
+    lines.push("WARNING: ACR report failed validation and was reset to 'None found'.");
+  }
+
+  if (rejections.length > 0) {
+    lines.push(`${rejections.length} link(s) flagged for manual verification (not removed):`);
+    rejections.forEach(r => lines.push(`  - ${r}`));
+  }
+
+  lines.push(`Vendor resources: ${diagnostics.surviving_vendor_count} of ${diagnostics.parsed_vendor_count} parsed.`);
+  lines.push(`Other resources: ${diagnostics.surviving_other_count} of ${diagnostics.parsed_other_count} parsed.`);
+
+  return lines;
+}
 
 export default function Home() {
   const { state, startResearch, reset, stopResearch, updateListing, injectListing } = useResearch();
@@ -38,6 +74,7 @@ export default function Home() {
   const logRef = useRef<HTMLDivElement>(null);
   const heartbeatTimer = useRef<NodeJS.Timeout | null>(null);
 
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [editorOpenCount, setEditorOpenCount] = useState(0);
   const [unsavedSections, setUnsavedSections] = useState<Set<SectionKey>>(new Set());
@@ -258,6 +295,18 @@ useEffect(() => {
     } catch (err) {
       console.error("Failed to fetch product data:", err);
     }
+  };
+
+  const handleImportProcessed = (result: IngestDraftResponse) => {
+    // See nerd-import-data-architecture-v4.md §3.3, §6.
+    setProcessHeading("Imported Draft");
+    setLocalLog(diagnosticLines(result));
+    setIsDirty(false);
+    setUnsavedSections(new Set());
+    setIsProductLoaded(false);
+    setActiveCandidateSlug(null);
+    setIsImportOpen(false);
+    injectListing(result.parsed_listing, "Loaded imported draft.");
   };
 
   const handleSave = async (target: "candidates" | "products") => {
@@ -513,6 +562,17 @@ useEffect(() => {
                   >
                     View Candidate
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsImportOpen(true)}
+                    disabled={state.status === "streaming"}
+                    className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded
+                               hover:bg-blue-800 focus:outline-none focus:ring-2
+                               focus:ring-blue-500 focus:ring-offset-2
+                               disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                  >
+                    Import Data
+                  </button>
                 </div>
               </div>
             </div>
@@ -675,6 +735,14 @@ useEffect(() => {
           onSave={handleSaveSection}
           onReset={handleResetSection}
           onClose={() => setEditingSection(null)}
+        />
+      )}
+
+      {isImportOpen && (
+        <ImportDataModal
+          isOpen={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+          onProcessed={handleImportProcessed}
         />
       )}
     </div>
