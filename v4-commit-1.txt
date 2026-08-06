@@ -1,0 +1,66 @@
+SCOPE: Commit 1 of 3 for the Import Data feature (nerd-import-data-architecture-v4.md, §11.2). This commit ONLY. Do not touch anything under frontend/, api/schemas.py, api/main.py, or scripts/ingest_ai_studio_draft.py — those are Commit 2 and 3, out of scope here.
+
+BASELINE CHECK — run first, report output before making any changes:
+git status
+git log -1 --oneline
+Confirm working tree is clean and HEAD is at or descended from 1e14ce9. If working tree is not clean, STOP and report — do not proceed.
+
+OBJECTIVE: Extract the validate-and-build sequence currently duplicated in api/worker.py into a new nerd_core/pipeline.py module, with zero behavior change. Update the one test whose mock target this extraction breaks. Add an equivalence test proving old and new code paths produce identical output.
+
+STEP 1 — Create nerd_core/pipeline.py
+
+Read api/worker.py in full first. The new module must reproduce _validate and _build_result_payload exactly, just relocated and split. Contract:
+
+_URL_RE = re.compile(r'https?://[^\s<>"\')\]]+')
+MAX_DRAFT_URLS = 100
+
+DraftDiagnostics dataclass fields: parsed_vendor_count: int, surviving_vendor_count: int, parsed_other_count: int, surviving_other_count: int, dropped_urls: list[str], acr_reset: bool
+
+DraftValidationResult dataclass fields: listing: gen.ListingData, rejections: list[str], url_cache: dict[str, str], diagnostics: DraftDiagnostics
+
+async def validate_links(raw_urls: list[str], draft_markdown: str, url_cache: dict[str, str]) -> tuple[str, list[str]]:
+This is api/worker.py's current _validate function body, moved verbatim. Mutates url_cache in place. Returns (validated_markdown, rejections).
+
+async def build_listing(validated_markdown: str) -> tuple[gen.ListingData, DraftDiagnostics]:
+This is api/worker.py's current _build_result_payload function body, MINUS the JobResultPayload construction at the end — that stays in worker.py, since this module has no HTTP or job-store concerns. Must compute and return DraftDiagnostics: count vendor_resources and other_resources before and after adaptive_validate, list any URLs present before adaptive_validate and absent after as dropped_urls, and set acr_reset=True if is_likely_vpat_acr rewrote the ACR to url="#".
+
+async def validate_draft(draft_markdown: str, raw_urls: list[str] | None = None, url_cache: dict[str, str] | None = None) -> DraftValidationResult:
+Convenience wrapper. If raw_urls is None, extract via _URL_RE; if the extracted count exceeds MAX_DRAFT_URLS, raise ValueError with a message stating the count and the limit. If url_cache is None, default to {}. Calls validate_links then build_listing, assembles DraftValidationResult.
+
+Preserve the exact sequence order from api/worker.py: resolve_and_validate_all, then filter_broken_links, then parse_markdown_to_listing, then adaptive_validate on both resource lists, then is_likely_vpat_acr. Do not reorder. Do not add a semaphore. Do not have filter_broken_links consult url_cache. Do not deduplicate the three redundant URL-resolution passes. These are all deliberately deferred — see §9 of the architecture doc — and changing any of them here breaks the equivalence test this commit exists to establish.
+
+STEP 2 — Refactor api/worker.py
+
+Replace the bodies of _validate and _build_result_payload with calls into nerd_core.pipeline.validate_links and nerd_core.pipeline.build_listing. worker_initial and worker_deep_dive keep calling _validate and _build_result_payload by their current names — only the internals change, not the call sites, not the function signatures those two callers use. Import validate_links and build_listing from nerd_core.pipeline at the top of the file.
+
+STEP 3 — Fix tests/integration/test_job_lifecycle.py
+
+Current line: patch("api.worker._validate", new_callable=AsyncMock)
+This will raise AttributeError once _validate's internals move — the name api.worker._validate still exists as a thin wrapper per Step 2, so confirm whether the patch still works as-is first. If Step 2 kept _validate as a real function name in api/worker.py (calling into pipeline.validate_links), the existing patch target is still valid and no test file change may be needed — check this before editing. If instead the refactor removes the api.worker._validate name entirely, change the patch target to patch("api.worker.validate_links", new_callable=AsyncMock) instead, since that is the name as bound in the worker's namespace after the import in Step 2. Report which case applied.
+
+STEP 4 — New equivalence test
+
+Create tests/unit/test_pipeline_equivalence.py. This test must call nerd_core.pipeline.validate_draft directly, unmocked, against a real or realistic markdown fixture, and assert the returned DraftValidationResult.listing matches field-for-field what api/worker.py's pre-refactor _validate + _build_result_payload sequence would have produced on the same input. Do not put this test in test_job_lifecycle.py — that file mocks the exact function under test here.
+
+VERIFICATION — run every command below, paste raw output for each, do not summarize or paraphrase results:
+
+python -c "import ast; ast.parse(open('nerd_core/pipeline.py').read())"
+
+python -c "import ast; ast.parse(open('api/worker.py').read())"
+
+pytest tests/integration/test_job_lifecycle.py -v
+
+pytest tests/unit/test_pipeline_equivalence.py -v
+
+pytest tests/ -v
+
+git status
+
+git diff --stat
+
+CONSTRAINTS:
+All edits sequential — no parallel str_replace operations.
+Do not edit .gitignore under any circumstances.
+Max 2 self-directed fix attempts per distinct error. On a 3rd occurrence of the same root-cause error, STOP and report the exact error text plus what was tried, rather than attempting a different fix.
+Do not commit. Do not push. Report back with the verification output above and wait for explicit go-ahead before committing.
+No unauthorized file modifications — the git status output above is the check for this; if anything outside nerd_core/pipeline.py, api/worker.py, tests/integration/test_job_lifecycle.py, and tests/unit/test_pipeline_equivalence.py shows as modified, report it and stop.
