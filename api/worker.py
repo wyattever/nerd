@@ -8,7 +8,6 @@ import uuid
 from fastapi import FastAPI
 from typing import Dict, Any
 
-from nerd_core.generators import parse_markdown_to_listing
 from nerd_core.services import (
     run_initial_research,
     run_deep_dive,
@@ -16,9 +15,7 @@ from nerd_core.services import (
 )
 # Integration: Using hardened liveness validator
 from nerd_core.tools.liveness_validator import validate_link
-from nerd_core.utils import resolve_and_validate_all, filter_broken_links
-from nerd_core.adaptive_validation import adaptive_validate
-from nerd_core.acr_validation import is_likely_vpat_acr
+from nerd_core.pipeline import validate_links, build_listing
 from . import schemas
 from . import store
 from .conversions import dataclass_to_pydantic
@@ -43,9 +40,7 @@ class WorkerDeepDiveRequest(schemas.DeepDiveRequest):
 
 
 async def _validate(raw_urls: list[str], draft_markdown: str, url_cache: dict[str, str]):
-    await resolve_and_validate_all(raw_urls, url_cache)
-    validated_markdown, rejections = await filter_broken_links(draft_markdown)
-    return validated_markdown, rejections
+    return await validate_links(raw_urls, draft_markdown, url_cache)
 
 
 async def _build_result_payload(
@@ -55,17 +50,7 @@ async def _build_result_payload(
     rejections: list[str],
     timeout_min: int,
 ) -> dict:
-    listing_dc = parse_markdown_to_listing(validated_markdown)
-
-    # Note: adaptive_validate now utilizes the hardened liveness_validator internally
-    listing_dc.vendor_resources = await adaptive_validate(listing_dc.vendor_resources)
-    listing_dc.other_resources = await adaptive_validate(listing_dc.other_resources)
-
-    if listing_dc.acr_reports:
-        is_valid, _ = await is_likely_vpat_acr(listing_dc.acr_reports[0].url)
-        if not is_valid:
-            listing_dc.acr_reports[0].url = "#"
-            listing_dc.acr_reports[0].title = "None found"
+    listing_dc, _diagnostics = await build_listing(validated_markdown)
 
     parsed = dataclass_to_pydantic(listing_dc)
     payload = schemas.JobResultPayload(
