@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from nerd_core.services import run_initial_research, run_deep_dive, synthesize_insights
+from nerd_core.services import run_initial_research, run_deep_dive
 from nerd_core.generators import parse_markdown_to_listing, render_listing_html
 from nerd_core.utils import resolve_and_validate_all
 from jinja2 import Environment, FileSystemLoader
@@ -102,10 +102,10 @@ async def process_url(url: str, force: bool = False):
         logger.info(f"  Phase 2: Deep Dive for {listing.product_name}...")
         deep_dive_draft, dd_urls = run_deep_dive(url, listing.product_name, initial_draft, timeout_min=4)
         
-        # 3. AI Insights Synthesis
-        logger.info("  Phase 3: Synthesizing Insights...")
+        # 3. Combine drafts (AI Insights synthesis removed per Decision Log #18 -- ai_insights
+        # is no longer synthesized anywhere in the pipeline; this file previously called a
+        # synthesize_insights() function that no longer exists in nerd_core/services.py)
         full_markdown = f"{initial_draft}\n\n## Additional Research\n\n{deep_dive_draft}"
-        final_insights = synthesize_insights(full_markdown)
         
         # 4. Resolve Proxy URLs
         logger.info("  Phase 4: Resolving Redirects...")
@@ -118,8 +118,6 @@ async def process_url(url: str, force: bool = False):
         
         # 5. Final Parse & Render
         final_listing = parse_markdown_to_listing(full_markdown)
-        final_listing.ai_insights = final_insights
-        
         # 6. Save Artifacts
         # Prepare pure ListingData for JSON
         pure_listing = {
@@ -130,7 +128,6 @@ async def process_url(url: str, force: bool = False):
             "product_website_url": final_listing.product_website_url,
             "vendor_resources": [asdict(r) for r in final_listing.vendor_resources],
             "other_resources": [asdict(r) for r in final_listing.other_resources],
-            "ai_insights": final_listing.ai_insights,
             "support_contacts": [asdict(c) for c in final_listing.support_contacts],
             "acr_reports": [asdict(a) for a in final_listing.acr_reports],
             "last_updated": final_listing.last_updated,

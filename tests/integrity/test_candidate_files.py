@@ -7,7 +7,12 @@ from api.schemas import ListingData
 # Note: This test validates the source-of-truth JSON files in the filesystem,
 # not the Firestore state. Firestore state is validated by integration tests.
 
-CANDIDATES_DIR = Path(os.getenv("CANDIDATES_DIR", str(Path(__file__).parent.parent.parent / "NCADEMI_candidates")))
+# Fallback default updated 2026-07-09: NCADEMI_candidates/ no longer exists in the
+# repo post-FinOps directory-decoupling migration (data lives in ~/nerd_data/ now,
+# physically separate from the repo to avoid triggering the Uvicorn reload watcher).
+# run_nerd() sets CANDIDATES_DIR=/data/candidates inside Docker; this fallback covers
+# running pytest directly on the host outside the container.
+CANDIDATES_DIR = Path(os.getenv("CANDIDATES_DIR", str(Path.home() / "nerd_data" / "candidates")))
 LOCAL_MODE = os.getenv("LOCAL_MODE", "false").lower() == "true"
 
 def get_candidate_files():

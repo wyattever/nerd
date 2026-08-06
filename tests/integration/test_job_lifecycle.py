@@ -9,12 +9,10 @@ async def test_initial_research_lifecycle(client):
     
     # Mock the long-running research services to return instantly
     with patch("api.worker.run_initial_research") as mock_research, \
-         patch("api.worker._validate", new_callable=AsyncMock) as mock_validate, \
-         patch("api.worker.synthesize_insights") as mock_synth:
+         patch("api.worker._validate", new_callable=AsyncMock) as mock_validate:
         
         mock_research.return_value = ("# Mock Draft", ["https://link1.com"])
         mock_validate.return_value = ("# Validated MD", [])
-        mock_synth.return_value = "Mocked AI Insights"
 
         # 1. Enqueue job
         resp = await client.post(
@@ -48,13 +46,14 @@ async def test_initial_research_lifecycle(client):
                     break
 
         # 3. Assertions
-        # Expect at least: searching_initial, validating_links, synthesizing
+        # Real emitted statuses per api/job_store.py claim_job() + api/worker.py: searching_initial
+        # (from claim_job), validating_links (explicit emit_event in worker_initial). AI Insights
+        # was removed per Decision Log #18 -- ListingData never had an ai_insights field, so no
+        # such key or status exists in the real payload/event stream.
         statuses = [e["status"] for e in status_events]
         assert "searching_initial" in statuses
         assert "validating_links" in statuses
-        assert "synthesizing" in statuses
         
         assert result_payload is not None
         assert result_payload["raw_markdown"] == "# Mock Draft"
         assert result_payload["parsed_listing"]["product_name"] == "Validated MD"
-        assert result_payload["parsed_listing"]["ai_insights"] == "Mocked AI Insights"
