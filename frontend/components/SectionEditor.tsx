@@ -97,6 +97,17 @@ export function SectionEditor({
     }
   };
 
+  const DEFAULT_RESOURCE_HTML = `<h3 class="section-heading">From</h3>
+<ul class="wp-block-list resource-list">
+<li><a href="" target="_blank" rel="noopener noreferrer"></a></li>
+<li><a href="" target="_blank" rel="noopener noreferrer"></a></li>
+<li><a href="" target="_blank" rel="noopener noreferrer"></a></li>
+</ul>`;
+
+  const handleAddDefaultHtml = () => {
+    setCurrentHtml(DEFAULT_RESOURCE_HTML);
+  };
+
   return (
     <dialog 
       ref={dialogRef} 
@@ -116,6 +127,13 @@ export function SectionEditor({
           className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           Cancel
+        </button>
+        <button
+          onClick={handleAddDefaultHtml}
+          disabled={currentHtml.trim() !== ""}
+          className="px-4 py-2 text-sm font-medium text-white bg-[#666666] border border-transparent rounded hover:bg-[#555555] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500"
+        >
+          Add default HTML
         </button>
         <button 
           onClick={handleReset} 

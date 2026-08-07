@@ -571,7 +571,7 @@ useEffect(() => {
                                focus:ring-blue-500 focus:ring-offset-2
                                disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                   >
-                    Import Data
+                    Import
                   </button>
                 </div>
               </div>
