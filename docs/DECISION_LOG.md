@@ -151,3 +151,13 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 ### 28. WORKER AUTH — ADC only, no GEMINI_API_KEY on nerd-worker.
 - **Decision:** `nerd-worker` authenticates to Vertex AI/Gemini via Application Default Credentials (`roles/aiplatform.user` on the compute service account) and to Firestore via `roles/datastore.user`. Never add a `GEMINI_API_KEY` secret reference to the worker's deploy config — this differs intentionally from `nerd-api`, which does use `--set-secrets="GEMINI_API_KEY=..."`.
 - **Status:** SETTLED.
+
+---
+
+## Security
+
+### 29. SECURITY POSTURE — Deferred until public deployment.
+- **Decision:** N.E.R.D. is MVP-stage, running on a local server only. Feature-level security hardening — e.g. adding an auth gate to `/users`, closing access-control gaps on other net-new routes — is deferred until the app is published to the web.
+- **Scope/exception:** Does not relax #27 (`LOCAL_MODE` / `NEXT_PUBLIC_DISABLE_AUTH` must never reach deployed environments) or #28 (worker auth via ADC only). Those guardrails exist specifically to stop local-dev conveniences from leaking into a deployed environment — see the 2026-07-08 incident logged under #27 — and remain in force regardless of this project's current stage.
+- **Rationale:** No value in hardening auth/access-control for routes and features not yet exposed to the public internet. Revisit before any public launch.
+- **Status:** SETTLED.
