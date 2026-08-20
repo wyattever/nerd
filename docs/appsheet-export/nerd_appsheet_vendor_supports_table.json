@@ -1,0 +1,474 @@
+{
+  "$meta": {
+    "artifact": "N.E.R.D. — AppSheet vendor-level Supports table: structure + visible content snapshot",
+    "purpose": "Structure documentation for the NERD dashboard.",
+    "source_database_id": "U0ppjX3l274pYh2MnNSXo7",
+    "source_table_id": "unknown — not supplied",
+    "source_table_label": "Supports (vendor-level) — provisional",
+    "captured": "2026-08-18",
+    "inputs": [
+      {
+        "kind": "ui_screenshot",
+        "file": "Screenshot_2026-08-18_at_2_55_28_PM.png",
+        "fidelity": "All 19 rows visible. URLs and long names truncated at column boundaries. No Row ID column present."
+      }
+    ],
+    "truncation_marker": "…",
+    "truncation_meaning": "A trailing '…' means the value was cut off at the column boundary. Per-row list in _truncated_fields.",
+    "completeness": {
+      "rows_visible": 19,
+      "table_appears_complete": true,
+      "basis": "The 'Add row' affordance follows row 19 with no scroll remainder.",
+      "relationship_note": "This is the VENDOR-level Supports table — it carries a Vendor ID column and no Product reference. It is NOT the table Products.support_ids targets, which carries 85 distinct child references. A separate product-level Supports table exists and has not yet been captured."
+    },
+    "table_family": {
+      "note": "This database uses a paired vendor-level / product-level pattern for both resources and supports.",
+      "captured_so_far": [
+        "Products (101 rows, CSV + screenshot)",
+        "Vendor Resources (31 rows, screenshot)",
+        "Resources / product-level (89 of ~281 rows, screenshot)",
+        "ACRs (79 of 79 rows, screenshot + CSV key reconciliation, row keys VERIFIED)",
+        "Supports / vendor-level (19 rows, screenshot — this artifact)"
+      ],
+      "not_yet_captured": [
+        "Supports / product-level (~85 rows)",
+        "Vendors"
+      ]
+    }
+  },
+  "schema": {
+    "table": "Supports (vendor-level)",
+    "row_count": 19,
+    "row_key": "not exposed in this view",
+    "columns": [
+      {
+        "name": "support_type",
+        "appsheet_label": "Support Type",
+        "type": "Enum",
+        "confidence": "high",
+        "enum_values": [
+          "Email",
+          "Website",
+          "Information"
+        ],
+        "notes": "Discriminator controlling which of the three payload columns is populated. Email -> support_email; Website -> support_website_name + support_website_url; Information -> support_information. Maps directly onto SupportContact.type, which uses email|url|text.",
+        "value_counts": {
+          "Email": 9,
+          "Website": 9,
+          "Information": 1
+        },
+        "profile": {
+          "filled": 19,
+          "empty": 0,
+          "distinct": 3
+        }
+      },
+      {
+        "name": "support_website_name",
+        "appsheet_label": "Support Website Name",
+        "type": "Text",
+        "confidence": "high",
+        "notes": "Link label. Populated only on Website rows. Maps to SupportContact.label.",
+        "profile": {
+          "filled": 9,
+          "empty": 10,
+          "distinct": 9
+        }
+      },
+      {
+        "name": "support_website_url",
+        "appsheet_label": "Support Website URL",
+        "type": "Url",
+        "confidence": "high",
+        "notes": "Populated only on Website rows. Maps to SupportContact.value when type is url.",
+        "profile": {
+          "filled": 9,
+          "empty": 10,
+          "distinct": 8
+        }
+      },
+      {
+        "name": "support_email",
+        "appsheet_label": "Support Email",
+        "type": "Email",
+        "confidence": "high",
+        "notes": "Bare address, no mailto: prefix — matches the Gem instruction for Support Contact lines. Populated only on Email rows. Maps to SupportContact.value when type is email.",
+        "profile": {
+          "filled": 9,
+          "empty": 10,
+          "distinct": 9
+        }
+      },
+      {
+        "name": "support_information",
+        "appsheet_label": "Support Information",
+        "type": "LongText",
+        "confidence": "medium",
+        "notes": "Free-text fallback for vendors with no direct channel. Populated on 1 of 19 rows. Maps to SupportContact.value when type is text.",
+        "profile": {
+          "filled": 1,
+          "empty": 18,
+          "distinct": 1
+        }
+      },
+      {
+        "name": "vendor_id",
+        "appsheet_label": "Vendor ID",
+        "type": "Ref",
+        "ref_target": "Vendors",
+        "confidence": "high",
+        "notes": "Stores vendor NAME, consistent with Products.vendor_id and Vendor Resources.vendor_reference. Populated on all 19 rows. Several vendors hold multiple support rows (Adobe 2, Google 2, A+E Global Media 2, Curriculum Associates 2, Capstone 3).",
+        "value_counts": {
+          "Instructure": 1,
+          "Adobe": 2,
+          "BrainPop": 1,
+          "A+E Global Media": 2,
+          "McGraw Hill": 1,
+          "OpenAI": 1,
+          "Google": 2,
+          "IXL Learning": 1,
+          "Curriculum Associates": 2,
+          "PowerSchool": 1,
+          "Amplify": 1,
+          "Lexia": 1,
+          "Capstone": 3
+        },
+        "profile": {
+          "filled": 19,
+          "empty": 0,
+          "distinct": 13
+        }
+      },
+      {
+        "name": "vendor_support_datetime",
+        "appsheet_label": "Vendor Support… (truncated)",
+        "type": "DateTime",
+        "confidence": "medium",
+        "notes": "Format 'M/D/YY, h:mm AM/PM' — matches Vendor Resources, Resources, and ACRs. Products remains the outlier with 'M/D/YYYY h:mm:ss AM/PM'. Empty on 1 row.",
+        "profile": {
+          "filled": 18,
+          "empty": 1,
+          "distinct": 16
+        }
+      },
+      {
+        "name": "checkbox_unnamed",
+        "appsheet_label": "(header truncated to icon)",
+        "type": "Yes/No",
+        "confidence": "medium",
+        "notes": "Same position and behavior as 'Added to Site' in the ACRs and Resources tables; inferred to be the same publication gate. 12 checked, 6 unchecked, 1 unread (row 1 obscured by the active-row highlight).",
+        "profile": {
+          "checked": 13,
+          "unchecked": 5,
+          "unknown": 1
+        }
+      },
+      {
+        "name": "column_9_unread",
+        "appsheet_label": "unreadable",
+        "type": "unknown",
+        "confidence": "none",
+        "notes": "A column exists to the right of the checkbox, before the 'Add column' control. No header or values readable."
+      }
+    ],
+    "relations": [
+      {
+        "from": "this_table.vendor_id",
+        "to": "Vendors",
+        "cardinality": "many-to-one",
+        "join_key": "vendor name string",
+        "integrity": "strong — all 19 populated"
+      },
+      {
+        "from": "Products.support_ids",
+        "to": "product-level Supports table (NOT this one)",
+        "cardinality": "one-to-many",
+        "join_key": "AppSheet UNIQUEID",
+        "integrity": "n/a — different table"
+      }
+    ],
+    "nerd_mapping": {
+      "note": "This table maps onto ListingData.support_contacts via the support_type discriminator, but is scoped to vendors rather than products. Attaching it to a product listing requires resolving Products.vendor_id -> Vendors -> these rows.",
+      "maps_to_support_contact": {
+        "support_type": "SupportContact.type (Email->email, Website->url, Information->text)",
+        "support_email": "SupportContact.value when type=email",
+        "support_website_url": "SupportContact.value when type=url",
+        "support_website_name": "SupportContact.label",
+        "support_information": "SupportContact.value when type=text"
+      },
+      "no_nerd_equivalent": [
+        "vendor_id scoping",
+        "vendor_support_datetime",
+        "checkbox_unnamed"
+      ]
+    }
+  },
+  "rows": [
+    {
+      "ui_row": 1,
+      "support_type": "Email",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": "support_a11y@instructure.com",
+      "support_information": null,
+      "vendor_id": "Instructure",
+      "vendor_support_datetime_raw": "3/2/26, 4:33 PM",
+      "checkbox_unnamed": null,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 2,
+      "support_type": "Website",
+      "support_website_name": "Adobe Accessibility Feedback Fo…",
+      "support_website_url": "https://survey.adobe.com/jfe/for…",
+      "support_email": null,
+      "support_information": null,
+      "vendor_id": "Adobe",
+      "vendor_support_datetime_raw": "2/17/26, 10:15 AM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": [
+        "support_website_name",
+        "support_website_url"
+      ]
+    },
+    {
+      "ui_row": 3,
+      "support_type": "Email",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": "accessibility@brainpop.com",
+      "support_information": null,
+      "vendor_id": "BrainPop",
+      "vendor_support_datetime_raw": null,
+      "checkbox_unnamed": false,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 4,
+      "support_type": "Email",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": "ClosedCaptions@aegm.com",
+      "support_information": null,
+      "vendor_id": "A+E Global Media",
+      "vendor_support_datetime_raw": "2/27/26, 8:41 AM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 5,
+      "support_type": "Email",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": "accessibility@mheducation.com",
+      "support_information": null,
+      "vendor_id": "McGraw Hill",
+      "vendor_support_datetime_raw": "2/17/26, 10:36 AM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 6,
+      "support_type": "Email",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": "access@adobe.com",
+      "support_information": null,
+      "vendor_id": "Adobe",
+      "vendor_support_datetime_raw": "2/17/26, 10:15 AM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 7,
+      "support_type": "Website",
+      "support_website_name": "OpenAI Help Center",
+      "support_website_url": "https://help.openai.com/",
+      "support_email": null,
+      "support_information": null,
+      "vendor_id": "OpenAI",
+      "vendor_support_datetime_raw": "2/17/26, 11:10 AM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 8,
+      "support_type": "Email",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": "apps-accessibility@google.com",
+      "support_information": null,
+      "vendor_id": "Google",
+      "vendor_support_datetime_raw": "2/27/26, 9:13 AM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 9,
+      "support_type": "Website",
+      "support_website_name": "Help Request",
+      "support_website_url": "https://www.ixl.com/help",
+      "support_email": null,
+      "support_information": null,
+      "vendor_id": "IXL Learning",
+      "vendor_support_datetime_raw": "2/26/26, 3:19 PM",
+      "checkbox_unnamed": false,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 10,
+      "support_type": "Website",
+      "support_website_name": "A+E Global Media Accessibility S…",
+      "support_website_url": "https://www.aegm.com/accessib…",
+      "support_email": null,
+      "support_information": null,
+      "vendor_id": "A+E Global Media",
+      "vendor_support_datetime_raw": "2/27/26, 8:41 AM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": [
+        "support_website_name",
+        "support_website_url"
+      ]
+    },
+    {
+      "ui_row": 11,
+      "support_type": "Website",
+      "support_website_name": "Contact your local Curriculum As…",
+      "support_website_url": "https://www.curriculumassociate…",
+      "support_email": null,
+      "support_information": null,
+      "vendor_id": "Curriculum Associates",
+      "vendor_support_datetime_raw": "4/20/26, 1:35 PM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": [
+        "support_website_name",
+        "support_website_url"
+      ]
+    },
+    {
+      "ui_row": 12,
+      "support_type": "Information",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": null,
+      "support_information": "Existing customers can contact t…",
+      "vendor_id": "Curriculum Associates",
+      "vendor_support_datetime_raw": "4/20/26, 1:42 PM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": [
+        "support_information"
+      ]
+    },
+    {
+      "ui_row": 13,
+      "support_type": "Email",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": "accessibility@powerschool.com",
+      "support_information": null,
+      "vendor_id": "PowerSchool",
+      "vendor_support_datetime_raw": "5/13/26, 1:57 PM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 14,
+      "support_type": "Website",
+      "support_website_name": "Support",
+      "support_website_url": "https://service.amplify.com/supp…",
+      "support_email": null,
+      "support_information": null,
+      "vendor_id": "Amplify",
+      "vendor_support_datetime_raw": "5/14/26, 5:30 PM",
+      "checkbox_unnamed": false,
+      "column_9_unread": null,
+      "_truncated_fields": [
+        "support_website_url"
+      ]
+    },
+    {
+      "ui_row": 15,
+      "support_type": "Email",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": "accessibility@lexialearning.com",
+      "support_information": null,
+      "vendor_id": "Lexia",
+      "vendor_support_datetime_raw": "6/29/26, 8:31 AM",
+      "checkbox_unnamed": false,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 16,
+      "support_type": "Website",
+      "support_website_name": "Google Accessibility Help",
+      "support_website_url": "https://support.google.com/acco…",
+      "support_email": null,
+      "support_information": null,
+      "vendor_id": "Google",
+      "vendor_support_datetime_raw": "7/21/26, 5:18 PM",
+      "checkbox_unnamed": false,
+      "column_9_unread": null,
+      "_truncated_fields": [
+        "support_website_url"
+      ]
+    },
+    {
+      "ui_row": 17,
+      "support_type": "Email",
+      "support_website_name": null,
+      "support_website_url": null,
+      "support_email": "accessibility@capstonepub.com",
+      "support_information": null,
+      "vendor_id": "Capstone",
+      "vendor_support_datetime_raw": "8/7/26, 12:20 PM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": []
+    },
+    {
+      "ui_row": 18,
+      "support_type": "Website",
+      "support_website_name": "Support Form",
+      "support_website_url": "https://www.pebblego.com/reso…",
+      "support_email": null,
+      "support_information": null,
+      "vendor_id": "Capstone",
+      "vendor_support_datetime_raw": "8/7/26, 12:23 PM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": [
+        "support_website_url"
+      ]
+    },
+    {
+      "ui_row": 19,
+      "support_type": "Website",
+      "support_website_name": "Help Center",
+      "support_website_url": "https://www.pebblego.com/reso…",
+      "support_email": null,
+      "support_information": null,
+      "vendor_id": "Capstone",
+      "vendor_support_datetime_raw": "8/7/26, 12:22 PM",
+      "checkbox_unnamed": true,
+      "column_9_unread": null,
+      "_truncated_fields": [
+        "support_website_url"
+      ]
+    }
+  ]
+}

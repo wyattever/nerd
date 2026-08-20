@@ -1,0 +1,2960 @@
+{
+  "$meta": {
+    "artifact": "N.E.R.D. — AppSheet Products table: structure + content snapshot",
+    "purpose": "Phase 1 prepopulation source and Phase 2 UI wiring reference. Documents the AppSheet Products table schema and its visible content as of the export date.",
+    "source_database_id": "U0ppjX3l274pYh2MnNSXo7",
+    "source_table_id": "HmBN-uoEaE4UMMOSdCC_5d",
+    "source_table_label": "Products",
+    "captured": "2026-08-18",
+    "inputs": [
+      {
+        "kind": "csv_export",
+        "file": "AppSheet_ViewData_2026-08-18.csv",
+        "covers": "all fields except platforms",
+        "fidelity": "complete, untruncated"
+      },
+      {
+        "kind": "ui_screenshot",
+        "file": "Screenshot_2026-08-18_at_2_37_45_PM.png",
+        "covers": "platforms only, plus column type/order/color evidence",
+        "fidelity": "visually truncated — see truncation_marker"
+      }
+    ],
+    "truncation_marker": "…",
+    "truncation_meaning": "A '…' element at the end of a platforms array means the chip list ran to the column boundary in the screenshot; additional values may exist beyond what was visible. It is NOT a data value.",
+    "row_order": "CSV export order (alphabetical by product_name). The screenshot is sorted by priority and does NOT match csv_row.",
+    "known_gaps": [
+      "The AppSheet row key (UNIQUEID) for Products is not present in either input. Child references in acr_ids / resource_ids / support_ids point outward, but nothing points back in, so a Products key must be obtained before any join or round-trip write.",
+      "platforms is absent from the CSV export entirely and was transcribed from the screenshot. It requires a verified re-export before being treated as authoritative.",
+      "Enum value lists for priority, status, and platforms are observed-from-data, not read from AppSheet column configuration. Unused values may exist.",
+      "Column types below are inferred from value shape and UI affordances, not read from the AppSheet column editor."
+    ]
+  },
+  "schema": {
+    "table": "Products",
+    "estimated_row_key": "unknown — not exported; product_name is unique across all 101 rows but is a label, not a confirmed key",
+    "columns": [
+      {
+        "name": "product_name",
+        "appsheet_label": "Product Name",
+        "type": "Text",
+        "required": true,
+        "confidence": "high",
+        "notes": "Unique across all rows. Likely the display label; may or may not be the key.",
+        "profile": {
+          "filled": 101,
+          "empty": 0,
+          "distinct": 101,
+          "max_length": 50
+        }
+      },
+      {
+        "name": "vendor_id",
+        "appsheet_label": "Vendor ID",
+        "type": "Ref",
+        "ref_target": "Vendors (unconfirmed)",
+        "required": false,
+        "confidence": "medium",
+        "notes": "Stores a vendor NAME, not an opaque ID. Contains two sentinel strings that are not real vendors: 'NULL' (26 rows) and 'CANDIDATE' (11 rows). 37% of rows therefore carry no genuine vendor reference. UI shows a ref-arrow icon on this column.",
+        "sentinel_values": [
+          "NULL",
+          "CANDIDATE"
+        ],
+        "profile": {
+          "filled": 100,
+          "empty": 1,
+          "distinct": 33,
+          "max_length": 30
+        }
+      },
+      {
+        "name": "product_website",
+        "appsheet_label": "Product Website",
+        "type": "Url",
+        "required": true,
+        "confidence": "high",
+        "profile": {
+          "filled": 101,
+          "empty": 0,
+          "distinct": 100,
+          "max_length": 97
+        }
+      },
+      {
+        "name": "product_description",
+        "appsheet_label": "Product Description",
+        "type": "LongText",
+        "required": false,
+        "confidence": "medium",
+        "notes": "Max observed 420 chars — could be Text rather than LongText.",
+        "profile": {
+          "filled": 100,
+          "empty": 1,
+          "distinct": 100,
+          "max_length": 420
+        }
+      },
+      {
+        "name": "priority",
+        "appsheet_label": "Priority",
+        "type": "Enum",
+        "required": false,
+        "confidence": "high",
+        "enum_values": [
+          "High",
+          "Medium",
+          "Low"
+        ],
+        "profile": {
+          "filled": 88,
+          "empty": 13,
+          "distinct": 3,
+          "max_length": 6
+        }
+      },
+      {
+        "name": "platforms",
+        "appsheet_label": "Platforms",
+        "type": "EnumList",
+        "required": false,
+        "confidence": "low",
+        "enum_values": [
+          "Web Application",
+          "Mobile Application",
+          "Web Content",
+          "Browser Extension"
+        ],
+        "notes": "NOT PRESENT IN THE CSV EXPORT. Transcribed from the screenshot. Only 22 of 101 rows have visible values; the remaining 79 are recorded as empty arrays, which may reflect genuine emptiness or export/visibility limits. Re-export before trusting.",
+        "profile": {
+          "filled": 22,
+          "empty": 79
+        }
+      },
+      {
+        "name": "notes",
+        "appsheet_label": "Notes",
+        "type": "LongText",
+        "required": false,
+        "confidence": "high",
+        "notes": "Free-form editorial notes, contains embedded newlines and initialed sign-offs (e.g. '-RC'). Max observed 780 chars.",
+        "profile": {
+          "filled": 31,
+          "empty": 70,
+          "distinct": 27,
+          "max_length": 780
+        }
+      },
+      {
+        "name": "status",
+        "appsheet_label": "Status",
+        "type": "Enum",
+        "required": false,
+        "confidence": "high",
+        "enum_values": [
+          "Published",
+          "Added to Site",
+          "Needs Review",
+          "Discussion"
+        ],
+        "ui_colors": {
+          "Published": "blue",
+          "Added to Site": "green",
+          "Needs Review": "yellow",
+          "Discussion": "orange"
+        },
+        "notes": "11 rows have no status. UI renders each value as a colored chip — colors above are observed from the screenshot and should drive the dashboard's status treatment, with a non-color cue added alongside (WCAG 1.4.1).",
+        "profile": {
+          "filled": 90,
+          "empty": 11,
+          "distinct": 4,
+          "max_length": 13
+        }
+      },
+      {
+        "name": "last_updated",
+        "appsheet_label": "Last Updated",
+        "type": "DateTime",
+        "required": true,
+        "confidence": "high",
+        "notes": "Stored as US-locale string 'M/D/YYYY h:mm:ss AM/PM'. All 101 values parse cleanly. Exposed here as both last_updated_raw (verbatim) and last_updated_iso (derived, for sorting).",
+        "profile": {
+          "filled": 101,
+          "empty": 0,
+          "distinct": 101,
+          "max_length": 21
+        }
+      },
+      {
+        "name": "ncademi_product_url",
+        "appsheet_label": "NCADEMI Product URL",
+        "type": "Url",
+        "required": false,
+        "confidence": "high",
+        "notes": "Populated only for products already live on ncademi.org — 54 of 101. Correlates with status but is not derivable from it.",
+        "profile": {
+          "filled": 54,
+          "empty": 47,
+          "distinct": 54,
+          "max_length": 77
+        }
+      },
+      {
+        "name": "gatherer",
+        "appsheet_label": "Gatherer",
+        "type": "Ref or Enum",
+        "ref_target": "People/Users (unconfirmed)",
+        "required": false,
+        "confidence": "low",
+        "notes": "CSV stores an email address; the UI displays a person's full name, which indicates a Ref to a people table with a display-name label. Only 2 distinct values present, too few to infer the full vocabulary.",
+        "profile": {
+          "filled": 35,
+          "empty": 66,
+          "distinct": 2,
+          "max_length": 21
+        }
+      },
+      {
+        "name": "reviewer",
+        "appsheet_label": "Reviewer",
+        "type": "Ref or Enum",
+        "ref_target": "People/Users (unconfirmed)",
+        "required": false,
+        "confidence": "low",
+        "notes": "Same shape and caveats as gatherer.",
+        "profile": {
+          "filled": 34,
+          "empty": 67,
+          "distinct": 2,
+          "max_length": 21
+        }
+      },
+      {
+        "name": "acr_ids",
+        "appsheet_label": "ACRs",
+        "type": "EnumList of Ref",
+        "ref_target": "ACRs",
+        "required": false,
+        "confidence": "high",
+        "notes": "Comma-space delimited 22-character AppSheet UNIQUEID keys. 79 references across 59 rows, 0-5 per row, all distinct — strict one-to-many, no shared child rows.",
+        "profile": {
+          "filled": 59,
+          "empty": 42
+        }
+      },
+      {
+        "name": "resource_ids",
+        "appsheet_label": "Resources",
+        "type": "EnumList of Ref",
+        "ref_target": "Resources",
+        "required": false,
+        "confidence": "high",
+        "notes": "281 references across 80 rows, 0-13 per row, all distinct. This is the highest-cardinality child relation and the one that maps onto ListingData.vendor_resources / other_resources — the Resources table must be inspected for a column that distinguishes the two.",
+        "profile": {
+          "filled": 80,
+          "empty": 21
+        }
+      },
+      {
+        "name": "support_ids",
+        "appsheet_label": "Supports",
+        "type": "EnumList of Ref",
+        "ref_target": "Supports",
+        "required": false,
+        "confidence": "high",
+        "notes": "85 references across 61 rows, 0-3 per row, all distinct.",
+        "profile": {
+          "filled": 61,
+          "empty": 40
+        }
+      }
+    ],
+    "relations": [
+      {
+        "from": "Products.vendor_id",
+        "to": "Vendors",
+        "cardinality": "many-to-one",
+        "join_key": "vendor name string",
+        "integrity": "weak — 37% sentinel values"
+      },
+      {
+        "from": "Products.acr_ids",
+        "to": "ACRs",
+        "cardinality": "one-to-many",
+        "join_key": "AppSheet UNIQUEID",
+        "integrity": "strong — all references distinct"
+      },
+      {
+        "from": "Products.resource_ids",
+        "to": "Resources",
+        "cardinality": "one-to-many",
+        "join_key": "AppSheet UNIQUEID",
+        "integrity": "strong — all references distinct"
+      },
+      {
+        "from": "Products.support_ids",
+        "to": "Supports",
+        "cardinality": "one-to-many",
+        "join_key": "AppSheet UNIQUEID",
+        "integrity": "strong — all references distinct"
+      }
+    ],
+    "nerd_mapping": {
+      "note": "The AppSheet Products table is an editorial workflow record, not a published-listing record. It overlaps ListingData on product identity and child collections but diverges on workflow fields, which have no ListingData equivalent. Treat this as a distinct model rather than forcing it into ListingData.",
+      "maps_to_listing_data": {
+        "product_name": "product_name",
+        "product_website": "product_website_url",
+        "product_description": "product_description",
+        "vendor_id": "vendor_name",
+        "ncademi_product_url": "vendor_directory_url (verify — semantics may differ)",
+        "last_updated": "last_updated / last_updated_at",
+        "acr_ids": "acr_reports (via ACRs table)",
+        "resource_ids": "vendor_resources + other_resources (via Resources table; split rule unknown)",
+        "support_ids": "support_contacts (via Supports table)"
+      },
+      "no_listing_data_equivalent": [
+        "priority",
+        "platforms",
+        "notes",
+        "status",
+        "gatherer",
+        "reviewer"
+      ],
+      "not_present_in_appsheet": [
+        "html_override",
+        "section_overrides",
+        "raw_markdown"
+      ]
+    }
+  },
+  "rows": [
+    {
+      "csv_row": 1,
+      "product_name": "ABCya!",
+      "vendor_id": "IXL Learning",
+      "product_website": "https://www.abcya.com/",
+      "product_description": "Educational platform that provides interactive games and activities designed to support learning in subjects such as math, language arts, and problem-solving for students in grades PreK-6.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application",
+        "…"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:16:32 AM",
+      "last_updated_iso": "2026-04-07T10:16:32",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/abcya/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "NNQiOxxdRE4xufWcuEc8Yc"
+      ],
+      "support_ids": [
+        "bfwi4_R_YC4kUZJI5AZaZ2"
+      ]
+    },
+    {
+      "csv_row": 2,
+      "product_name": "Adobe Acrobat",
+      "vendor_id": "Adobe",
+      "product_website": "https://www.adobe.com/acrobat.html",
+      "product_description": "Adobe Acrobat is a software application used to create, edit, view, and manage PDF documents.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:17:47 AM",
+      "last_updated_iso": "2026-04-07T10:17:47",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/adobe-acrobat/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "yWX5e3ZgPC4iQhN_yNcD4f",
+        "aQXirrOvaf4WUgWtBzoy_e",
+        "zekRGmpyuF4Tumx7ddE5ic"
+      ],
+      "resource_ids": [
+        "HSTwYKQUy14rizobI7HtUd",
+        "Tj_8jtInuu4Q2tdU6b0yxf",
+        "zfWwgBryoo4hag9Bdg8vJa",
+        "p5MoQawn404lMATpplMnsf",
+        "SGajm4OtCF4BaF1ZmrdcRc",
+        "tV9tStlYIR4-M6m5auQXM9"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 3,
+      "product_name": "Adobe Express",
+      "vendor_id": "Adobe",
+      "product_website": "https://www.adobe.com/education/express/",
+      "product_description": "Adobe Express is a cloud-based content creation platform that enables users to design and produce graphics, videos, documents, and other digital media.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:17:56 AM",
+      "last_updated_iso": "2026-04-07T10:17:56",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/adobe-express/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "ewdWmq0Yor4GMvhZm2yQCe",
+        "MePmQhjr7942uq8ezJnxIa",
+        "ge8kxhEcMS4_m1J2IVhP70"
+      ],
+      "resource_ids": [
+        "J26P7f0Sy74RUFAp_W8pl6"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 4,
+      "product_name": "ALEKS",
+      "vendor_id": "McGraw Hill",
+      "product_website": "https://www.aleks.com/",
+      "product_description": "ALEKS (Assessment and LEarning in Knowledge Spaces) is a web-based, adaptive learning and assessment system that provides personalized instruction and practice in subjects such as mathematics, chemistry, and statistics.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:00 AM",
+      "last_updated_iso": "2026-04-07T10:18:00",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/aleks/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "bDURGATdjK4lU3ledcJV6e"
+      ],
+      "resource_ids": [
+        "QUVfinmirC4sm-F65Yphu0",
+        "RW1nQZT8Ga49u_27_ha0Gf",
+        "gbd4KVnZkd4SqWJLudMLv2",
+        "rw2e0a8SeU4-uSqFfnWcda"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 5,
+      "product_name": "Amplify CKLA",
+      "vendor_id": "Amplify",
+      "product_website": "https://amplify.com/programs/amplify-core-knowledge-language-arts/",
+      "product_description": "Amplify CKLA (Core Knowledge Language Arts) is a K–5 core literacy curriculum program that provides structured instruction in reading, writing, listening, and speaking. It is used by educators for English language arts instruction.",
+      "priority": "High",
+      "platforms": [],
+      "notes": "Need to ask them if they will share ACRs with us to share on the site, if they're available by request, or if they require an NDA.\n\n(Emailed 6/23 to ask, but previous comments they've made suggest they're available by request. Will confirm when they email back. -RC)",
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 12:49:29 PM",
+      "last_updated_iso": "2026-07-21T12:49:29",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [
+        "ymX_tbnWwd4reI4qu4Er5d"
+      ],
+      "support_ids": [
+        "ggd3TCa8y14z6yThyBzTR7"
+      ]
+    },
+    {
+      "csv_row": 6,
+      "product_name": "Amplify Desmos Math",
+      "vendor_id": "Amplify",
+      "product_website": "https://amplify.com/programs/amplify-desmos-math/",
+      "product_description": "Amplify Desmos Math is a mathematics curriculum program that delivers problem-based instruction and interactive activities for teaching math concepts. It is used by K–12 educators for classroom mathematics instruction.",
+      "priority": "High",
+      "platforms": [],
+      "notes": "GJ: Resources added during review. May need second review.",
+      "status": "Added to Site",
+      "last_updated_raw": "7/23/2026 10:35:56 AM",
+      "last_updated_iso": "2026-07-23T10:35:56",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "UJbVuAcU8p4geAbt_LfHJ2"
+      ],
+      "resource_ids": [
+        "f2Fc9yMKkn49UW1c7Qq6M8",
+        "UKyPtcnHTK4K68JzFokqlb",
+        "LKuTeQFbQL49ipitayQgxc"
+      ],
+      "support_ids": [
+        "70tBOtcQKg4qIPtwvLdVa9",
+        "ztoBeRiY0L4GQ014Sr4f53"
+      ]
+    },
+    {
+      "csv_row": 7,
+      "product_name": "Amplify ELA",
+      "vendor_id": "Amplify",
+      "product_website": "https://amplify.com/programs/amplify-english-language-arts/",
+      "product_description": "Amplify ELA is a literacy curriculum program that provides instruction in reading, writing, and text analysis. It is used by middle and high school educators for English language arts instruction.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 12:59:14 PM",
+      "last_updated_iso": "2026-07-21T12:59:14",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [
+        "hAEpDRswdz4DQKfxLdDfOf",
+        "E2IoKONVtG4GeYWKWZq1r1",
+        "_hSkT4VxeP4DyrYKZGBev5"
+      ],
+      "support_ids": [
+        "01NP1VxvkC4sEhj-jo4v06"
+      ]
+    },
+    {
+      "csv_row": 8,
+      "product_name": "Blooklet",
+      "vendor_id": "NULL",
+      "product_website": "https://www.blooket.com/",
+      "product_description": "Blooket is a game-based learning platform that allows educators to create and host quiz activities for student practice and review.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application",
+        "…"
+      ],
+      "notes": "GJ: The ACR for this product is from a third-party and should be removed.",
+      "status": "Published",
+      "last_updated_raw": "8/7/2026 11:06:26 AM",
+      "last_updated_iso": "2026-08-07T11:06:26",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/blooket/",
+      "gatherer": null,
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "UM5BD7aY4o4bU-FFDSrJ62"
+      ],
+      "resource_ids": [
+        "0vgFyjZubV4WANKgm5CSaa",
+        "5nvFDUpb0z4Tq26BReNVs1"
+      ],
+      "support_ids": [
+        "j5E8zO1O_g4YAsB-eQW_Oc"
+      ]
+    },
+    {
+      "csv_row": 9,
+      "product_name": "Bridges in Mathematics",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.mathlearningcenter.org/curriculum/bridges-mathematics",
+      "product_description": "Inquiry-based and student-centered, Bridges focuses on developing mathematical reasoning while creating an inclusive and equitable learning community for all students.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.mathlearningcenter.org",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:29:52 PM",
+      "last_updated_iso": "2026-08-07T12:29:52",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 10,
+      "product_name": "Bridges Intervention",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.mathlearningcenter.org/curriculum/bridges-intervention",
+      "product_description": "Provides targeted instruction and assessment for essential K–5 mathematics skills and concepts. A strengths-based approach builds on each student’s abilities—starting with manipulatives, then moving to two-dimensional representations and mental images.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.mathlearningcenter.org",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:30:42 PM",
+      "last_updated_iso": "2026-08-07T12:30:42",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 11,
+      "product_name": "Canva",
+      "vendor_id": "NULL",
+      "product_website": "https://www.canva.com/",
+      "product_description": "Canva is an online design platform that allows users to create graphics, presentations, and other visual content using templates and editing tools.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application",
+        "…"
+      ],
+      "notes": "https://www.canva.com/help/canva-keyboard-shortcuts/",
+      "status": "Published",
+      "last_updated_raw": "4/10/2026 10:53:53 AM",
+      "last_updated_iso": "2026-04-10T10:53:53",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/canva/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "RXNXKN8DYW4hivJ0layA36"
+      ],
+      "resource_ids": [
+        "v9e-lspXI64Dy2sPRwO61a",
+        "cPBFiftk744cuZiaplru39",
+        "YGnDmCh8jC4Ey5kSrQPM6c",
+        "cU6qFEptfc46UHLCvKeuz6",
+        "mkptN_NWNS4ra0mtw96eM3",
+        "TPUazHEVtL4EyFfAe40lOd",
+        "IWfscP48iW4yiDa6t5pzt1",
+        "uKbH_yRP9v4YQ_cbVZrFc0",
+        "GUMD8g0riB42atXaniVjS9"
+      ],
+      "support_ids": [
+        "ulo8b6--Wm4XQm-hsLJD1e",
+        "bUhV3DufWg4O6F13BDElI5"
+      ]
+    },
+    {
+      "csv_row": 12,
+      "product_name": "Canvas LMS2",
+      "vendor_id": "Instructure",
+      "product_website": "https://www.instructure.com/canvas",
+      "product_description": "Canvas is a learning management system (LMS) developed by Instructure that provides educators and students with tools for course management, online learning, and collaboration.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/24/2026 8:34:00 AM",
+      "last_updated_iso": "2026-04-24T08:34:00",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/canvas-lms/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "8JLw23uQKr4xI3_3wo2SLf"
+      ],
+      "resource_ids": [
+        "lN2aOAI8s84MmepMVqUsK9",
+        "h1RV15rMij4ZIDAIoXVD09",
+        "c49Ui8EPLW4g6Se2SunRJ4",
+        "QLvaSo3ekV4LMdbn3Eh9a9",
+        "37W70wxIuG4SyZC5Ilez40",
+        "yExpiUy5TK4eMEwUc8Cv-1"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 13,
+      "product_name": "ChatGPT",
+      "vendor_id": "OpenAI",
+      "product_website": "https://chatgpt.com/",
+      "product_description": "ChatGPT is an AI-powered conversational tool that enables users to generate, analyze, and interact with text-based content to support learning and teaching in educational contexts.",
+      "priority": "High",
+      "platforms": [
+        "Web Application"
+      ],
+      "notes": "Vendor not added [No shared resource or 2nd product]",
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:33 AM",
+      "last_updated_iso": "2026-04-07T10:18:33",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/chatgpt/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "VIoKN_oIAA46QhyF3sMsy2"
+      ],
+      "resource_ids": [
+        "OHN88IujXm4OqlHweSQjo1"
+      ],
+      "support_ids": [
+        "D-eQsevREp4AYa-gPyabta"
+      ]
+    },
+    {
+      "csv_row": 14,
+      "product_name": "Code.Org",
+      "vendor_id": "NULL",
+      "product_website": "https://code.org/",
+      "product_description": "Code.org is a web-based educational platform that provides K–12 educators with curriculum, lesson plans, and interactive coding activities designed to teach computer science and programming concepts across grade levels.",
+      "priority": "High",
+      "platforms": [
+        "Web Application"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:35 AM",
+      "last_updated_iso": "2026-04-07T10:18:35",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/code-org/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "LdSBwlvOa-4rUsM9zwSWV3"
+      ],
+      "resource_ids": [
+        "iu5Ao3hB0X4jYlEUc90KIe",
+        "xBuq_w_u974OuAzLRdBDZ1",
+        "lJOKUFxq1J4GQ1ood6_k09",
+        "4J8Z6YRtK84zuaM2G4ltu0",
+        "9M9-3wJSRb4xqIaMdrKQ33",
+        "dOZZBPoqcA4FEeFAGcwQr7",
+        "C2Dcw6VX3v4kUEZwrHGhY0",
+        "t-cHuqgRKD4o6tnpuSKnZa",
+        "H8Z7b2BX9V40eM3FAmMss1"
+      ],
+      "support_ids": [
+        "Ski5bd2_fT4Xy6HJJR8_d7"
+      ]
+    },
+    {
+      "csv_row": 15,
+      "product_name": "CoolMathGames",
+      "vendor_id": "NULL",
+      "product_website": "https://www.coolmathgames.com/",
+      "product_description": "Coolmath Games is an online platform offering a variety of non-violent, educational games designed to promote logical thinking and problem-solving skills among players of all ages.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application",
+        "…"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:37 AM",
+      "last_updated_iso": "2026-04-07T10:18:37",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/coolmathgames/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "h_JW88bQVN4xYHn1z6IuNa"
+      ],
+      "resource_ids": [
+        "ZWD4FG6Hf544mt3bP8c0a8"
+      ],
+      "support_ids": [
+        "bsIlBQawtG4MEGQBkazB20"
+      ]
+    },
+    {
+      "csv_row": 16,
+      "product_name": "Desmos",
+      "vendor_id": "NULL",
+      "product_website": "https://www.desmos.com/",
+      "product_description": "Desmos provides free, powerful online graphing calculators and math tools that make learning and visualizing mathematics engaging and accessible.",
+      "priority": "High",
+      "platforms": [
+        "Mobile Application",
+        "Web Application"
+      ],
+      "notes": "A couple of videos fromhttps://www.youtube.com/playlist?list=PLOZE3Jd_yfYHNAbgcUUs0UsQx879OddPk have been added - consider our own playlist with all of the Desmos vidoes.",
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 4:58:54 PM",
+      "last_updated_iso": "2026-04-07T16:58:54",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/desmos/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "RfRgHjMnSS4aQ7NS3sNQFd",
+        "01ZTAlp3XB4y2cf97Z5S9b",
+        "2WpwJM34sh4gE6QnUad9A8"
+      ],
+      "resource_ids": [
+        "nPafUyZr7S4ty38lB1wEa4",
+        "drplqEONxy4-YWkQJFFOH9",
+        "42XVnv6D7F4ridDhm1Lzid",
+        "7RUDABMkI54kQeQ9kA2if5",
+        "Bv-LQzlrjb4vM7PAsRe_M7",
+        "FWN_OHEvD34mYU4ar-H4Xc",
+        "mpEzA_5gWr4kEMK632FeRd",
+        "4AIULQFNCk4PYK9H3px4D1",
+        "VnFFlHEGZ548YrC9OzZlW8",
+        "lMD7xSQvMZ4JYCoKhy7tmc",
+        "oO5OnrjErp4iQO2nHW_Pka",
+        "o_dninfe924E2V7deLzx-7"
+      ],
+      "support_ids": [
+        "-CE0c58C9I4q6UhXIsrj-4"
+      ]
+    },
+    {
+      "csv_row": 17,
+      "product_name": "EdPuzzle",
+      "vendor_id": "NULL",
+      "product_website": "https://edpuzzle.com/",
+      "product_description": "Edpuzzle allows teachers to transform any video into an interactive lesson by embedding questions, voiceovers, and notes, enabling them to track student understanding.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:41 AM",
+      "last_updated_iso": "2026-04-07T10:18:41",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/edpuzzle/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "EYp-7TVK8c4i6ymVetDc2c"
+      ],
+      "resource_ids": [
+        "ASDi9DaQda4JiBgq0x8CEe"
+      ],
+      "support_ids": [
+        "TwnYTcmVbP4VY5DKfrPs1a"
+      ]
+    },
+    {
+      "csv_row": 18,
+      "product_name": "Encyclopedia Britannica",
+      "vendor_id": "NULL",
+      "product_website": "https://www.britannica.com/",
+      "product_description": "Encyclopedia Britanica is an online encyclopedia that provides reference content across a wide range of subjects.",
+      "priority": "High",
+      "platforms": [
+        "Web Content"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/10/2026 10:52:45 AM",
+      "last_updated_iso": "2026-04-10T10:52:45",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/encyclopedia-britannica/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "OlhG1IYWiR4_EwIpR043I4"
+      ],
+      "resource_ids": [
+        "UaCPgMDuwN48AH8ELLv4b8"
+      ],
+      "support_ids": [
+        "lyynLZ7swH49Iu1BAULkPc"
+      ]
+    },
+    {
+      "csv_row": 19,
+      "product_name": "Epic!",
+      "vendor_id": "NULL",
+      "product_website": "https://www.getepic.com/",
+      "product_description": "Epic is a subscription-based digital reading platform that provides children (typically ages 12 and under) access to a large library of eBooks, audiobooks, read-to-me titles, and educational videos.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:45 AM",
+      "last_updated_iso": "2026-04-07T10:18:45",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/epic/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "fK7qNcQUx-4tEYE_-MmhO5"
+      ],
+      "support_ids": [
+        "F2CSIoTHDR4KAFQ2w-JZX0"
+      ]
+    },
+    {
+      "csv_row": 20,
+      "product_name": "Gimkit",
+      "vendor_id": "NULL",
+      "product_website": "https://www.gimkit.com/",
+      "product_description": "Gimkit is a game-based learning platform that allows educators and students to create and play interactive quiz-style games, using gamification features like live gameplay, in-game rewards, and real-time feedback.",
+      "priority": "High",
+      "platforms": [
+        "Web Application"
+      ],
+      "notes": "https://www.berkeleyschools.net/wp-content/uploads/2024/04/Web-Accessibility-Testing-Checklist-v3-Gimkit.pdf",
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:47 AM",
+      "last_updated_iso": "2026-04-07T10:18:47",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/gimkit/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "GdtknNSPO84iiQvBOZOzS5"
+      ],
+      "support_ids": [
+        "GT3JFOgFNu4ly-KY2lQqtd"
+      ]
+    },
+    {
+      "csv_row": 21,
+      "product_name": "Google Classroom",
+      "vendor_id": "Google",
+      "product_website": "https://edu.google.com/workspace-for-education/products/classroom/",
+      "product_description": "Google Classroom is a cloud-based learning management platform within Google Workspace for Education that helps educators create, distribute, manage, and grade assignments while facilitating communication and collaboration with students.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:48 AM",
+      "last_updated_iso": "2026-04-07T10:18:48",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-classroom/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "I2GOxrXb-F4qafEakRkrqe",
+        "9nSS-m9gMp4WI6rVP7xjBb"
+      ],
+      "resource_ids": [
+        "zQDNj2phjS4SaeqH8gjiE5"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 22,
+      "product_name": "Grammarly",
+      "vendor_id": "NULL",
+      "product_website": "https://www.grammarly.com/",
+      "product_description": "Grammarly is a cloud-based AI writing assistant that reviews text for spelling, grammar, clarity, tone, and style while offering suggestions and editing support across websites, apps, and documents.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:50 AM",
+      "last_updated_iso": "2026-04-07T10:18:50",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/grammarly/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "L2Z12FlT5E4kapincwLfq8",
+        "kkEqSiul6U4nU1lwmciq8a"
+      ],
+      "support_ids": [
+        "FvCGC7xhtu4RANQCrWpjs4",
+        "a-mdFfz45E4NudhxbzEsz4"
+      ]
+    },
+    {
+      "csv_row": 23,
+      "product_name": "History.com",
+      "vendor_id": "A+E Global Media",
+      "product_website": "https://www.history.com/",
+      "product_description": "History.com provides educational content on historical events, figures, and topics through articles, videos, and interactive resources, supporting learning in history and social studies.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application",
+        "…"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:52 AM",
+      "last_updated_iso": "2026-04-07T10:18:52",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/history-com/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 24,
+      "product_name": "i-Ready Classroom Mathematics",
+      "vendor_id": "Curriculum Associates",
+      "product_website": "https://www.curriculumassociates.com/programs/i-ready-learning/i-ready-classroom-mathematics-2024",
+      "product_description": "i-Ready Classroom Mathematics is a K–8 mathematics curriculum from Curriculum Associates that provides teacher-led lessons, digital activities, and assessments to support standards-aligned math instruction and help students develop conceptual understanding and problem-solving skills.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "6/19/2026 3:47:31 PM",
+      "last_updated_iso": "2026-06-19T15:47:31",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready-classroom-mathematics/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "9HZePaWqSs4n6ZDjrRA-y8",
+        "lnn73wQe_c4au9Hcw2mazd",
+        "k7rId8-b4a4UaRDnL8x3Da",
+        "Cv8vfZ8cgu4bMUSouSJZA1"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 25,
+      "product_name": "i-Ready Inform",
+      "vendor_id": "Curriculum Associates",
+      "product_website": "https://www.curriculumassociates.com/programs/i-ready-assessment/diagnostic",
+      "product_description": "i-Ready Inform is an online adaptive assessment and instructional program that measures students’ reading and mathematics skills, identifies learning needs, and delivers individualized lessons to support skill development and help address learning gaps.",
+      "priority": "High",
+      "platforms": [],
+      "notes": "The original product name was iReady, but the link goes to a specific diagnostic piece of the iReady system called \"iReady Inform.\" iReady encompasses curriculum as well as diagnostics, so I wasn't sure whether this needed to be expanded or split into several products under the iReady umbrella.\n\nFrom RC: I'll look into their products. I think it may make sense to split them up since there are so many, but I need to do some research.",
+      "status": "Discussion",
+      "last_updated_raw": "7/21/2026 2:53:21 PM",
+      "last_updated_iso": "2026-07-21T14:53:21",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready/",
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": null,
+      "acr_ids": [
+        "vPTVe7BLYE4w2vjdWJdFAe"
+      ],
+      "resource_ids": [
+        "bUWKmeiUEz4Iyk-HVvIwn9",
+        "iDgkO57cl34EaG9qtCvwa7",
+        "ZRNM5npsnW4YEhqIE9PQi6",
+        "w3tg2UEGkU4EMHlCr2i1Qa",
+        "BxGYiSqmXm4MmIOz1y08d5",
+        "_zXhiIgbTd45U7CKJAlCR9",
+        "otG4zmojjj4aApnGcIG9m9",
+        "VlQX0Y4J6H4xU6rWe9LYr0",
+        "YJMx7F8co44puf9vM__43e",
+        "iq8wQuzyWo45izAC21WuB0",
+        "Q7R4X4D2Xj4GA3KN1k9vH3",
+        "fvt8jTpx1u4Jar63PgnYj4",
+        "rNnQvsAhTO40iGN4zoerx8"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 26,
+      "product_name": "IXL",
+      "vendor_id": "IXL Learning",
+      "product_website": "https://www.ixl.com/",
+      "product_description": "IXL Learning is a personalized learning platform offering a comprehensive K–12 curriculum across subjects like math, language arts, science, social studies, and Spanish, designed to meet the unique needs of each learner.",
+      "priority": "High",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:54 AM",
+      "last_updated_iso": "2026-04-07T10:18:54",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/ixl/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "ZWmNgjtGKo44ej0ziKmQ4a",
+        "AgHnAd2VZw4DyByGOHVHW8",
+        "mT9EBPjfY84r25d-XQ22B1",
+        "yqahDSX4Ko4PAqUyxDyzXf",
+        "UCShPo-oMy4rYnooeRtlwd",
+        "iM01twvBVh4iyKlD94bmM4",
+        "JpMgluqvNq4rasI7Q6xp76"
+      ],
+      "support_ids": [
+        "D4uGjT-5hz4uYNNTVCtLd8",
+        "B2368bf4cM4xM2N7w04Nof"
+      ]
+    },
+    {
+      "csv_row": 27,
+      "product_name": "Kahoot!",
+      "vendor_id": "NULL",
+      "product_website": "https://kahoot.com/",
+      "product_description": "Kahoot! is a game-based learning platform that enables users to create, share, and play interactive quizzes and learning games, fostering engagement in educational and professional settings.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application",
+        "…"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:56 AM",
+      "last_updated_iso": "2026-04-07T10:18:56",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/kahoot/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "AUKQRA21iT4dIi-D8sZYsb"
+      ],
+      "resource_ids": [
+        "FzYoWZMiDV4o6-Zn-b2Yh6",
+        "wNFQDGTFTw4KI1rbhv_lSf",
+        "pJtJ1quX044_US8rfCVn42",
+        "Q1f2F-crrN4mamqMRt8Lt3",
+        "BAsCd8m79r4zyGn1ARP_4f"
+      ],
+      "support_ids": [
+        "jKAJd-4vJp4g6UO3Gn3dLf"
+      ]
+    },
+    {
+      "csv_row": 28,
+      "product_name": "Kami",
+      "vendor_id": "NULL",
+      "product_website": "https://www.kamiapp.com/",
+      "product_description": "Kami is a collaborative learning platform that transforms static documents into interactive, engaging content with annotation tools, AI-powered assessments, and real-time feedback, enhancing accessibility and collaboration for students and educators.",
+      "priority": "High",
+      "platforms": [
+        "Browser Extension"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:18:58 AM",
+      "last_updated_iso": "2026-04-07T10:18:58",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/kami/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "S9r5-lFawA4LyYtjocGZ66"
+      ],
+      "resource_ids": [
+        "aavZfjc_e-4_29yBOcmny7",
+        "5Qs_0YN_uI4GyYH1N7tKj2"
+      ],
+      "support_ids": [
+        "xzE7frmwIf4_23sUqi-gp2",
+        "SaqLMrbh1Z4IQuY2w8I079"
+      ]
+    },
+    {
+      "csv_row": 29,
+      "product_name": "Khan Academy",
+      "vendor_id": "NULL",
+      "product_website": "https://www.khanacademy.org/",
+      "product_description": "Khan Academy provides instructional resources including videos, exercises, and personalized learning programs.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application",
+        "…"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:01 AM",
+      "last_updated_iso": "2026-04-07T10:19:01",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/khan-academy/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "onCGaE3HmK4JQObk9-STa5",
+        "UbYMyrsFBE41e23EHMUBC6"
+      ],
+      "support_ids": [
+        "OnMKBhfUFF4OQFZ1XkAFO9",
+        "XBxbx1cWqd4IyEMWXqgew0"
+      ]
+    },
+    {
+      "csv_row": 30,
+      "product_name": "Math Playground",
+      "vendor_id": "NULL",
+      "product_website": "https://www.mathplayground.com/",
+      "product_description": "Math Playground is an educational website that provides math problems, logic puzzles, and instructional games for elementary and middle school students.",
+      "priority": "High",
+      "platforms": [
+        "Web Content"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:03 AM",
+      "last_updated_iso": "2026-04-07T10:19:03",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/math-playground/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "xLDj7uv-AE4Pqa23VxFGU1"
+      ],
+      "resource_ids": [],
+      "support_ids": [
+        "BvjDeiiPd641U27h4EA5pa"
+      ]
+    },
+    {
+      "csv_row": 31,
+      "product_name": "mCLASS DIBELS",
+      "vendor_id": "Amplify",
+      "product_website": "https://amplify.com/programs/mclass/",
+      "product_description": "mCLASS DIBELS is a literacy assessment system that measures early reading skills through standardized benchmark and progress monitoring assessments. It is used by K–12 educators to assess foundational literacy development.",
+      "priority": "High",
+      "platforms": [],
+      "notes": "Unofficial ACR: https://software.psdschools.org/ApplicationsPublic/GetDocument/a10324cf-b9d9-49e6-913b-5dd1957081e4\n\nConsider listing as \"mCLASS\" only -- DIBELS is embedded in the product, but doesn't seem to be part of the official product's name\n\nGJ: Reviewed and resources added. May need to be re-reviewed. mCLASS is very confusing to me. There are four \"programs\" listed as mCLASS: mCLASS DIBELS 8th Edition, mCLASS Intervention, mCLASS Lectura, and mCLASS Math. Doesn't look like these are bundled, but not sure....\n\nRC: The screener and overview from outside of Amplify don't seem to fit with what we want to publish. I'm open to discussing it, but the dyslexia screener doesn't really speak to accessibility and the external resource doesn't have much meaningful info IMO.",
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 3:23:18 PM",
+      "last_updated_iso": "2026-07-21T15:23:18",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "QLEWZv2jBw4bId_bLsqHaf"
+      ],
+      "resource_ids": [
+        "Dk6nAIl74L4RuWX00hF1ea",
+        "_3XU2ezYGH4SA8lXM164E1",
+        "J7PwYX0FA54JUxBo6ZH4P2"
+      ],
+      "support_ids": [
+        "gmRy_E20s84ci8Kfk2AVHf"
+      ]
+    },
+    {
+      "csv_row": 32,
+      "product_name": "Nearpod",
+      "vendor_id": "Renaissance",
+      "product_website": "https://nearpod.com/",
+      "product_description": "Nearpod is an instructional platform that allows educators to create and deliver interactive lessons incorporating presentations, multimedia content, and formative assessments in diverse learning environments.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:05 AM",
+      "last_updated_iso": "2026-04-07T10:19:05",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/nearpod/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "AYKqQf0Hq14QM2i_AsPuz3"
+      ],
+      "resource_ids": [
+        "zRMK-y-xz343u5vjNQk5e3",
+        "9SIa_pxpve4A2s_I1SjpV6",
+        "-G8e-6GDl54RAyPIkbJrB0"
+      ],
+      "support_ids": [
+        "WEzgDKnriP4CUgJKejWm18"
+      ]
+    },
+    {
+      "csv_row": 33,
+      "product_name": "PBS",
+      "vendor_id": "NULL",
+      "product_website": "https://www.pbs.org/",
+      "product_description": "PBS is a public broadcasting network that provides educational television programming, digital media content, and classroom resources for children, students, and educators.",
+      "priority": "High",
+      "platforms": [
+        "Web Content"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:12 AM",
+      "last_updated_iso": "2026-04-07T10:19:12",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/pbs/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "bDeat_PxW34ayDmkSagVYa",
+        "3VuBf7LWD74Tm2f6U8dZKd",
+        "WqoF_TwG0n4xel_N-b4tV9",
+        "FPtJzZHuqx4wqzX1v6PoP3",
+        "Cjx9G00lsg4IaiA0mHSaLf"
+      ],
+      "support_ids": [
+        "uOrt5H7j8M4BIpp6VogDU2"
+      ]
+    },
+    {
+      "csv_row": 34,
+      "product_name": "PhET Interactive Simulations",
+      "vendor_id": "University of Colorado Boulder",
+      "product_website": "https://phet.colorado.edu/",
+      "product_description": "PhET Interactive Simulations at the University of Colorado Boulder provides free interactive math and science simulations. The simulations allow students to explore concepts through visual models and experimentation and are commonly used to support inquiry-based learning.",
+      "priority": "High",
+      "platforms": [
+        "Web Application"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:14 AM",
+      "last_updated_iso": "2026-04-07T10:19:14",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/phet-interactive/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "J2jfHKpMzO4lA0pWgNiCB1",
+        "66C6d0bv-S4dafkG4AkZe9"
+      ],
+      "resource_ids": [
+        "5ivLZ4JAem4MidlHJTLIWa",
+        "S0YVanqj5G4fedR9TvzZgf",
+        "Of1P3S6XtN4M6yR_b0aa4c",
+        "HM4G1zAPPA4dmvW1vqjhq1"
+      ],
+      "support_ids": [
+        "EFazm4oeq74_2yZODxIRq3"
+      ]
+    },
+    {
+      "csv_row": 35,
+      "product_name": "Prodigy",
+      "vendor_id": "NULL",
+      "product_website": "https://www.prodigygame.com/",
+      "product_description": "Prodigy Game offers an interactive platform for learning mathematics and English targeted toward elementary and middle school students.",
+      "priority": "High",
+      "platforms": [
+        "Web Application"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:16 AM",
+      "last_updated_iso": "2026-04-07T10:19:16",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/prodigy/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "pjoE4gucKJ4Jqlj9fICbN8"
+      ],
+      "resource_ids": [
+        "_GyD6NEwoU49imlYysDEPb"
+      ],
+      "support_ids": [
+        "m1Ko6ASIJW4zeyx1Err0e1"
+      ]
+    },
+    {
+      "csv_row": 36,
+      "product_name": "Quizlet",
+      "vendor_id": "NULL",
+      "product_website": "https://quizlet.com/",
+      "product_description": "Quizlet is an online study platform that enables users to create and access digital flashcards, practice quizzes, and learning activities across a range of academic subjects.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application",
+        "…"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:18 AM",
+      "last_updated_iso": "2026-04-07T10:19:18",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/quizlet/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "UT6pLWpJjK4VES9pMzmbR0",
+        "o_KYZK6wXs4v2V6qXQggje"
+      ],
+      "support_ids": [
+        "xxCqx3JHSo4HYW0CNg8ysb",
+        "C_lE_pJOoo4T6zEbhfW4eb"
+      ]
+    },
+    {
+      "csv_row": 37,
+      "product_name": "Scratch",
+      "vendor_id": "Scratch Foundation",
+      "product_website": "https://scratch.mit.edu/",
+      "product_description": "Scratch is the world’s largest coding community for children and a coding language with a simple visual interface that allows young people to create digital stories, games, and animations. Scratch is designed, developed, and moderated by the Scratch Foundation, a nonprofit organization.",
+      "priority": "High",
+      "platforms": [
+        "Web Application",
+        "Mobile Application",
+        "…"
+      ],
+      "notes": "Further review: \nhttps://en.scratch-wiki.info/wiki/List_of_Controversial_Topics_on_Scratch#Accessibility_Updates\nhttps://en.scratch-wiki.info/wiki/MIT_Accessibility\nhttps://scratch.mit.edu/discuss/topic/790060/?page=1#post-8238866\nhttps://www.scratchtactile.org/en/start\nhttps://forum.creaticode.com/topic/1579/new-features-for-making-scratch-more-accessible",
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:20 AM",
+      "last_updated_iso": "2026-04-07T10:19:20",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/scratch/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "D1y1CCOESo4aEVAlPCiGn9",
+        "C53vlfwlRe4Xm1n9yBZUl1",
+        "SpY82p03eB43MdCFCq31b0",
+        "j5zO8Monji4gi0OO8eLqYc",
+        "S00LRPpIbi4yE1viljXWM4",
+        "Kf9CnguiU_4SA5adKcmvF0",
+        "qn5USRw1sb42m4AwpkDZU7",
+        "xzadqbMmGx4xqGND8tp-N7",
+        "iOZzarrsm44Y21C430PpPd",
+        "LZKJRJdx0g48et6KTS-9d1",
+        "R-XWzp93dh4gUx_wj0QEcb",
+        "z2tOavvHm_4mMa7UTTpAMd"
+      ],
+      "support_ids": [
+        "fLnX2iXIKp4vA_UNZmcl38"
+      ]
+    },
+    {
+      "csv_row": 38,
+      "product_name": "Wayground",
+      "vendor_id": "NULL",
+      "product_website": "https://wayground.com/",
+      "product_description": "Wayground is an online platform that provides K–12 educators with tools to create, assign, and manage interactive learning activities and digital lessons for classroom and remote instruction.",
+      "priority": "High",
+      "platforms": [
+        "Web Application"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:21 AM",
+      "last_updated_iso": "2026-04-07T10:19:21",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/wayground/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "P5ouUXxIvk4M2tOYwjUp14"
+      ],
+      "resource_ids": [
+        "j7mFhKeR274ym63uDORzcc",
+        "FwORebr2sJ49est4S8bAc0",
+        "uxh9n8J3aa4Nu8NEk80Bv6"
+      ],
+      "support_ids": [
+        "L2udl0okms4F6I20Ppl1I5"
+      ]
+    },
+    {
+      "csv_row": 39,
+      "product_name": "[OLD] i-Ready Inform (formerly i-Ready Diagnostic)",
+      "vendor_id": "Curriculum Associates",
+      "product_website": "https://www.curriculumassociates.com/programs/i-ready-assessment/diagnostic",
+      "product_description": "i-Ready Inform is an online adaptive assessment that measures students’ reading and mathematics skills to identify learning needs and provide educators with data to guide instruction.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "4/20/2026 10:50:26 AM",
+      "last_updated_iso": "2026-04-20T10:50:26",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready-inform/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "-0UYm8ZNqV4NIl_ZADLIsb"
+      ],
+      "resource_ids": [
+        "ss8lI0h_x04RQO1kffgAKe",
+        "PW_-csKafR4pYDltRPK_8f",
+        "Aw1-0_C_Z-4xupKrMyeoTe",
+        "HC4ODtHH444GAub_10W8We",
+        "4tTDrLDwcd4R2wHCcHt6h2",
+        "q5muAtSvX64I6o75k9_dR2",
+        "mpKTEX8AQ24kupsyQw5hs8",
+        "3gqGgYATrq4mUJjjKQZLef"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 40,
+      "product_name": "[OLD] i-Ready Personalized Learning",
+      "vendor_id": "Curriculum Associates",
+      "product_website": "https://www.curriculumassociates.com/programs/i-ready-learning/personalized-instruction",
+      "product_description": "i‑Ready Personalized Learning is an online instructional program that delivers individualized reading and mathematics lessons based on student performance to support skill development and help address learning gaps.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "4/20/2026 10:50:14 AM",
+      "last_updated_iso": "2026-04-20T10:50:14",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready-personalized-learning/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "TdpOWuz5Bx4nqlc8JhaW4b"
+      ],
+      "resource_ids": [
+        "36aFosZP_R47asPS-3BEA7",
+        "vPuW06cgn74dIxM8JiEfQ3",
+        "Z3z00L5iXc4syboT06NuM5",
+        "mLhJtjZPBE4AukYBnxmur3",
+        "bhA3wSSrVj4iIiot5Dp0Q5"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 41,
+      "product_name": "99math",
+      "vendor_id": "NULL",
+      "product_website": "https://99math.com/",
+      "product_description": "99math is an online mathematics practice platform that provides multiplayer games and formative assessment activities aligned with K–12 math standards.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:19:44 AM",
+      "last_updated_iso": "2026-04-07T10:19:44",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/99math/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": [
+        "IDbny28ctZ4EMHhAxfeCB2"
+      ]
+    },
+    {
+      "csv_row": 42,
+      "product_name": "Amplify Classroom",
+      "vendor_id": "Amplify",
+      "product_website": "https://amplify.com/",
+      "product_description": "Amplify Classroom is a digital curriculum platform that delivers standards-aligned instructional materials, assessments, and classroom management tools for K–12 educators and students.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "3/5/2026 11:55:02 PM",
+      "last_updated_iso": "2026-03-05T23:55:02",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-classroom/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "qSiYMxS_Cp4nUxCn39oJWf",
+        "87PIz49YVo44Yn64-WIgJ1"
+      ],
+      "support_ids": [
+        "EQGFzmHmUE4j2sPFXoKd93"
+      ]
+    },
+    {
+      "csv_row": 43,
+      "product_name": "Bookflix",
+      "vendor_id": "Scholastic",
+      "product_website": "https://teacher.scholastic.com/products/bookflix/",
+      "product_description": "BookFlix is a digital reading program that pairs fiction and nonfiction texts to support early literacy development. It is used by elementary students to build reading comprehension and content knowledge.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": "Vendor not linked yet (1 product - no vendor resources). GJ: the VPAT is hosted by third party so probably should be removed.",
+      "status": "Published",
+      "last_updated_raw": "8/7/2026 11:06:17 AM",
+      "last_updated_iso": "2026-08-07T11:06:17",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/bookflix/",
+      "gatherer": null,
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "8Cc5jIPxBx4ZIIy60DFhM0"
+      ],
+      "resource_ids": [
+        "ORrSYVLpZH4bILUHpP1443",
+        "AZtAA46w2k4jMh0WKOXDid"
+      ],
+      "support_ids": [
+        "kdtg0PnLhs4DeIDJ8yRI1e"
+      ]
+    },
+    {
+      "csv_row": 44,
+      "product_name": "Brainingcamp",
+      "vendor_id": null,
+      "product_website": "https://www.brainingcamp.com/",
+      "product_description": "Brainingcamp is a web-based educational application that provides interactive digital math manipulatives (such as base-ten blocks, number lines, and algebra tiles) to help students explore and understand mathematical concepts visually.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "6/19/2026 4:47:43 PM",
+      "last_updated_iso": "2026-06-19T16:47:43",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainingcamp/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "7nVf1ZhXD_4TqA_UqmFdc2"
+      ],
+      "resource_ids": [
+        "xtkwVUhHGA4Dyf4AX9f-d5",
+        "bWplaNy3UK4cm4sCy52nee"
+      ],
+      "support_ids": [
+        "CXngPaNO9-4pEk8KnWap-6"
+      ]
+    },
+    {
+      "csv_row": 45,
+      "product_name": "Brainly",
+      "vendor_id": "NULL",
+      "product_website": "https://brainly.com/",
+      "product_description": "Brainly is a peer learning platform that enables students to ask and answer academic questions across subjects. It is used by students to get homework help and explanations from a community of users.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "6/19/2026 4:41:13 PM",
+      "last_updated_iso": "2026-06-19T16:41:13",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainly/",
+      "gatherer": null,
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [
+        "0sQz4cvfBr4VISloMu7NRb"
+      ],
+      "support_ids": [
+        "D24bHA_0Wg4SEu8OpNwtj5"
+      ]
+    },
+    {
+      "csv_row": 46,
+      "product_name": "BrainPOP",
+      "vendor_id": "BrainPop",
+      "product_website": "https://www.brainpop.com/classroom-solutions/products/brainpop",
+      "product_description": "BrainPOP is an educational technology platform offering animated movies, interactive quizzes, and activities across various subjects for students in grades K-8. It focuses on making complex topics engaging and accessible through multimedia content and supporting diverse learning styles.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 1:32:54 PM",
+      "last_updated_iso": "2026-07-21T13:32:54",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "0q17YG-Mex48qrVi5TLNka"
+      ],
+      "resource_ids": [
+        "vLqc5gdywM4O2ks7Tmkp32",
+        "sdUhwiMwjx4OAEKA65yUY3",
+        "mWrVOLqKVZ4KaXeFtdfA4a"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 47,
+      "product_name": "BrainPOP ELL",
+      "vendor_id": "BrainPop",
+      "product_website": "https://www.brainpop.com/classroom-solutions/products/brainpop-ell",
+      "product_description": "BrainPOP ELL is an interactive language learning platform that provides English language learners with engaging content, including animated movies, games, quizzes, and interactive features, to develop their listening, speaking, reading, and writing skills. The platform supports skill development through conversational English modeled by characters and integrates vocabulary, language, and content lessons.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 1:36:59 PM",
+      "last_updated_iso": "2026-07-21T13:36:59",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "mQuEt2YMHq4z6NgGYz4Bfd"
+      ],
+      "resource_ids": [
+        "6_ow2ZduFG4wmYkR6M1Af6"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 48,
+      "product_name": "BrainPOP Jr.",
+      "vendor_id": "BrainPop",
+      "product_website": "https://www.brainpop.com/classroom-solutions/products/brainpop-jr",
+      "product_description": "BrainPOP Jr. is an educational platform offering animated movies, interactive quizzes, games, and activities across various subjects for students in kindergarten through third grade. It aims to make learning engaging and accessible by providing content through multiple modalities, fostering curiosity, and supporting diverse learning styles.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 1:40:13 PM",
+      "last_updated_iso": "2026-07-21T13:40:13",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "ieLTGC-VKl4XA5YU7Tezbc"
+      ],
+      "resource_ids": [
+        "YQKsmG1xfL4i29-hj1mKRd"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 49,
+      "product_name": "BrainPOP Science",
+      "vendor_id": "BrainPop",
+      "product_website": "https://www.brainpop.com/science-solutions/brainpop-science",
+      "product_description": "BrainPOP Science is a middle school science curriculum platform built around scaffolded, standards-aligned investigations that use real-world phenomena, simulations, data manipulatives, and an embedded Claim-Evidence-Reasoning process. It is designed for students in grades 6-8.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 1:41:37 PM",
+      "last_updated_iso": "2026-07-21T13:41:37",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "0WWaJpUMGB4TI5na_Zj4P6"
+      ],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 50,
+      "product_name": "Canvas Studio",
+      "vendor_id": "Instructure",
+      "product_website": "https://www.instructure.com/canvas/studio",
+      "product_description": "Canvas Studio is a video learning platform integrated with Canvas LMS that allows educators to create, manage, and share instructional videos while embedding quizzes, discussions, and analytics to support interactive learning.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:20:37 AM",
+      "last_updated_iso": "2026-04-07T10:20:37",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/canvas-studio/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "pZdESjvEPF4kyGjijeDEv4"
+      ],
+      "resource_ids": [
+        "Gv5Y2fpUne4rq9jx3_0RH9",
+        "RciVvJgXt14sYZR4r_7Ev7",
+        "9jORi_FJxT4xa5Go9IGGgb",
+        "K9VQelfQW84q2yeYH2-BF6",
+        "Pt-RfB1FKI4-iYcQXm6_Qa"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 51,
+      "product_name": "CK-12",
+      "vendor_id": "CK-12 Foundation",
+      "product_website": "https://www.ck12.org/teacher/",
+      "product_description": "CK-12 Foundation provides a comprehensive platform offering free online textbooks (FlexBooks), videos, adaptive practice, simulations, and real-world applications for K-12 students. The platform integrates AI to deliver personalized educational content and resources across various subjects, aiming to make quality education accessible.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 1:49:51 PM",
+      "last_updated_iso": "2026-07-21T13:49:51",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "VUSlrkLInQ4hQtcfDS9yZ9"
+      ],
+      "resource_ids": [],
+      "support_ids": [
+        "U7VLhhSz1c4JMG7Ao8j9g1",
+        "Zrpj8Fjn4f4KyHrU_sXm9f"
+      ]
+    },
+    {
+      "csv_row": 52,
+      "product_name": "ClearFluency",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.carnegielearning.com/solutions/literacy-ela/clearfluency",
+      "product_description": "ClearFluency acts as a one-on-one tutor to help students improve their reading fluency and comprehension, setting them up for a lifetime of joyful reading and learning.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.carnegielearning.com/",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:17:17 PM",
+      "last_updated_iso": "2026-08-07T12:17:17",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 53,
+      "product_name": "CommonLit 360",
+      "vendor_id": "CommonLit",
+      "product_website": "https://www.commonlit.org/ela-curriculum",
+      "product_description": "CommonLit is a literacy curriculum and reading comprehension platform that provides reading lessons, texts, and assessments for ELA instruction in grades 6–12. It is used in classroom and independent reading activities.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": "GJ: Resources added during review. May need second review. I think the name of the product is CommonLit 360 and this should be changed.",
+      "status": "Added to Site",
+      "last_updated_raw": "8/7/2026 11:08:52 AM",
+      "last_updated_iso": "2026-08-07T11:08:52",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "PebP83aOK442MwOKKRV_md"
+      ],
+      "resource_ids": [
+        "C9lsPCJznm4BuezmFAniM8",
+        "vdWXObwWzs4mm45kcyLFc6",
+        "BkrBbyc0CH4vMdkDvToQz6",
+        "K2ony7zb2C4EQ63zViRUVa"
+      ],
+      "support_ids": [
+        "5A65px-mXo4Lm1gtB0gsOb",
+        "2KMuyAHg4Q4n2RvHwtF4Wd"
+      ]
+    },
+    {
+      "csv_row": 54,
+      "product_name": "CommonLit Text Library",
+      "vendor_id": "CommonLit",
+      "product_website": "https://www.commonlit.org/text-library",
+      "product_description": "CommonLit is a digital library and ELA curriculum platform that provides reading passages, literacy resources, and assessment tools for educators and students. The platform includes built-in accessibility features such as a read-aloud tool, text translation, and support for keyboard navigation.",
+      "priority": null,
+      "platforms": [],
+      "notes": "GJ: VPAT on request only.",
+      "status": "Needs Review",
+      "last_updated_raw": "8/6/2026 4:06:14 PM",
+      "last_updated_iso": "2026-08-06T16:06:14",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "Xz6uQ9L1sn4Ii6lggpGctb",
+        "x2q55uPrGE4BqEV9JkT0Sa"
+      ],
+      "support_ids": [
+        "pIwkZbJP4G4rIWGyv0WQ_5",
+        "v2ihAPin704AeLKZF9EL1d"
+      ]
+    },
+    {
+      "csv_row": 55,
+      "product_name": "Concept Quests",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.mathlearningcenter.org/curriculum/concept-quests",
+      "product_description": "a collection of problem-solving tasks that help K–5 students build their math confidence through engaging challenges.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.mathlearningcenter.org",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:31:46 PM",
+      "last_updated_iso": "2026-08-07T12:31:46",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 56,
+      "product_name": "DeltaMath",
+      "vendor_id": "NULL",
+      "product_website": "https://www.deltamath.com/",
+      "product_description": "DeltaMath is a math practice and assignment platform that lets teachers assign problem sets in topics such as pre-algebra, algebra, geometry, trigonometry, precalculus, calculus, and statistics. It is used for classwork, homework, and skills practice in middle and high school math.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Discussion",
+      "last_updated_raw": "7/21/2026 2:50:47 PM",
+      "last_updated_iso": "2026-07-21T14:50:47",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [
+        "EgP3qSmIwe44yoiiZ_C-Z2",
+        "9Din9-Iibj41Eu0sbl4-44"
+      ],
+      "support_ids": [
+        "ELsA7BPb4p4biGcbysSGxb",
+        "gqvCUqneMm4PqFZY25pu20"
+      ]
+    },
+    {
+      "csv_row": 57,
+      "product_name": "DreamBox Learning",
+      "vendor_id": "Discovery Education",
+      "product_website": "https://www.dreambox.com/",
+      "product_description": "DreamBox Learning is an adaptive learning platform that provides personalized instruction in mathematics and reading for K–12 students. It is used to support core instruction, intervention, and supplemental practice through interactive, student-paced lessons.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": "MJ: DreamBox Learning includes both DreamBox Math (K–8), and DreamBox Reading (PreK–12). DreamBox Reading has two products: Reading Park (PreK–2) and Reading Plus (3-12). On the site, they list DreamBox Math (K–8) and DreamBox Reading (K–5). It's very confusing.",
+      "status": "Discussion",
+      "last_updated_raw": "7/20/2026 8:11:11 AM",
+      "last_updated_iso": "2026-07-20T08:11:11",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": null,
+      "acr_ids": [
+        "tp2ep2KBjp4AiJZfHDz_g7",
+        "XysdlaOi2C4KajgSDkpOb4"
+      ],
+      "resource_ids": [
+        "6FICDbtN2U4QakD-pFATX0",
+        "49BIMcqnXu4kEMj0TD7cEe",
+        "LMQbEvHTAy4luMp_VSkB6d"
+      ],
+      "support_ids": [
+        "9RLRs7nicz4miydOU3wqda"
+      ]
+    },
+    {
+      "csv_row": 58,
+      "product_name": "Excel",
+      "vendor_id": "Microsoft",
+      "product_website": "https://www.microsoft.com/en-us/microsoft-365/excel",
+      "product_description": "Microsoft Excel is a spreadsheet application that allows users to organize data, perform calculations, create charts, and analyze information using formulas and functions.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:20:58 AM",
+      "last_updated_iso": "2026-04-07T10:20:58",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/excel/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "oNTr3lQpvb43qHNUFWeuW8",
+        "5tLRYNURef4qEKbOCfxUZa",
+        "ApLHXPu5yL4JUZZrDP12S9",
+        "Iu7oJc-YD74j6BUAOfogR8",
+        "y_BilwdWw94zucvTd3Q1U8"
+      ],
+      "resource_ids": [
+        "o82KRaxGnQ4oU6B8eWaytd",
+        "E5hdS7zrzL4oIuwNCndTx8",
+        "P7MhUsm3HE4EMDqDQnAY-0",
+        "DmUI0wsw0t4iQ5yXORoNb1",
+        "fJROgX1O-X4RYxJlSuwLSe",
+        "M6h1K5Tu0r4AIpoSSmxBl2"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 59,
+      "product_name": "Formative",
+      "vendor_id": "Newsela",
+      "product_website": "https://www.formative.com/",
+      "product_description": "Formative is a real-time instructional and assessment platform designed for K-12 educators. It allows teachers to create digital lessons and assessments, monitor student work live as it happens, and provide immediate feedback.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "8/7/2026 11:55:35 AM",
+      "last_updated_iso": "2026-08-07T11:55:35",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "qVQQhCTW7R4iAQWbZk3nJd"
+      ],
+      "resource_ids": [
+        "D0jKEzSlWD4xUWQH7azoMc",
+        "1QmbXFAuDD4RygeUJCjOT4"
+      ],
+      "support_ids": [
+        "eotbLXfjtk4zIjgt_KeECc",
+        "wmxNNyi5I54FUlu5PnZLH1"
+      ]
+    },
+    {
+      "csv_row": 60,
+      "product_name": "Frax",
+      "vendor_id": "ExploreLearning",
+      "product_website": "https://frax.explorelearning.com/",
+      "product_description": "Frax is a fraction instruction program that provides adaptive lessons and practice in fraction concepts, operations, decimals, ratios, and proportional reasoning for students in grades 3–9. It is used to build conceptual understanding and procedural fluency with fractions and related mathematics.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "8/7/2026 12:16:33 PM",
+      "last_updated_iso": "2026-08-07T12:16:33",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "81s95hQFQ94UU_tZJZVSs8"
+      ],
+      "resource_ids": [
+        "5whfBiwZLq4syYBkMpjEye",
+        "Xy60lvOfZC4KMnQgWPBCB8",
+        "eLz0U_ODzt4lymlAgX9Zz1"
+      ],
+      "support_ids": [
+        "I73AXfuEAl4nuswxarrT41"
+      ]
+    },
+    {
+      "csv_row": 61,
+      "product_name": "GeoGebra",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.geogebra.org/",
+      "product_description": "GeoGebra is more than a set of free tools to do math. It’s a platform to connect enthusiastic teachers and students and offer them a new way to explore and learn about math.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://byjus.com/",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:15:23 PM",
+      "last_updated_iso": "2026-08-07T12:15:23",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 62,
+      "product_name": "Gizmos",
+      "vendor_id": "ExploreLearning",
+      "product_website": "https://gizmos.explorelearning.com/",
+      "product_description": "Gizmos is a STEM simulation library that provides interactive simulations and inquiry-based lessons in science and mathematics topics such as biology, chemistry, physics, Earth science, algebra, and geometry. It is used by K–12 educators to support concept exploration, virtual labs, and problem-solving activities.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "8/7/2026 12:19:14 PM",
+      "last_updated_iso": "2026-08-07T12:19:14",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "UQvQTotouc4aI_Que-pQV8"
+      ],
+      "resource_ids": [
+        "P1wg31NtQI41akn-Wu4I09",
+        "DR3rCBRrnY4K6Fb_6Ka2R9"
+      ],
+      "support_ids": [
+        "JuZEiURBDl496HJubqadk5",
+        "5mGAlzC6Mt4LaH0PFcSNe4"
+      ]
+    },
+    {
+      "csv_row": 63,
+      "product_name": "Google Docs",
+      "vendor_id": "Google",
+      "product_website": "https://workspace.google.com/products/docs/",
+      "product_description": "Google Docs is a web-based word processing application that allows users to create, edit, format, and collaborate on text documents in real time.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:21:27 AM",
+      "last_updated_iso": "2026-04-07T10:21:27",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-docs/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "PGnt1yoUQc4WM9IftrKkna"
+      ],
+      "resource_ids": [
+        "hZKYhIdJve4mQSbat6U-U6",
+        "LeAsd0sGDK4zmdxRP3Bf92",
+        "-XbsrQCNCK4zYfF6Pr4Bw2",
+        "uohFi5KsQx4IEJrwLGjmS0",
+        "oKRMSx9vSd42uT1c2RfwA3",
+        "HKKHyU_Lmw4uAKxZ3iq1u5"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 64,
+      "product_name": "Google Forms",
+      "vendor_id": "Google",
+      "product_website": "https://docs.google.com/forms",
+      "product_description": "Google Forms is a web-based application that allows users to create surveys, quizzes, questionnaires, and other forms to collect information. It is part of the Google Docs Editors suite and is designed to be usable across various devices and for users of assistive technologies.",
+      "priority": null,
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "7/23/2026 10:29:23 AM",
+      "last_updated_iso": "2026-07-23T10:29:23",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "KJMXaE62TO4iufwhGYcYyb"
+      ],
+      "resource_ids": [
+        "34w9gWHhYA49Uy-E656j45",
+        "qB5e1xambb48YJ2npHEMW1",
+        "8GOt8QM1_X40E7IOSOya13",
+        "6bMWCZu_Q_462tBxZb5Sp3",
+        "Eft-qyXT6X4v2XZPmm2717",
+        "-0gVk_8luk4SaDUxhTx51d"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 65,
+      "product_name": "Google Sheets",
+      "vendor_id": "Google",
+      "product_website": "https://workspace.google.com/products/sheets/",
+      "product_description": "Google Sheets is a web-based spreadsheet application that allows users to organize, calculate, analyze, and collaboratively edit data in real time.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:21:30 AM",
+      "last_updated_iso": "2026-04-07T10:21:30",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-sheets/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "mI1gecCk5t4dQRVSnvbgSd"
+      ],
+      "resource_ids": [
+        "PDSVh0b01-42u6UlJadPS6",
+        "4OlpYsLSi24zig2WaMp1Z1",
+        "ckjL67udPN4nAkVT8papze",
+        "7dvITRE3Jb4iUx6xE96Vc6"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 66,
+      "product_name": "Google Slides",
+      "vendor_id": "Google",
+      "product_website": "https://workspace.google.com/products/slides/",
+      "product_description": "Google Slides is a web-based presentation application that enables users to create, edit, format, and collaboratively present slide decks online.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:21:32 AM",
+      "last_updated_iso": "2026-04-07T10:21:32",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-slides/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "3lxAybPEij4EuV0P6vqS2d"
+      ],
+      "resource_ids": [
+        "sAsUOwfIil4emUPfltxWQ2",
+        "ci0g800YZK4V6sFyEW_UK6",
+        "blXb-tGz554EAitUqQ8ZC6"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 67,
+      "product_name": "Houghton Mifflin Harcourt",
+      "vendor_id": "NULL",
+      "product_website": "https://www.hmhco.com/",
+      "product_description": null,
+      "priority": "Medium",
+      "platforms": [],
+      "notes": "GJ: I'm kind of at a loss with Houghton Mifflin Harcourt. They are a publisher, which to me equates to a Vendor. They have a \"Products\" page, that when the link is not broken, just returns a listing of books filtered by a keyword. They certainly have digital \"add-ons\" to their publications, but I didn't see any evidence of an actual digital platform. An AI search for any VPAT associated with HMH returned 0 results. My recommendation is to add them as a Vendor only.",
+      "status": "Discussion",
+      "last_updated_raw": "8/6/2026 4:22:25 PM",
+      "last_updated_iso": "2026-08-06T16:22:25",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 68,
+      "product_name": "Intuit for Education",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.intuit.com/solutions/education/",
+      "product_description": "Intuit for Education provides high school students with free curriculum and tools to develop financial literacy, capability, and confidence for personal and professional success.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.intuit.com/",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:20:08 PM",
+      "last_updated_iso": "2026-08-07T12:20:08",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 69,
+      "product_name": "Lexia CORE5 Reading",
+      "vendor_id": "Lexia",
+      "product_website": "https://www.lexialearning.com/core5",
+      "product_description": "Lexia Core5® Reading is an adaptive literacy instruction program that provides personalized reading instruction across phonological awareness, phonics, fluency, vocabulary, and comprehension for students in pre-K through grade 5. It is used to support core instruction and reading intervention.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "8/7/2026 11:10:17 AM",
+      "last_updated_iso": "2026-08-07T11:10:17",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [
+        "lYwgOzZmrt4bYSe-7WU2c4",
+        "8GJkUJe0nb4ymMEYFJYj58",
+        "0-HJjbllC84oeV12x-Fqv5"
+      ],
+      "support_ids": [
+        "ex7DvgSmf64XQWH1rB2knc",
+        "kVAeOPSNSW4AEJEc-wSjH7",
+        "YcqVsIaylP4kAACKFV7vQ9"
+      ]
+    },
+    {
+      "csv_row": 70,
+      "product_name": "Lexia English Language Development",
+      "vendor_id": "Lexia",
+      "product_website": "https://www.lexialearning.com/lexia-english",
+      "product_description": "Lexia English Language Development™ provides instruction in speaking, listening, grammar, vocabulary, and academic language for K–6 multilingual learners. It is used to support English language acquisition alongside core classroom instruction.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 3:11:06 PM",
+      "last_updated_iso": "2026-07-21T15:11:06",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "vD5wnMPMcp4xAXSx2rttAf"
+      ],
+      "resource_ids": [
+        "bjvZlcCgWk42Ea_WkgMLQ3",
+        "Uem5ZPsIRZ49Ax48VR-Dq4"
+      ],
+      "support_ids": [
+        "iuxoF4ZHZv42EQa_w0Wb_3",
+        "efhlRVNCRk43eQcgZd064f"
+      ]
+    },
+    {
+      "csv_row": 71,
+      "product_name": "Lexia PowerUp Literacy",
+      "vendor_id": "Lexia",
+      "product_website": "https://www.lexialearning.com/powerup",
+      "product_description": "Lexia PowerUp Literacy® is an adaptive literacy intervention program that provides personalized instruction in decoding, word recognition, grammar, and reading comprehension for students in grades 6–12 who need additional reading support. It is used in intervention and supplemental literacy instruction.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": "GJ: Looks like the VPAT was published by https://www.psdschools.org/. Do we still link to it? Do we reference Poudre School District?",
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 3:12:09 PM",
+      "last_updated_iso": "2026-07-21T15:12:09",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "B2sNAWFdqR4pMofVoGxbq2"
+      ],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 72,
+      "product_name": "Mastery Connect",
+      "vendor_id": "Instructure",
+      "product_website": "https://www.instructure.com/k12/products/mastery/mastery-connect",
+      "product_description": "Mastery Connect is a K–12 digital assessment management system that lets educators create and deliver both formative and benchmark assessments, tie results to specific academic standards, visualize student mastery through trackers and reports, and use that data to inform instructional decisions and interventions rather than just reporting overall scores.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:23:10 AM",
+      "last_updated_iso": "2026-04-07T10:23:10",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/mastery-connect/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "N_Hr1_PX9X49QkFpjjtO3b",
+        "1RF-UGomTj43amPq7xv4E0",
+        "j_RYY2sppg43qxNpn9tMZ8",
+        "IAPCOtYSnP4jYmSmhpAokc"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 73,
+      "product_name": "Mathway",
+      "vendor_id": "Chegg",
+      "product_website": "https://www.mathway.com/",
+      "product_description": "Mathway is a math problem-solving application that lets students enter math problems and receive step-by-step solutions for topics including algebra, geometry, trigonometry, calculus, statistics, and finite math. It is used to solve, check, and review math problems across a range of grade levels.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": "MJ: Added one resource for Chegg (parent company), which will need to be updated on the site.\nGJ: Drawing a huge blank for Mathway and Chegg too 🤦‍♂️ Chegg claims they are committed to aligning with VPAT on an investor page: https://investor.chegg.com/esg/how-we-help-learners/default.aspx. No actual VPAT link...\n\nChegg says that is it \"powered by Accredible\". And there is an Accredible accessibility page--https://help.accredible.com/s/article/accessibility?language=en_US--and a VPAT--https://cdn.prod.website-files.com/65f2558d9f3ac6c64f1b8bb1/691c857f3e58bc0dc5fd5ae6_Accredible%20Digital%20Credentialing%20Platform%20VPAT%20WCAG%20Edition%20-%20Updated%20November%202025.pdf",
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 3:18:25 PM",
+      "last_updated_iso": "2026-07-21T15:18:25",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": [
+        "JYepnI9kx84cmRwRI6OSG1",
+        "XUs4Xi9aji4dMpSceu42Mf"
+      ]
+    },
+    {
+      "csv_row": 74,
+      "product_name": "myIGDIs",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.renaissance.com/products/assessment/myigdis-for-preschool/",
+      "product_description": "Equip every child with the foundational literacy, numeracy, and social‑emotional skills they need for kindergarten success and beyond—supported by assessments and early learning tools designed to promote growth.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.renaissance.com",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:33:00 PM",
+      "last_updated_iso": "2026-08-07T12:33:00",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 75,
+      "product_name": "Newsela Student Platform",
+      "vendor_id": "Newsela",
+      "product_website": "https://newsela.com/",
+      "product_description": "Newsela is an instructional content platform designed to bridge real-world media and classroom learning for students in grades 3–12. It converts authentic, current-events news and cross-curricular content--ELA (English Language Arts), Social Studies, STEM, and Writing--into accessible learning materials.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": "While there are a number of \"products\" listed--ELA, Social Studies, STEM, and Writing--they all run on the same platform, and they all point to the same VPAT and resource pages.",
+      "status": "Added to Site",
+      "last_updated_raw": "8/7/2026 12:02:34 PM",
+      "last_updated_iso": "2026-08-07T12:02:34",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "e4pyGIRHeN4zQBdrhONjX3"
+      ],
+      "resource_ids": [
+        "cMFzECwhZE4sypvbtqyDn2",
+        "pe-uQuYp7W4CYCcImqoQN9",
+        "4BcsqnsvQX4i2key623itd",
+        "RS0IsrWG4y4pUtbzesjdE7"
+      ],
+      "support_ids": [
+        "R86j0F0jf_4Ea5vEVYTL2e"
+      ]
+    },
+    {
+      "csv_row": 76,
+      "product_name": "Next Gen Personal Finance",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.ngpf.org/",
+      "product_description": "Next Gen Personal Finance (NGPF) is the #1 provider of personal finance curriculum and professional development for educators in the U.S., transforming the way financial education is taught and impacting millions of students nationwide.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.ngpf.org/",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:36:39 PM",
+      "last_updated_iso": "2026-08-07T12:36:39",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 77,
+      "product_name": "NItro Type",
+      "vendor_id": "Teaching.com",
+      "product_website": "https://www.nitrotype.com/",
+      "product_description": "Nitro Type is a typing practice game that builds keyboarding speed and accuracy through timed racing activities. It is used by students to develop typing skills in a competitive setting.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "6/19/2026 3:12:24 PM",
+      "last_updated_iso": "2026-06-19T15:12:24",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/nitro-type/",
+      "gatherer": null,
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 78,
+      "product_name": "NoRedInk",
+      "vendor_id": "NULL",
+      "product_website": "https://www.noredink.com/",
+      "product_description": "NoRedInk is a writing instruction platform that provides grammar practice, revision activities, and scaffolded writing assignments in areas such as sentence structure, usage, essay writing, and text-based analysis. It is used in grades 3–12 for English language arts instruction and writing practice.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/23/2026 10:43:52 AM",
+      "last_updated_iso": "2026-07-23T10:43:52",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "rNPTjVAYJD4C6m_hEU_Ib8"
+      ],
+      "resource_ids": [
+        "_qNpC1LUPh4wuWQZilL5cd",
+        "aBjIeI1VW848AJiIQKCi1c",
+        "0f7gmVYP_-4fARS2pC2Mcb"
+      ],
+      "support_ids": [
+        "FCw1fsybvL4yqzGNandN38",
+        "EPVL5Ys_Tv4kaPYvb50Zqe"
+      ]
+    },
+    {
+      "csv_row": 79,
+      "product_name": "Notebook LM",
+      "vendor_id": "Google",
+      "product_website": "https://notebooklm.google/",
+      "product_description": "NotebookLM is an AI-powered research and note-taking tool that allows users to upload documents and generate summaries, explanations, and responses based on the provided sources.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:23:20 AM",
+      "last_updated_iso": "2026-04-07T10:23:20",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/notebook-lm/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "jeh7npDYWG4KqzR090fDp7",
+        "fErQ-lNx-n4Wyfxb6B0Hs8",
+        "nMEtWR0fUy40MdRR2ZlZN9"
+      ],
+      "support_ids": [
+        "OMa8-Zkf-34XaxNIxGS-67"
+      ]
+    },
+    {
+      "csv_row": 80,
+      "product_name": "Number Corner",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.mathlearningcenter.org/curriculum/number-corner",
+      "product_description": "Number Corner is a skill-building program revolving around the classroom calendar.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.mathlearningcenter.org",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:30:09 PM",
+      "last_updated_iso": "2026-08-07T12:30:09",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 81,
+      "product_name": "Number Rack Explorations",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.mathlearningcenter.org/curriculum/number-rack-explorations",
+      "product_description": "The activities in Number Rack Explorations by The Math Learning Center engages students with a math tool designed to empower them with a deep conceptual understanding of number and relationships. Ultimately, the number rack also supports addition and subtraction fact fluency with meaning.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.mathlearningcenter.org",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:29:07 PM",
+      "last_updated_iso": "2026-08-07T12:29:07",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 82,
+      "product_name": "PBLWorks TEACH",
+      "vendor_id": "CANDIDATE",
+      "product_website": "https://www.pblworks.org/teach",
+      "product_description": "A web-based app for K-12 schools that want an easier way to implement Project Based Learning (PBL) to ignite student engagement and deeper learning. TEACH makes PBL easier to implement by providing ready-to-use, standards-aligned project units for math, science, ELA, and social studies.",
+      "priority": null,
+      "platforms": [],
+      "notes": "Vendor: https://www.pblworks.org/about",
+      "status": null,
+      "last_updated_raw": "8/7/2026 12:40:20 PM",
+      "last_updated_iso": "2026-08-07T12:40:20",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [],
+      "support_ids": []
+    },
+    {
+      "csv_row": 83,
+      "product_name": "Pear Deck",
+      "vendor_id": "GoGuardian",
+      "product_website": "https://www.peardeck.com/",
+      "product_description": "Pear Deck is an educational technology platform that transforms static presentations—like Google Slides and Microsoft PowerPoint—into interactive, student-engaging experiences.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": "GJ: The have a whole page bragging about how amazing their commitment is to their VPAT--\"While some companies may only refresh their VPATS  once a year – or even less frequently – we embed accessibility deeply into our software development lifecycle.--they don't provide a LINK to one, or even say \"upon request\". 🤷‍♂️🤦‍♂️",
+      "status": "Added to Site",
+      "last_updated_raw": "8/7/2026 12:08:00 PM",
+      "last_updated_iso": "2026-08-07T12:08:00",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [
+        "wEaaI1Bz774GumxZCnSgwf",
+        "j6UAcie4pB4NabSsbXggE0",
+        "a-dBt7Vf8E47iJUWbONOEb",
+        "ry88IKvP9h4-2xe0s6Nptb"
+      ],
+      "support_ids": [
+        "8zSIuWVYVz4mIIuGVw3kae",
+        "yoWF62Ck1-47uI4Y4gvzY0"
+      ]
+    },
+    {
+      "csv_row": 84,
+      "product_name": "PebbleGo",
+      "vendor_id": "Capstone",
+      "product_website": "https://www.pebblego.com",
+      "product_description": "PebbleGo is a digital learning platform designed for K-5 students, offering nonfiction articles, eBooks, and teaching resources to support literacy skills and build knowledge in subjects like science and social studies. It features read-aloud audio, rich vocabulary support, and multimodal learning tools.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "8/7/2026 12:32:57 PM",
+      "last_updated_iso": "2026-08-07T12:32:57",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "tt-nNG8YGK47muotNEBybd"
+      ],
+      "resource_ids": [
+        "ER9NHo1I2s4RiHIW5n-4A5",
+        "vTQICP500m4eilOXEFgNJ8",
+        "o2A6uwPHmw4ceQZ0E51ZGe"
+      ],
+      "support_ids": [
+        "35uLlh4btk4XM_ZX8BjBY5",
+        "pIMPDuaTsD4aQFRZwRtiz3",
+        "dDOVKB60pn4T23n2z9Kcmd"
+      ]
+    },
+    {
+      "csv_row": 85,
+      "product_name": "PebbleGo Create",
+      "vendor_id": "Capstone",
+      "product_website": "https://www.pebblego.com/us/create",
+      "product_description": "PebbleGo Create is a content creation tool that allows elementary students to create multimedia projects that demonstrate their learning. It provides a space for students to develop and share projects using text, images, audio, and other media elements.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Needs Review",
+      "last_updated_raw": "8/4/2026 8:56:30 AM",
+      "last_updated_iso": "2026-08-04T08:56:30",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": null,
+      "acr_ids": [
+        "0OkAqAObfh4J2qRYa2V1hf"
+      ],
+      "resource_ids": [
+        "xInS7UEZKT4jQaMSW4xwi6"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 86,
+      "product_name": "PebbleGo Next",
+      "vendor_id": "Capstone",
+      "product_website": "https://www.pebblego.com/us/pebblegonext",
+      "product_description": "PebbleGo Next is a digital curriculum resource that provides students with nonfiction articles and learning materials for science and social studies topics. It is used by K–12 educators to support student research and content exploration.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Needs Review",
+      "last_updated_raw": "8/4/2026 8:56:38 AM",
+      "last_updated_iso": "2026-08-04T08:56:38",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": null,
+      "acr_ids": [
+        "ds8zpROyZm4pyhrECjY035"
+      ],
+      "resource_ids": [],
+      "support_ids": [
+        "IvoKDKNyvp4CIA8Lzdu_x9"
+      ]
+    },
+    {
+      "csv_row": 87,
+      "product_name": "PowerPoint",
+      "vendor_id": "Microsoft",
+      "product_website": "https://www.microsoft.com/en-us/microsoft-365/powerpoint",
+      "product_description": "Microsoft PowerPoint is a presentation application that enables users to create, edit, and display slide-based presentations with text, images, charts, and multimedia content.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:21:55 AM",
+      "last_updated_iso": "2026-04-07T10:21:55",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/powerpoint/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "tl3yero1Xz4_Uc_1-Y64rd",
+        "oCEn4vUPZi4LU8_H47K8rd",
+        "b4GSf6z2-M4CYLULBlJ7a1",
+        "4EzZglCNZn4hun2iJVuUz0"
+      ],
+      "resource_ids": [
+        "KMGgpB4gHZ4aQDPPiethZ3",
+        "sP3FEB-3QZ4uYB2Jlm2X0c",
+        "S9nsvqzjl04SELuAoqlq1f",
+        "SsJ8f0XN8v4se-WlxKF7Kc",
+        "cyCqNxx5Ki4Ju0s91HBSfe"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 88,
+      "product_name": "ReadWorks",
+      "vendor_id": "NULL",
+      "product_website": "https://www.readworks.org/",
+      "product_description": "ReadWorks is a nonprofit educational technology organization that provides a reading comprehension and literacy instruction platform for K-12 students and teachers. The ReadWorks platform features reading passages, comprehension question and vocabulary sets, and writing activities for K–12 English language arts instruction. It is used to support close reading, background knowledge building, and reading comprehension.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 3:29:50 PM",
+      "last_updated_iso": "2026-07-21T15:29:50",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [
+        "o0g1SDGJBQ43iDWY3d2AA3"
+      ],
+      "resource_ids": [
+        "qLWsFj2EbP4BEjwDVWvBPe",
+        "w6RwCovwmk4IEEyEOVm3Yc"
+      ],
+      "support_ids": [
+        "C4HAciBj_24H6bZAsUACCe",
+        "49pKy0yFMj46ilwQUc7As4"
+      ]
+    },
+    {
+      "csv_row": 89,
+      "product_name": "Reflex",
+      "vendor_id": "ExploreLearning",
+      "product_website": "https://reflex.explorelearning.com/",
+      "product_description": "Reflex is a math fact fluency program that provides adaptive practice in addition, subtraction, multiplication, and division through game-based activities. It is used by elementary and middle school students to build speed and accuracy with basic math facts.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Needs Review",
+      "last_updated_raw": "7/28/2026 5:14:41 PM",
+      "last_updated_iso": "2026-07-28T17:14:41",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": null,
+      "acr_ids": [
+        "cf2dmdoGSU4Xu8uOBUhqXb"
+      ],
+      "resource_ids": [
+        "tv5YeaZswr4d6tVpokhny8"
+      ],
+      "support_ids": [
+        "RudsXht_Lc4KaN2Q2e2Sd3"
+      ]
+    },
+    {
+      "csv_row": 90,
+      "product_name": "Schoology",
+      "vendor_id": "PowerSchool",
+      "product_website": "https://www.powerschool.com/solutions/personalized-learning/schoology-learning/",
+      "product_description": "Schoology is a learning management system that enables teachers to create, manage, and deliver course content and assignments. It is used by K–12 educators and students to support classroom instruction and communication.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "6/19/2026 1:55:58 PM",
+      "last_updated_iso": "2026-06-19T13:55:58",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/schoology/",
+      "gatherer": null,
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "COUILIJGB74Ta2aIp6EKN8"
+      ],
+      "resource_ids": [
+        "RYBNWZDg1M4WimWyaDgdS3",
+        "KtlqTVFzi64E2ED4R_l8jc",
+        "eLF-RXEJl04rUMkbNxpYma"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 91,
+      "product_name": "Science4Us",
+      "vendor_id": "ExploreLearning",
+      "product_website": "https://www.explorelearning.com/our-products/science4us",
+      "product_description": "Science4Us is an elementary science curriculum that provides interactive lessons, digital investigations, videos, and hands-on activities in life, physical, Earth, and inquiry science for students in grades K–2. It is used to support classroom science instruction and early science learning.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Needs Review",
+      "last_updated_raw": "7/29/2026 5:09:32 PM",
+      "last_updated_iso": "2026-07-29T17:09:32",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": null,
+      "acr_ids": [
+        "-0eMIcp7Gg4eerLS7Nzyfa"
+      ],
+      "resource_ids": [
+        "1xoPr6z_qz4PaoilWoLQQ4"
+      ],
+      "support_ids": [
+        "C_PBX2QaKe4AQv_D3eL7Ed"
+      ]
+    },
+    {
+      "csv_row": 92,
+      "product_name": "SeeSaw Elementary LMS",
+      "vendor_id": "SeeSaw",
+      "product_website": "https://seesaw.com/benefits/all-in-one-platform/",
+      "product_description": "Seesaw Elementary LMS is a learning management system that enables students to create and share classwork and allows teachers to assign, review, and communicate about learning activities in elementary classrooms.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "6/19/2026 4:35:41 PM",
+      "last_updated_iso": "2026-06-19T16:35:41",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "eJnM_95i1f4Gu94oRSPfC5"
+      ],
+      "resource_ids": [
+        "RaeJDeOSlD4Dqg_aySuVz0",
+        "vekwmM8-D_4oUWqhUY7Se3",
+        "bwhyW29yWr4i6WvEXJmfqd",
+        "rHY9YlKrvh4GaRepf_uIC5",
+        "Dcn_ZN1zz94su0xwnR0rs4",
+        "dhvQfWLy1y42e6y-qAeRD5",
+        "yFbpUWZ_tQ4ry7qctroUQ0"
+      ],
+      "support_ids": [
+        "bvV1i-iIVp4mMl5sIem6xb"
+      ]
+    },
+    {
+      "csv_row": 93,
+      "product_name": "Sora",
+      "vendor_id": "OverDrive",
+      "product_website": "https://soraapp.com/",
+      "product_description": "Sora is a student reading application that provides access to digital collections of ebooks and audiobooks from school libraries. The platform includes features such as screen reader compatibility, adjustable text settings, Read-Alongs, and support for the OpenDyslexic font to assist students with varying reading needs.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Needs Review",
+      "last_updated_raw": "8/6/2026 3:49:39 PM",
+      "last_updated_iso": "2026-08-06T15:49:39",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "hjPRcgDkdA4JASKALvbLjb",
+        "jjhaGZA5A04KiWBKRKgcxc",
+        "gKfY27-XHn42IwIz0zE5X1"
+      ],
+      "support_ids": [
+        "IuqeqCYx944za9cFSDDjv5"
+      ]
+    },
+    {
+      "csv_row": 94,
+      "product_name": "SparkNotes",
+      "vendor_id": "Barnes & Noble",
+      "product_website": "https://www.sparknotes.com/",
+      "product_description": "SparkNotes is a study guide and literature reference resource that provides chapter summaries, literary analysis, study questions, and test preparation materials for literature, history, and other academic subjects. It is used by secondary and college-level students to review assigned texts and course content.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 3:34:34 PM",
+      "last_updated_iso": "2026-07-21T15:34:34",
+      "ncademi_product_url": null,
+      "gatherer": "mindy.johnson@usu.edu",
+      "reviewer": "g.joeckel@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [
+        "wUCpDWNd_54CmDxsCZAmZ4"
+      ],
+      "support_ids": [
+        "mdrnnGMR_G4yuYSwSw-Rvd"
+      ]
+    },
+    {
+      "csv_row": 95,
+      "product_name": "Study.com",
+      "vendor_id": "NULL",
+      "product_website": "https://study.com/",
+      "product_description": "Study.com is an online learning platform that provides video lessons, practice quizzes, and study materials across academic subjects and test preparation areas with opportunities to earn certificates and/or college credit.",
+      "priority": "Medium",
+      "platforms": [
+        "Web Content",
+        "Mobile Application"
+      ],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:22:05 AM",
+      "last_updated_iso": "2026-04-07T10:22:05",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/study-com/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "Go3cvzH3C-4iAUDllmkvc1",
+        "Un3qZ21RXz4AIOUE5mcLn0"
+      ],
+      "support_ids": [
+        "p8hCjVzlLw4HibCzkNc7x0",
+        "CzUFlH3N0e45UCOnEhkc6d"
+      ]
+    },
+    {
+      "csv_row": 96,
+      "product_name": "Typing.Com",
+      "vendor_id": "Teaching.com",
+      "product_website": "https://www.typing.com/",
+      "product_description": "Typing.com is a keyboarding instruction program that teaches typing skills through structured lessons and practice activities. It is used by K–12 students to develop typing proficiency.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "6/19/2026 4:43:43 PM",
+      "last_updated_iso": "2026-06-19T16:43:43",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/typing-com/",
+      "gatherer": null,
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "YuMwW7aCEh4YMwJH6g2Cx4"
+      ],
+      "resource_ids": [
+        "d_T_TC8b3F4yiZAy0BR8Z9",
+        "o0fTBvZaV74sqcDq6XBrO4",
+        "0pVvoZTyKe4IErd5uNb098"
+      ],
+      "support_ids": [
+        "lQ2aVp77sZ4cEu9r0-2ku0"
+      ]
+    },
+    {
+      "csv_row": 97,
+      "product_name": "TypingClub",
+      "vendor_id": "edclub",
+      "product_website": "https://www.typingclub.com/",
+      "product_description": "TypingClub is a keyboarding instruction program that teaches typing skills through structured lessons. It is used by students to develop typing speed and accuracy.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Added to Site",
+      "last_updated_raw": "6/19/2026 4:24:10 PM",
+      "last_updated_iso": "2026-06-19T16:24:10",
+      "ncademi_product_url": null,
+      "gatherer": null,
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [],
+      "resource_ids": [
+        "HMhj8qKrK-4zUAO9S0nWs5",
+        "T7IRXz5_Os4Dmz3QV4Ecb8"
+      ],
+      "support_ids": [
+        "GFLp2C7bOP4nYP7dV7wgHa"
+      ]
+    },
+    {
+      "csv_row": 98,
+      "product_name": "Weebly",
+      "vendor_id": "NULL",
+      "product_website": "https://www.weebly.com/",
+      "product_description": "Weebly is a website-building platform that allows users to create and publish websites and online stores using templates and easy-to-use design tools.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:22:10 AM",
+      "last_updated_iso": "2026-04-07T10:22:10",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/weebly/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "7d3vH6dJxL4VuAElk9mP31",
+        "4gK14u-K7A4LUpLxIUHj1b"
+      ],
+      "support_ids": [
+        "iS1TQz8hHX4-U7mKkSWPQf"
+      ]
+    },
+    {
+      "csv_row": 99,
+      "product_name": "Word",
+      "vendor_id": "Microsoft",
+      "product_website": "https://www.microsoft.com/en-us/microsoft-365/word",
+      "product_description": "Microsoft Word is a word processing application that allows users to create, edit, format, and manage text-based documents for print and digital use.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:23:43 AM",
+      "last_updated_iso": "2026-04-07T10:23:43",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/word/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [
+        "7wy_Z5B0xU4uuaA82jm6n5",
+        "c7xdcX-bq44hqsnSH73Hm5",
+        "3U13JbNh3A40m0ajiNcmd7",
+        "BXGBhBSOkT4DaVKqHZpaEe",
+        "4dilB0zEO14RUXqhrYkAH6"
+      ],
+      "resource_ids": [
+        "-MumShN3xA4-22tTIzo4r0",
+        "i0nhIXZDID4SIFQSSvtq94",
+        "iHNmUVMX-n4bQLQqNu1VH5",
+        "FMOkUmOYtg4aejIr4ir2n9"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 100,
+      "product_name": "YouTube",
+      "vendor_id": "Google",
+      "product_website": "https://www.youtube.com/",
+      "product_description": "YouTube is a video-sharing platform that allows users to upload, view, and share video content across a wide range of topics, including educational material.",
+      "priority": "Medium",
+      "platforms": [],
+      "notes": null,
+      "status": "Published",
+      "last_updated_raw": "4/7/2026 10:23:55 AM",
+      "last_updated_iso": "2026-04-07T10:23:55",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/youtube/",
+      "gatherer": null,
+      "reviewer": null,
+      "acr_ids": [],
+      "resource_ids": [
+        "jKkE8kmML54MmMDrNcU6ld",
+        "J-qE25YyYK4JmkgUqa2HB3",
+        "piaeuFqdPq49yLnOszCqNc",
+        "beUNKz-Ko44LacSSR0Ezrc",
+        "1Fuqn9ziXl4NyLXfI1vnCa"
+      ],
+      "support_ids": []
+    },
+    {
+      "csv_row": 101,
+      "product_name": "Book Creator",
+      "vendor_id": "Kami",
+      "product_website": "https://bookcreator.com/",
+      "product_description": "Book Creator is an intuitive EdTech platform designed to empower students and teachers to create and publish interactive digital books incorporating text, images, audio, and video. It supports diverse learning styles and encourages creative expression, making learning accessible and engaging for all users.",
+      "priority": "Low",
+      "platforms": [],
+      "notes": "Suggested by vendor",
+      "status": "Added to Site",
+      "last_updated_raw": "7/21/2026 1:07:09 PM",
+      "last_updated_iso": "2026-07-21T13:07:09",
+      "ncademi_product_url": null,
+      "gatherer": "g.joeckel@usu.edu",
+      "reviewer": "mindy.johnson@usu.edu",
+      "acr_ids": [
+        "roC15ZAUHc4L6Ajkvy_Uu0"
+      ],
+      "resource_ids": [
+        "C8FgCvbhwT4juOeIn5OQw2",
+        "H5U5zWhoLn40AsnWC0d-Re",
+        "qHf5qaVvlx4RQNTQSHqKo0",
+        "hvTgVNqd0q4uuR5O-rLdZa",
+        "X3wPEe4QHK4xut4C11Vaq1",
+        "xKcw7pFS874XQFjonBcX61",
+        "qAQ6dZpa7R4dMWl2lU_Zc7",
+        "fdksw83IWe4jEdzCGsLz82"
+      ],
+      "support_ids": [
+        "_kKVeb_nCv4FMYpJHyho11",
+        "HMOyq0g4Qq4Cq89YHNENA6"
+      ]
+    }
+  ]
+}

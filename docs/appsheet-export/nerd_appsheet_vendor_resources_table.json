@@ -1,0 +1,546 @@
+{
+  "$meta": {
+    "artifact": "N.E.R.D. — AppSheet vendor-level Resources table: structure + content snapshot",
+    "purpose": "Completes the table family documented in nerd_appsheet_vendor_supports_table.json's $meta.table_family, which listed \"Vendor Resources (31 rows, screenshot)\" as already captured on 2026-08-18 but for which no corresponding JSON artifact was ever produced. This file fills that gap using a fresh screenshot.",
+    "source_database_id": "U0ppjX3l274pYh2MnNSXo7",
+    "source_table_id": "unknown — not supplied",
+    "source_table_label": "Resources (vendor-level)",
+    "ui_view_title": "Vendor Resources",
+    "captured": "2026-08-19",
+    "inputs": [
+      {
+        "kind": "ui_screenshot",
+        "file": "Screenshot_2026-08-19_at_4_21_35_PM.png",
+        "covers": "all 31 rows, all columns except Row ID and full URL text",
+        "fidelity": "Row text is NOT truncated in this capture (no trailing ellipsis observed in any cell) -- differs from the 2026-08-18 batch. However the URL column renders as a link-launch icon only; no URL text is visible or recoverable from this screenshot for any row."
+      },
+      {
+        "kind": "dom_export",
+        "file": "vendor_resources_dom.html (pasted row-element markup, 31 rows)",
+        "covers": "Row IDs (AppSheet UNIQUEID) for all 31 rows, via element id=\"Table_RowElement_Vendor_Resource_<row_id>\"",
+        "fidelity": "complete and exact -- these are DOM attribute values, not OCR/transcription. Confirmed 31 distinct keys, no duplicates."
+      },
+      {
+        "kind": "ui_screenshot",
+        "file": "Screenshot_2026-08-19_at_4_29_53_PM.png",
+        "covers": "Full, untruncated URL column for all 31 rows (wider column capture than the 4:21 PM screenshot)",
+        "fidelity": "High confidence on most rows. Medium confidence on rows with long alphanumeric IDs (Microsoft support anchor hashes, YouTube video IDs, Google answer sjid param) -- see per-row _url_transcription_confidence flags on ui_row 14, 15, 21, 24, 27."
+      }
+    ],
+    "truncation_marker": "…",
+    "truncation_meaning": "Not applicable to this capture -- no cell values were visually truncated. Retained for schema consistency with sibling artifacts.",
+    "row_key": "row_id (AppSheet UNIQUEID, 22 chars) -- VERIFIED via DOM element id attribute (Table_RowElement_Vendor_Resource_<key>), not screenshot OCR",
+    "completeness": {
+      "rows_visible": 31,
+      "table_appears_complete": true,
+      "basis": "Matches the row count (31) pre-reported in nerd_appsheet_vendor_supports_table.json's table_family.captured_so_far, and no scroll/pagination affordance is visible below the last row."
+    },
+    "relationship_to_other_tables": "This is the VENDOR-level Resources table -- vendor_reference stores a vendor NAME matching Vendors.vendor_name, the same join convention as Products.vendor_id and Supports(vendor-level).vendor_id. It is structurally parallel to, and distinct from, the product-level Resources table (nerd_appsheet_product_resources_table.json, ~281 rows, of which 89 are captured) -- same column family (name/url/source/label/datetime/added_to_site), scoped by vendor instead of by product.",
+    "known_gaps": [
+      "Column order in the live UI (Name, Added to Site?, URL, Source, Label, Vendor Reference, Last Updated) differs from the product-level Resources table's captured order (Name, Product Reference, URL, Source, Label, ...) -- Vendor Reference sits near the end here rather than 2nd position. Recorded as observed; does not necessarily imply anything about backend field order."
+    ],
+    "data_anomalies": [
+      "ui_row 22 ('Thoughts on I-Ready') has Source=External but an EMPTY Vendor Reference -- the only row where Source is populated but Vendor Reference is not.",
+      "ui_row 6 ('Accessibility Statement', BrainPop) and ui_row 27 ('Accessibility Settings (Video)', edclub) have no Added to Site? value (neither Y nor N) -- blank/tri-state, not a checked or unchecked box. ui_row 6 also has no Last Updated timestamp, consistent with being an untouched/draft row.",
+      "Three rows share the Name 'Accessibility Statement' (ui_row 6 / BrainPop, ui_row 26 / ExploreLearning, ui_row 31 / Capstone) -- distinct count on name is 29, not 31. Not an error; vendors commonly reuse this generic title.",
+      "DATETIME FORMAT DISCREPANCY WITH PRIOR ARTIFACTS: this table's datetime values use 'M/D/YYYY h:mm:ss AM/PM' (4-digit year, seconds included -- e.g. '2/17/2026 9:35:34 AM'), matching the Products table's format. Every other child table captured so far (Resources/product-level, both Supports tables, Vendors) used 'M/D/YY, h:mm AM/PM' (2-digit year, no seconds). nerd_appsheet_product_supports_table.json's $meta claimed 'Products remains the sole outlier' on this point -- that claim is now contradicted; Products and vendor-level Resources share the long format, everything else captured so far uses the short format.",
+      "ui_row 2 ('Accessibility Community') and ui_row 3 ('Accessibility Toolkit') have IDENTICAL urls (https://community.instructure.com/en/categories/accessibility). Recorded as observed -- may be a legitimate shared landing page (a forum category) rather than a data entry error."
+    ],
+    "row_key_verification": {
+      "method": "All 31 row_id values were cross-checked for overlap against the union of resource_ids across all 101 rows in nerd_appsheet_products_table.json (281 distinct keys).",
+      "result": "Zero overlap. Confirms this table's rows are NOT the ones Products.resource_ids points at -- consistent with this being the separate vendor-level Resources table, parallel to (not the same as) the product-level Resources table that Products.resource_ids actually targets.",
+      "note": "This does not verify individual row_id correctness (no parent pointer exists to check against, unlike ACRs), only that the table-level relationship claimed in $meta.relationship_to_other_tables is not contradicted by the data."
+    }
+  },
+  "schema": {
+    "table": "Resources (vendor-level)",
+    "row_count": 31,
+    "row_key": "row_id (AppSheet UNIQUEID, 22 chars) -- VERIFIED",
+    "columns": [
+      {
+        "name": "name",
+        "appsheet_label": "Name",
+        "type": "Text",
+        "confidence": "high",
+        "notes": "Resource title. Maps to ListingData.ResourceLink.text.",
+        "profile": {
+          "filled": 31,
+          "empty": 0,
+          "distinct": 29
+        }
+      },
+      {
+        "name": "added_to_site",
+        "appsheet_label": "Add… (truncated; 'Added to Site?' per convention in sibling tables)",
+        "type": "Yes/No",
+        "confidence": "high",
+        "notes": "Publication gate, same concept as in Products, ACRs, and both Resources/Supports tables.",
+        "profile": {
+          "checked": 24,
+          "unchecked": 5,
+          "blank": 2
+        }
+      },
+      {
+        "name": "url",
+        "appsheet_label": "(unlabeled icon column)",
+        "type": "Url",
+        "confidence": "high (see per-row flags for 5 rows with long ID/hash/param strings)",
+        "notes": "Full URLs captured via a wider-column screenshot on 2026-08-19. Maps to ListingData.ResourceLink.url.",
+        "profile": {
+          "filled": 31,
+          "empty": 0,
+          "distinct": 30
+        }
+      },
+      {
+        "name": "source",
+        "appsheet_label": "Source",
+        "type": "Enum",
+        "confidence": "high",
+        "enum_values": [
+          "Internal",
+          "External"
+        ],
+        "notes": "THE SPLIT RULE, same as product-level Resources: Internal -> ListingData.vendor_resources; External -> ListingData.other_resources.",
+        "profile": {
+          "filled": 31,
+          "empty": 0,
+          "distinct": 2,
+          "value_counts": {
+            "Internal": 28,
+            "External": 3
+          }
+        }
+      },
+      {
+        "name": "label",
+        "appsheet_label": "Label",
+        "type": "Enum",
+        "confidence": "medium",
+        "enum_values_observed": [
+          "Statement/Policy"
+        ],
+        "notes": "Sparse. Only 'Statement/Policy' observed in this capture -- product-level Resources additionally showed 'Video', so the enum is shared and wider than this table alone suggests.",
+        "profile": {
+          "filled": 5,
+          "empty": 26,
+          "distinct": 1
+        }
+      },
+      {
+        "name": "vendor_reference",
+        "appsheet_label": "Vendor Reference",
+        "type": "Ref",
+        "ref_target": "Vendors",
+        "confidence": "high",
+        "notes": "Stores vendor NAME, matching Vendors.vendor_name -- same convention as Products.vendor_id and Supports(vendor-level).vendor_id.",
+        "profile": {
+          "filled": 30,
+          "empty": 1,
+          "distinct": 13
+        }
+      },
+      {
+        "name": "vendor_resource_datetime",
+        "appsheet_label": "Vendor Resource Last Updated",
+        "type": "DateTime",
+        "confidence": "high",
+        "notes": "Format 'M/D/YYYY h:mm:ss AM/PM' -- matches Products, NOT the short format used by every other child table captured so far. See $meta.data_anomalies.",
+        "profile": {
+          "filled": 30,
+          "empty": 1,
+          "distinct": 30
+        }
+      }
+    ],
+    "relations": [
+      {
+        "from": "this_table.vendor_reference",
+        "to": "Vendors.vendor_name",
+        "cardinality": "many-to-one",
+        "join_key": "vendor name string",
+        "integrity": "30 of 31 rows resolve (ui_row 22 has no vendor_reference value to check)"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "ui_row": 1,
+      "name": "We Believe in Accessibility for All",
+      "added_to_site": true,
+      "url": "https://www.instructure.com/accessibility",
+      "source": "Internal",
+      "label": "Statement/Policy",
+      "vendor_reference": "Instructure",
+      "vendor_resource_datetime_raw": "2/17/2026 9:35:34 AM",
+      "_truncated_fields": [],
+      "row_id": "-fi_smATV94bAyYWGaaC32"
+    },
+    {
+      "ui_row": 2,
+      "name": "Accessibility Community",
+      "added_to_site": true,
+      "url": "https://community.instructure.com/en/categories/accessibility",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Instructure",
+      "vendor_resource_datetime_raw": "2/17/2026 9:35:42 AM",
+      "_truncated_fields": [],
+      "row_id": "ww6T6BBk-r4aY8I9LNZmPa"
+    },
+    {
+      "ui_row": 3,
+      "name": "Accessibility Toolkit",
+      "added_to_site": true,
+      "url": "https://community.instructure.com/en/categories/accessibility",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Instructure",
+      "vendor_resource_datetime_raw": "2/17/2026 9:35:51 AM",
+      "_truncated_fields": [],
+      "row_id": "gZRuKaucRh4VegA-2T50B2"
+    },
+    {
+      "ui_row": 4,
+      "name": "Google Accessibility Conformance Reports",
+      "added_to_site": false,
+      "url": "https://belonging.google/accessibility-conformance-reports/",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Google",
+      "vendor_resource_datetime_raw": "2/27/2026 9:11:54 AM",
+      "_truncated_fields": [],
+      "row_id": "zBdlaqGYD14wirzVMc3mAf"
+    },
+    {
+      "ui_row": 5,
+      "name": "Accessibility at Adobe",
+      "added_to_site": true,
+      "url": "https://www.adobe.com/trust/accessibility.html",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Adobe",
+      "vendor_resource_datetime_raw": "2/17/2026 10:13:04 AM",
+      "_truncated_fields": [],
+      "row_id": "1tMR8j2odcJ21EXvOKQuYf"
+    },
+    {
+      "ui_row": 6,
+      "name": "Accessibility Statement",
+      "added_to_site": null,
+      "url": "https://www.brainpop.com/accessibility/",
+      "source": "Internal",
+      "label": "Statement/Policy",
+      "vendor_reference": "BrainPop",
+      "vendor_resource_datetime_raw": null,
+      "_truncated_fields": [],
+      "row_id": "Yq1eHeZ0XcoUMmLVvbluFf"
+    },
+    {
+      "ui_row": 7,
+      "name": "Committed to Accessibility",
+      "added_to_site": true,
+      "url": "https://www.curriculumassociates.com/instructional-design/committed-to-accessibility",
+      "source": "Internal",
+      "label": "Statement/Policy",
+      "vendor_reference": "Curriculum Associates",
+      "vendor_resource_datetime_raw": "3/11/2026 2:51:53 PM",
+      "_truncated_fields": [],
+      "row_id": "v84cUqtimQ55Bbq0Wm7Xqt"
+    },
+    {
+      "ui_row": 8,
+      "name": "McGraw Hill Accessibility",
+      "added_to_site": true,
+      "url": "https://www.mheducation.com/about-us/trust-center/accessibility",
+      "source": "Internal",
+      "label": "Statement/Policy",
+      "vendor_reference": "McGraw Hill",
+      "vendor_resource_datetime_raw": "3/6/2026 12:30:50 AM",
+      "_truncated_fields": [],
+      "row_id": "jJODUdPUm8HKXgpS7lTSyk"
+    },
+    {
+      "ui_row": 9,
+      "name": "Opening Doors to Learning: The Essential Role of Accessibility in K-12 Schools",
+      "added_to_site": true,
+      "url": "https://www.instructure.com/resources/blog/opening-doors-learning-essential-role-accessibility-k-12-schools",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Instructure",
+      "vendor_resource_datetime_raw": "2/17/2026 9:40:34 AM",
+      "_truncated_fields": [],
+      "row_id": "AVJPeoInMbdfpO2GBEL7w4"
+    },
+    {
+      "ui_row": 10,
+      "name": "Accessibility initiatives at Adobe",
+      "added_to_site": true,
+      "url": "https://www.adobe.com/trust/accessibility/initiatives.html",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Adobe",
+      "vendor_resource_datetime_raw": "2/17/2026 10:13:51 AM",
+      "_truncated_fields": [],
+      "row_id": "TS7d3PPsvXnkU5tU9V6yPO"
+    },
+    {
+      "ui_row": 11,
+      "name": "Accessibility conformance reports for Adobe solutions.",
+      "added_to_site": true,
+      "url": "https://www.adobe.com/accessibility/compliance.html",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Adobe",
+      "vendor_resource_datetime_raw": "2/17/2026 10:14:27 AM",
+      "_truncated_fields": [],
+      "row_id": "Q9FE92KmJrXTPoTNPKFmHl"
+    },
+    {
+      "ui_row": 12,
+      "name": "Accessibility features in Google for Education",
+      "added_to_site": true,
+      "url": "https://edu.google.com/intl/ALL_us/our-values/accessibility/",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Google",
+      "vendor_resource_datetime_raw": "3/20/2026 10:44:01 AM",
+      "_truncated_fields": [],
+      "row_id": "k54CfRq2RGxsMYlSiMkjRq"
+    },
+    {
+      "ui_row": 13,
+      "name": "Accessibility at Microsoft",
+      "added_to_site": true,
+      "url": "https://www.microsoft.com/en-us/accessibility",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Microsoft",
+      "vendor_resource_datetime_raw": "2/27/2026 9:45:59 AM",
+      "_truncated_fields": [],
+      "row_id": "gktn9XJXJwtAyuh7kWWdG3"
+    },
+    {
+      "ui_row": 14,
+      "name": "Set up your device to work with accessibility in Microsoft 365",
+      "added_to_site": true,
+      "url": "https://support.microsoft.com/en-us/office/set-up-your-device-to-work-with-accessibility-in-microsoft-365-a0ca81c1-fa3e-417e-9d3b-78b8816fce58#PickTab=Windows",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Microsoft",
+      "vendor_resource_datetime_raw": "2/27/2026 9:53:17 AM",
+      "_truncated_fields": [],
+      "row_id": "AxyV14sI14QcVKJEAtSSsY",
+      "_url_transcription_confidence": "medium -- contains a long alphanumeric ID/hash/param string, verify before automated use"
+    },
+    {
+      "ui_row": 15,
+      "name": "Improve accessibility with the Accessibility Checker",
+      "added_to_site": true,
+      "url": "https://support.microsoft.com/en-us/office/improve-accessibility-with-the-accessibility-checker-a16f6de0-2f39-4a2b-8bd8-5ad801426c7f",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Microsoft",
+      "vendor_resource_datetime_raw": "3/6/2026 1:05:13 AM",
+      "_truncated_fields": [],
+      "row_id": "l3q3bkx1ws2nLcYUglwp08",
+      "_url_transcription_confidence": "medium -- contains a long alphanumeric ID/hash/param string, verify before automated use"
+    },
+    {
+      "ui_row": 16,
+      "name": "Accessibility help & learning",
+      "added_to_site": true,
+      "url": "https://support.microsoft.com/en-us/accessibility",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Microsoft",
+      "vendor_resource_datetime_raw": "3/3/2026 10:50:46 AM",
+      "_truncated_fields": [],
+      "row_id": "U6v61fPv9XO3YTeMLkPgeP"
+    },
+    {
+      "ui_row": 17,
+      "name": "Using Student and Teacher Feedback to Improve Product Accessibility",
+      "added_to_site": true,
+      "url": "https://www.curriculumassociates.com/blog/using-feedback-to-improve-product-accessibility",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Curriculum Associates",
+      "vendor_resource_datetime_raw": "3/5/2026 5:23:28 PM",
+      "_truncated_fields": [],
+      "row_id": "ARBftnQYQ1ZtUPbqncUPBh"
+    },
+    {
+      "ui_row": 18,
+      "name": "Accessibility in Our Programs",
+      "added_to_site": true,
+      "url": "https://www.curriculumassociates.com/instructional-design/committed-to-accessibility/accessibility-in-our-programs",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Curriculum Associates",
+      "vendor_resource_datetime_raw": "3/11/2026 2:55:51 PM",
+      "_truncated_fields": [],
+      "row_id": "bFjANLwdzcAqvD4vvXTOrY"
+    },
+    {
+      "ui_row": 19,
+      "name": "Accessibility Policy (PDF)",
+      "added_to_site": true,
+      "url": "https://www.mheducation.com/unitas/school/explore/sites/aleks/6-12-accessibility.pdf",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "McGraw Hill",
+      "vendor_resource_datetime_raw": "3/6/2026 12:30:00 AM",
+      "_truncated_fields": [],
+      "row_id": "6KankBUpyAJV6qbKWHY02g"
+    },
+    {
+      "ui_row": 20,
+      "name": "i-Ready TrustEd Apps Profile - Accessibility Rubric",
+      "added_to_site": true,
+      "url": "https://site.imsglobal.org/accessibility-rubric/app-vetting-profile-for-i-ready/620058",
+      "source": "External",
+      "label": null,
+      "vendor_reference": "Curriculum Associates",
+      "vendor_resource_datetime_raw": "3/11/2026 4:53:01 PM",
+      "_truncated_fields": [],
+      "row_id": "SgEgyNBROjZJr82x5vSEBF"
+    },
+    {
+      "ui_row": 21,
+      "name": "i-Ready Accessibility Tools (Video)",
+      "added_to_site": false,
+      "url": "https://www.youtube.com/watch?v=Beakz8qe8aY",
+      "source": "External",
+      "label": null,
+      "vendor_reference": "Curriculum Associates",
+      "vendor_resource_datetime_raw": "3/11/2026 4:46:24 PM",
+      "_truncated_fields": [],
+      "row_id": "1jfobdazSTFRlg58JwmvP1",
+      "_url_transcription_confidence": "medium -- contains a long alphanumeric ID/hash/param string, verify before automated use"
+    },
+    {
+      "ui_row": 22,
+      "name": "Thoughts on I-Ready",
+      "added_to_site": false,
+      "url": "https://www.reddit.com/r/specialed/comments/1mxiqmg/thoughts_on_iready/",
+      "source": "External",
+      "label": null,
+      "vendor_reference": null,
+      "vendor_resource_datetime_raw": "3/11/2026 4:59:03 PM",
+      "_truncated_fields": [],
+      "row_id": "NVeSHCZOBvsClZxc8xl6Ds"
+    },
+    {
+      "ui_row": 23,
+      "name": "Make your document, presentation, sheets & videos more accessible",
+      "added_to_site": true,
+      "url": "https://support.google.com/accessibility/answer/6199477?hl=en",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Google",
+      "vendor_resource_datetime_raw": "3/20/2026 10:30:43 AM",
+      "_truncated_fields": [],
+      "row_id": "P8j9tHTBOuqZaDngPm61Zt"
+    },
+    {
+      "ui_row": 24,
+      "name": "Use Google Docs Editors with a screen reader",
+      "added_to_site": true,
+      "url": "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Google",
+      "vendor_resource_datetime_raw": "3/20/2026 10:42:15 AM",
+      "_truncated_fields": [],
+      "row_id": "7CP8s8UMEVX7drTpAijDWs",
+      "_url_transcription_confidence": "medium -- contains a long alphanumeric ID/hash/param string, verify before automated use"
+    },
+    {
+      "ui_row": 25,
+      "name": "Accessibility support for ExploreLearning",
+      "added_to_site": true,
+      "url": "https://help.explorelearning.com/en/articles/9016018-accessibility",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "ExploreLearning",
+      "vendor_resource_datetime_raw": "8/7/2026 12:10:20 PM",
+      "_truncated_fields": [],
+      "row_id": "Vs6nlVxCPXPFblIip56QFB"
+    },
+    {
+      "ui_row": 26,
+      "name": "Accessibility Statement",
+      "added_to_site": true,
+      "url": "https://apps.explorelearning.com/account/el/accessibility",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "ExploreLearning",
+      "vendor_resource_datetime_raw": "8/7/2026 12:10:16 PM",
+      "_truncated_fields": [],
+      "row_id": "pGQ7ptiTlwa7UJ70EPv3sl"
+    },
+    {
+      "ui_row": 27,
+      "name": "Accessibility Settings (Video)",
+      "added_to_site": null,
+      "url": "https://www.youtube.com/watch?v=uMg3NHVW4kM",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "edclub",
+      "vendor_resource_datetime_raw": "4/21/2026 5:02:41 PM",
+      "_truncated_fields": [],
+      "row_id": "XD1f2NAJZmxdbnPZNirU4n",
+      "_url_transcription_confidence": "medium -- contains a long alphanumeric ID/hash/param string, verify before automated use"
+    },
+    {
+      "ui_row": 28,
+      "name": "PowerSchool Product Accessibility Statement",
+      "added_to_site": true,
+      "url": "https://www.powerschool.com/legal/product-accessibility-statement/",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "PowerSchool",
+      "vendor_resource_datetime_raw": "5/13/2026 1:57:04 PM",
+      "_truncated_fields": [],
+      "row_id": "18KNy2rkmjRC0mgdqQTFDE"
+    },
+    {
+      "ui_row": 29,
+      "name": "Our Approach to Accessibility",
+      "added_to_site": false,
+      "url": "https://amplify.com/high-quality-programs/#h-our-approach-to-accessibility",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Amplify",
+      "vendor_resource_datetime_raw": "5/14/2026 5:26:04 PM",
+      "_truncated_fields": [],
+      "row_id": "pyqhq67rAfh31V61N99NXn"
+    },
+    {
+      "ui_row": 30,
+      "name": "How we help learners",
+      "added_to_site": false,
+      "url": "https://investor.chegg.com/esg/how-we-help-learners/default.aspx",
+      "source": "Internal",
+      "label": null,
+      "vendor_reference": "Chegg",
+      "vendor_resource_datetime_raw": "7/13/2026 8:32:14 AM",
+      "_truncated_fields": [],
+      "row_id": "PNbPGxT7SQF18i4YSH8S4D"
+    },
+    {
+      "ui_row": 31,
+      "name": "Accessibility Statement",
+      "added_to_site": true,
+      "url": "https://www.pebblego.com/resources/help-center/admin-support/accessibility",
+      "source": "Internal",
+      "label": "Statement/Policy",
+      "vendor_reference": "Capstone",
+      "vendor_resource_datetime_raw": "8/7/2026 12:24:21 PM",
+      "_truncated_fields": [],
+      "row_id": "B3yxwKaVAuxH9pNs1ABuY7"
+    }
+  ]
+}
