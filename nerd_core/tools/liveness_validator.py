@@ -5,6 +5,7 @@ import ipaddress
 import logging
 from dataclasses import dataclass
 from typing import Optional, Set
+from urllib.parse import urljoin
 
 logger = logging.getLogger("nerd.validator")
 
@@ -27,11 +28,17 @@ async def get_resolved_ips(hostname: str) -> Set[str]:
     addr_info = await asyncio.to_thread(socket.getaddrinfo, hostname, None)
     return {info[4][0] for info in addr_info}
 
+_BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
+
 async def validate_link(url: str, max_redirects: int = 3) -> ValidationResult:
     """
     Hardened validator: follows redirects manually to check SSRF safety at each hop.
     """
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=10.0, headers=_BROWSER_HEADERS) as client:
         current_url = url
         for _ in range(max_redirects + 1):
             try:
@@ -44,9 +51,10 @@ async def validate_link(url: str, max_redirects: int = 3) -> ValidationResult:
                 resp = await client.get(current_url, follow_redirects=False)
                 
                 if resp.is_redirect:
-                    current_url = resp.headers.get("location")
-                    if not current_url:
+                    location = resp.headers.get("location")
+                    if not location:
                         return ValidationResult(False, resp.status_code, "Redirect missing location")
+                    current_url = urljoin(current_url, location)
                     continue
                 
                 return ValidationResult(
