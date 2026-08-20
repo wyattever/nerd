@@ -239,6 +239,7 @@ async def ingest_draft(req: schemas.IngestDraftRequest, uid: str = Depends(verif
 
     return schemas.IngestDraftResponse(
         parsed_listing=dataclass_to_pydantic(result.listing),
+        raw_markdown=req.draft_markdown,
         rejections=result.rejections,
         diagnostics=schemas.DraftDiagnostics(**asdict(result.diagnostics)),
     )
@@ -278,7 +279,7 @@ async def get_product_data(slug: str, uid: str = Depends(verify_token)):
     return data
 
 @app.post("/admin/candidates")
-async def save_candidate(data: schemas.ListingData, uid: str = Depends(verify_token)):
+async def save_candidate(data: schemas.CandidateRecord, uid: str = Depends(verify_token)):
     # AI insights are stripped on ingestion/persistence
     model_data = data.model_dump()
     model_data.pop("ai_insights", None)
@@ -301,7 +302,7 @@ async def delete_candidate_endpoint(slug: str, uid: str = Depends(verify_token))
     return {"message": "Candidate deleted successfully"}
 
 @app.put("/admin/candidates/{slug}")
-async def update_candidate(slug: str, data: schemas.ListingData, uid: str = Depends(verify_token)):
+async def update_candidate(slug: str, data: schemas.CandidateRecord, uid: str = Depends(verify_token)):
     existing = await get_candidate(slug)
     if not existing:
         raise HTTPException(status_code=404, detail="Candidate not found")

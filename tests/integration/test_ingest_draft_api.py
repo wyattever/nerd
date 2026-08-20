@@ -56,6 +56,7 @@ async def test_ingest_draft_success(client):
         assert body["rejections"] == ["https://v.com/flagged (Status: 403)"]
         assert body["diagnostics"]["parsed_vendor_count"] == 1
         assert body["diagnostics"]["acr_reset"] is False
+        assert body["raw_markdown"] == "# Test Product\n- https://v.com/a"
 
 
 @pytest.mark.anyio

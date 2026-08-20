@@ -306,7 +306,7 @@ useEffect(() => {
     setIsProductLoaded(false);
     setActiveCandidateSlug(null);
     setIsImportOpen(false);
-    injectListing(result.parsed_listing, "Loaded imported draft.");
+    injectListing({ ...result.parsed_listing, raw_markdown: result.raw_markdown }, "Loaded imported draft.");
   };
 
   const handleSave = async (target: "candidates" | "products") => {

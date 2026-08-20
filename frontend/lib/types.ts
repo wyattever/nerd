@@ -42,6 +42,7 @@ export interface ListingData {
   acr_reports: ACRReport[];
   last_updated?: string;
   section_overrides?: SectionOverrides;
+  raw_markdown?: string;
 }
 
 export interface DraftDiagnostics {
@@ -55,6 +56,7 @@ export interface DraftDiagnostics {
 
 export interface IngestDraftResponse {
   parsed_listing: ListingData;
+  raw_markdown: string;
   rejections: string[];
   diagnostics: DraftDiagnostics;
 }

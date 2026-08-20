@@ -159,5 +159,6 @@ class DraftDiagnostics(BaseModel):
 
 class IngestDraftResponse(BaseModel):
     parsed_listing: ListingData
+    raw_markdown: str
     rejections: list[str] = Field(default_factory=list)
     diagnostics: DraftDiagnostics
