@@ -656,3 +656,601 @@
 /* Forced-colors mode: the icon glyph is real text, not a background image,
    so it stays visible with no extra rule beyond the existing thead th /
    tbody td border rule above. */
+
+
+/* ==========================================================================
+   N.E.R.D. -- AppSheet recovery tables
+   Added for the seven raw AppSheet review tables (ACRs, Product Resources,
+   Product Supports, Products (AppSheet source), Vendor Resources, Vendor
+   Supports, Vendors). Each table gets its own `.nerd-table--<anchor>`
+   min-width modifier -- `.nerd-table--wide` is left untouched because its
+   190rem min-width is specific to /researcher's 12 columns and does not
+   apply to any of these tables' column counts or widths.
+   ========================================================================== */
+
+/* Monospace utility for AppSheet row IDs, emails, and ID-reference lists. */
+.nerd-mono {
+  font-family: var(--nerd-font-mono);
+  font-size: 0.8125rem;
+}
+
+/* Ellipsis anchors need to be block-level for text-overflow to apply,
+   matching the existing .nerd-col-product-website / .nerd-col-ncademi-url
+   pattern in the base stylesheet. */
+.nerd-table td.nerd-col-acr-url a,
+.nerd-table td.nerd-col-acr-completedbyurl a,
+.nerd-table td.nerd-col-pres-url a,
+.nerd-table td.nerd-col-psup-websiteurl a,
+.nerd-table td.nerd-col-aprod-website a,
+.nerd-table td.nerd-col-aprod-ncademiurl a,
+.nerd-table td.nerd-col-vres-url a,
+.nerd-table td.nerd-col-vsup-websiteurl a,
+.nerd-table td.nerd-col-vend-website a,
+.nerd-table td.nerd-col-vend-ncademiurl a {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--nerd-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.nerd-table td.nerd-col-acr-url a:hover,
+.nerd-table td.nerd-col-acr-completedbyurl a:hover,
+.nerd-table td.nerd-col-pres-url a:hover,
+.nerd-table td.nerd-col-psup-websiteurl a:hover,
+.nerd-table td.nerd-col-aprod-website a:hover,
+.nerd-table td.nerd-col-aprod-ncademiurl a:hover,
+.nerd-table td.nerd-col-vres-url a:hover,
+.nerd-table td.nerd-col-vsup-websiteurl a:hover,
+.nerd-table td.nerd-col-vend-website a:hover,
+.nerd-table td.nerd-col-vend-ncademiurl a:hover {
+  color: var(--nerd-ink);
+  text-decoration-thickness: 2px;
+}
+
+/* Truncated-value flag. Applied via data-truncated="true" on any cell whose
+   field is listed in a row's _truncated_fields (or, for link cells, whose
+   value itself ends in the source ellipsis marker). Dashed underline is
+   programmatically backed by the title attribute already present on the
+   element, so the flag is not conveyed by color alone (WCAG 1.4.1). */
+[data-truncated="true"] {
+  text-decoration: underline dashed;
+  text-decoration-color: var(--nerd-rule-strong);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+@media (forced-colors: active) {
+  [data-truncated="true"] {
+    text-decoration-color: CanvasText;
+  }
+}
+
+/* ACRs (79 rows) -------------------------------- */
+.nerd-table--acrs {
+  min-width: 167rem;
+}
+
+.nerd-table th.nerd-col-acr-row,
+.nerd-table td.nerd-col-acr-row {
+  width: 4rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-acr-rowid,
+.nerd-table td.nerd-col-acr-rowid {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-acr-name,
+.nerd-table td.nerd-col-acr-name {
+  width: 18rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-acr-product,
+.nerd-table td.nerd-col-acr-product {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-acr-url,
+.nerd-table td.nerd-col-acr-url {
+  width: 20rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nerd-table th.nerd-col-acr-datepub,
+.nerd-table td.nerd-col-acr-datepub {
+  width: 8rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-acr-version,
+.nerd-table td.nerd-col-acr-version {
+  width: 6rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-acr-preparedby,
+.nerd-table td.nerd-col-acr-preparedby {
+  width: 8rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-acr-completedby,
+.nerd-table td.nerd-col-acr-completedby {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-acr-completedbyurl,
+.nerd-table td.nerd-col-acr-completedbyurl {
+  width: 16rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nerd-table th.nerd-col-acr-information,
+.nerd-table td.nerd-col-acr-information {
+  width: 16rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-acr-tempcontact,
+.nerd-table td.nerd-col-acr-tempcontact {
+  width: 14rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-acr-lastupdated,
+.nerd-table td.nerd-col-acr-lastupdated {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-acr-added,
+.nerd-table td.nerd-col-acr-added {
+  width: 7rem;
+  white-space: nowrap;
+}
+
+/* Product Resources (281 rows) -------------------------------- */
+.nerd-table--product-resources {
+  min-width: 112rem;
+}
+
+.nerd-table th.nerd-col-pres-row,
+.nerd-table td.nerd-col-pres-row {
+  width: 4rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-pres-name,
+.nerd-table td.nerd-col-pres-name {
+  width: 18rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-pres-product,
+.nerd-table td.nerd-col-pres-product {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-pres-url,
+.nerd-table td.nerd-col-pres-url {
+  width: 22rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nerd-table th.nerd-col-pres-source,
+.nerd-table td.nerd-col-pres-source {
+  width: 7rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-pres-label,
+.nerd-table td.nerd-col-pres-label {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-pres-date,
+.nerd-table td.nerd-col-pres-date {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-pres-added,
+.nerd-table td.nerd-col-pres-added {
+  width: 7rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-pres-notes,
+.nerd-table td.nerd-col-pres-notes {
+  width: 16rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+/* Product Supports (85 rows) -------------------------------- */
+.nerd-table--product-supports {
+  min-width: 111rem;
+}
+
+.nerd-table th.nerd-col-psup-row,
+.nerd-table td.nerd-col-psup-row {
+  width: 4rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-psup-type,
+.nerd-table td.nerd-col-psup-type {
+  width: 8rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-psup-websitename,
+.nerd-table td.nerd-col-psup-websitename {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-psup-websiteurl,
+.nerd-table td.nerd-col-psup-websiteurl {
+  width: 18rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nerd-table th.nerd-col-psup-email,
+.nerd-table td.nerd-col-psup-email {
+  width: 16rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-psup-info,
+.nerd-table td.nerd-col-psup-info {
+  width: 18rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-psup-product,
+.nerd-table td.nerd-col-psup-product {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-psup-date,
+.nerd-table td.nerd-col-psup-date {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-psup-added,
+.nerd-table td.nerd-col-psup-added {
+  width: 7rem;
+  white-space: nowrap;
+}
+
+/* Products (AppSheet source) (101 rows) -------------------------------- */
+.nerd-table--appsheet-products {
+  min-width: 231rem;
+}
+
+.nerd-table th.nerd-col-aprod-row,
+.nerd-table td.nerd-col-aprod-row {
+  width: 4rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-aprod-name,
+.nerd-table td.nerd-col-aprod-name {
+  width: 14rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-aprod-vendor,
+.nerd-table td.nerd-col-aprod-vendor {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-aprod-website,
+.nerd-table td.nerd-col-aprod-website {
+  width: 20rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nerd-table th.nerd-col-aprod-desc,
+.nerd-table td.nerd-col-aprod-desc {
+  width: 30rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-aprod-priority,
+.nerd-table td.nerd-col-aprod-priority {
+  width: 7rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-aprod-platforms,
+.nerd-table td.nerd-col-aprod-platforms {
+  width: 14rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-aprod-notes,
+.nerd-table td.nerd-col-aprod-notes {
+  width: 20rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-aprod-status,
+.nerd-table td.nerd-col-aprod-status {
+  width: 8rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-aprod-lastupdated,
+.nerd-table td.nerd-col-aprod-lastupdated {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-aprod-ncademiurl,
+.nerd-table td.nerd-col-aprod-ncademiurl {
+  width: 20rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nerd-table th.nerd-col-aprod-gatherer,
+.nerd-table td.nerd-col-aprod-gatherer {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-aprod-reviewer,
+.nerd-table td.nerd-col-aprod-reviewer {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-aprod-acrids,
+.nerd-table td.nerd-col-aprod-acrids {
+  width: 14rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-aprod-resourceids,
+.nerd-table td.nerd-col-aprod-resourceids {
+  width: 16rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-aprod-supportids,
+.nerd-table td.nerd-col-aprod-supportids {
+  width: 16rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+/* Vendor Resources (31 rows) -------------------------------- */
+.nerd-table--vendor-resources {
+  min-width: 110rem;
+}
+
+.nerd-table th.nerd-col-vres-row,
+.nerd-table td.nerd-col-vres-row {
+  width: 4rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vres-rowid,
+.nerd-table td.nerd-col-vres-rowid {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vres-name,
+.nerd-table td.nerd-col-vres-name {
+  width: 18rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-vres-vendor,
+.nerd-table td.nerd-col-vres-vendor {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vres-url,
+.nerd-table td.nerd-col-vres-url {
+  width: 22rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nerd-table th.nerd-col-vres-source,
+.nerd-table td.nerd-col-vres-source {
+  width: 7rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vres-label,
+.nerd-table td.nerd-col-vres-label {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vres-date,
+.nerd-table td.nerd-col-vres-date {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vres-added,
+.nerd-table td.nerd-col-vres-added {
+  width: 7rem;
+  white-space: nowrap;
+}
+
+/* Vendor Supports (19 rows) -------------------------------- */
+.nerd-table--vendor-supports {
+  min-width: 118rem;
+}
+
+.nerd-table th.nerd-col-vsup-row,
+.nerd-table td.nerd-col-vsup-row {
+  width: 4rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vsup-type,
+.nerd-table td.nerd-col-vsup-type {
+  width: 8rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vsup-websitename,
+.nerd-table td.nerd-col-vsup-websitename {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vsup-websiteurl,
+.nerd-table td.nerd-col-vsup-websiteurl {
+  width: 18rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nerd-table th.nerd-col-vsup-email,
+.nerd-table td.nerd-col-vsup-email {
+  width: 16rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vsup-info,
+.nerd-table td.nerd-col-vsup-info {
+  width: 16rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-vsup-vendor,
+.nerd-table td.nerd-col-vsup-vendor {
+  width: 12rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vsup-date,
+.nerd-table td.nerd-col-vsup-date {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vsup-checkbox,
+.nerd-table td.nerd-col-vsup-checkbox {
+  width: 8rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vsup-col9,
+.nerd-table td.nerd-col-vsup-col9 {
+  width: 8rem;
+  white-space: nowrap;
+}
+
+/* Vendors (37 rows) -------------------------------- */
+.nerd-table--vendors {
+  min-width: 103rem;
+}
+
+.nerd-table th.nerd-col-vend-row,
+.nerd-table td.nerd-col-vend-row {
+  width: 4rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vend-name,
+.nerd-table td.nerd-col-vend-name {
+  width: 14rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vend-website,
+.nerd-table td.nerd-col-vend-website {
+  width: 20rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nerd-table th.nerd-col-vend-lastupdated,
+.nerd-table td.nerd-col-vend-lastupdated {
+  width: 10rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vend-added,
+.nerd-table td.nerd-col-vend-added {
+  width: 7rem;
+  white-space: nowrap;
+}
+.nerd-table th.nerd-col-vend-notes,
+.nerd-table td.nerd-col-vend-notes {
+  width: 20rem;
+  white-space: pre-line;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.nerd-table th.nerd-col-vend-ncademiurl,
+.nerd-table td.nerd-col-vend-ncademiurl {
+  width: 22rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   N.E.R.D. — /tables navigation
+   Switches between the seven read-only AppSheet recovery tables via
+   ?table=<slug>. The active table's nav item is not a link (WCAG 2.4.4/3.2.1
+   -- a "you are here" indicator, not a redundant self-link) and carries
+   aria-current="page" so assistive tech announces it; underline plus bold
+   weight means the state is never conveyed by color alone (WCAG 1.4.1).
+   ========================================================================== */
+
+.nerd-tables-nav {
+  margin-bottom: 1.5rem;
+}
+
+.nerd-tables-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nerd-tables-nav a,
+.nerd-tables-nav-current {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.4375rem 0.875rem;
+  border-radius: var(--nerd-radius);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  border: 1px solid transparent;
+}
+
+.nerd-tables-nav a {
+  color: var(--nerd-ink-header);
+  background: var(--nerd-surface);
+  border-color: var(--nerd-rule-strong);
+  text-decoration: none;
+}
+
+.nerd-tables-nav a:hover {
+  background: var(--nerd-header-fill);
+  border-color: var(--nerd-ink-muted);
+}
+
+.nerd-tables-nav-current {
+  color: var(--nerd-accent);
+  background: var(--nerd-header-fill);
+  border-color: var(--nerd-accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (forced-colors: active) {
+  .nerd-tables-nav a {
+    border-color: CanvasText;
+  }
+  .nerd-tables-nav-current {
+    border-color: Highlight;
+    color: Highlight;
+  }
+}
