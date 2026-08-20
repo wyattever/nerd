@@ -61,7 +61,6 @@ def test_parser():
     assert listing.vendor_resources[0].text == "Official Accessibility Page"
     assert listing.vendor_resources[0].url == "https://test.com/a11y"
     assert len(listing.other_resources) == 1
-    assert "strong commitment" in listing.ai_insights
     logger.info("✅ Parser Passed")
 
 def test_artifact_generation():

@@ -74,7 +74,6 @@ def verify_render_parity():
         "product_website_url": listing_dc.product_website_url,
         "vendor_resources": [{"url": r.url, "text": r.text} for r in listing_dc.vendor_resources],
         "other_resources": [{"url": r.url, "text": r.text} for r in listing_dc.other_resources],
-        "ai_insights": listing_dc.ai_insights,
         "support_contacts": [{"type": "email", "value": "help@fidelity.io", "label": ""}],
         "acr_reports": [{
             "title": "WCAG 2.1 Report",

@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from nerd_core.link_validator_engine import LinkValidatorEngine
+from nerd_core.tools.administrative_validators.link_validator_engine import LinkValidatorEngine
 
 def test_engine():
     async def run_test():

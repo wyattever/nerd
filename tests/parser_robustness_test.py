@@ -88,17 +88,6 @@ class TestParserRobustness(unittest.IsolatedAsyncioTestCase):
             listing = parse_markdown_to_listing(md)
             self.assertEqual(len(listing.other_resources), 1, f"Failed on header: {v}")
 
-    def test_ai_insights_extraction(self):
-        md = """
-### AI Generated Insights
-Description: This is a test summary.
-It spans multiple lines.
-It should be captured fully.
-"""
-        listing = parse_markdown_to_listing(md)
-        self.assertIn("This is a test summary.", listing.ai_insights)
-        self.assertIn("should be captured fully.", listing.ai_insights)
-
     def test_malformed_lines_graceful_handling(self):
         md = """
 ### Vendor Resources
