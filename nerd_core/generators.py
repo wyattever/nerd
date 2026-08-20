@@ -50,7 +50,6 @@ class SupportContact:
 class ACRReport:
     title: str
     url: str
-    # Metadata fields retained for structure, but no longer parsed from markdown.
     version: str = ""
     date: str = ""
     auditor_name: str = ""
@@ -189,7 +188,20 @@ def parse_markdown_to_listing(markdown: str) -> ListingData:
                     fallback = _LINK_RE.match(link_body)
                     if fallback:
                         data.acr_reports[-1].url = (fallback.group("url1") or fallback.group("url2") or fallback.group("url3")).strip()
-            # Metadata scraping lines removed to ensure frugal/template-only behavior.
+            elif stripped.startswith("Version:") and data.acr_reports:
+                data.acr_reports[-1].version = stripped[len("Version:"):].strip()
+            elif stripped.startswith("Date:") and data.acr_reports:
+                data.acr_reports[-1].date = stripped[len("Date:"):].strip()
+            elif stripped.startswith("Auditor:") and data.acr_reports:
+                data.acr_reports[-1].auditor_name = stripped[len("Auditor:"):].strip()
+            elif stripped.startswith("Auditor URL:") and data.acr_reports:
+                data.acr_reports[-1].auditor_url = stripped[len("Auditor URL:"):].strip()
+            elif stripped.startswith("Preparation Type:") and data.acr_reports:
+                prep_val = stripped[len("Preparation Type:"):].strip()
+                if prep_val.lower() == "external":
+                    data.acr_reports[-1].preparation_type = "External"
+                elif prep_val.lower() == "internal":
+                    data.acr_reports[-1].preparation_type = "Internal" 
 
     data.last_updated = datetime.now().strftime('%B %d, %Y')
     data.vendor_resources = _rank_and_cap_resources(data.vendor_resources)

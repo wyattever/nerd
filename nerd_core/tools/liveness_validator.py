@@ -14,6 +14,7 @@ class ValidationResult:
     is_live: bool
     status_code: Optional[int]
     reason: str
+    resolved_url: str = ""
 
 def is_safe_ip(ip_str: str) -> bool:
     """Blocks private, loopback, link-local, and multicast ranges to prevent SSRF."""
@@ -34,40 +35,45 @@ _BROWSER_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-async def validate_link(url: str, max_redirects: int = 3) -> ValidationResult:
+async def validate_link(url: str, max_redirects: int = 5) -> ValidationResult:
     """
     Hardened validator: follows redirects manually to check SSRF safety at each hop.
+    Captures and returns the terminal resolved_url.
     """
     async with httpx.AsyncClient(timeout=10.0, headers=_BROWSER_HEADERS) as client:
         current_url = url
         for _ in range(max_redirects + 1):
             try:
                 host = httpx.URL(current_url).host
+                if not host:
+                    return ValidationResult(False, 0, "Invalid URL host", resolved_url=current_url)
+                    
                 ips = await get_resolved_ips(host)
                 
                 if not all(is_safe_ip(ip) for ip in ips):
-                    return ValidationResult(False, 0, "SSRF Blocked: Private IP detected")
+                    return ValidationResult(False, 0, "SSRF Blocked: Private IP detected", resolved_url=current_url)
 
                 resp = await client.get(current_url, follow_redirects=False)
                 
                 if resp.is_redirect:
                     location = resp.headers.get("location")
                     if not location:
-                        return ValidationResult(False, resp.status_code, "Redirect missing location")
+                        return ValidationResult(False, resp.status_code, "Redirect missing location", resolved_url=current_url)
                     current_url = urljoin(current_url, location)
                     continue
                 
                 return ValidationResult(
-                    resp.is_success, 
-                    resp.status_code, 
-                    "Success" if resp.is_success else "HTTP Error"
+                    is_live=resp.is_success,
+                    status_code=resp.status_code,
+                    reason="Success" if resp.is_success else f"HTTP {resp.status_code}",
+                    resolved_url=current_url
                 )
                 
             except httpx.HTTPStatusError as e:
-                return ValidationResult(False, e.response.status_code, str(e))
+                return ValidationResult(False, e.response.status_code, str(e), resolved_url=current_url)
             except Exception as e:
                 status = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
                 logger.error(f"Validation failed for {current_url}: {str(e)}")
-                return ValidationResult(False, status, str(e))
+                return ValidationResult(False, status, str(e), resolved_url=current_url)
                 
-        return ValidationResult(False, 0, "Too many redirects")
+        return ValidationResult(False, 0, "Too many redirects", resolved_url=current_url)

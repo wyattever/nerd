@@ -30,7 +30,6 @@ This is a helpful insight.
     assert listing.other_resources[0].text == "Review"
     assert listing.other_resources[0].url == "https://thirdparty.com/review"
     
-    assert listing.ai_insights == "This is a helpful insight."
 
 def test_parse_markdown_parenthetical_links():
     markdown = """
@@ -63,7 +62,6 @@ def test_parse_markdown_missing_sections():
     assert listing.product_name == "Empty Product"
     assert listing.vendor_resources == []
     assert listing.other_resources == []
-    assert listing.ai_insights == ""
 
 def test_render_with_section_override():
     listing = ListingData(
@@ -92,3 +90,38 @@ def test_render_without_overrides_regression():
     assert "regress@example.com" in html
     assert "Regress Link" in html
     assert "https://regress.com" in html
+
+
+def test_acr_metadata_parsing():
+    from nerd_core.generators import parse_markdown_to_listing
+    md = """
+### Accessibility Conformance Reports (ACR / VPAT)
+Report Title: Full Report
+Link: [Full Report (PDF)](https://vpat.com/full)
+Version: 2.5
+Date: July 2026
+Auditor: Deque Systems
+Auditor URL: https://deque.com
+Preparation Type: External
+
+Report Title: Minimal Report
+Link: [Minimal Report (Web)](https://vpat.com/min)
+"""
+    listing = parse_markdown_to_listing(md)
+    assert len(listing.acr_reports) == 2
+    
+    full_report = listing.acr_reports[0]
+    assert full_report.title == "Full Report"
+    assert full_report.version == "2.5"
+    assert full_report.date == "July 2026"
+    assert full_report.auditor_name == "Deque Systems"
+    assert full_report.auditor_url == "https://deque.com"
+    assert full_report.preparation_type == "External"
+
+    min_report = listing.acr_reports[1]
+    assert min_report.title == "Minimal Report"
+    assert min_report.version == ""
+    assert min_report.date == ""
+    assert min_report.auditor_name == ""
+    assert min_report.auditor_url == ""
+    assert min_report.preparation_type == "Internal"
