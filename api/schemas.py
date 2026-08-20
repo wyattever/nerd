@@ -56,6 +56,8 @@ class ListingData(BaseModel):
     last_updated_at: Optional[str] = None
     section_overrides: Optional[SectionOverrides] = None
 
+    model_config = {"extra": "forbid"}
+
 
 class CandidateRecord(ListingData):
     raw_markdown: Optional[str] = None

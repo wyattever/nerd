@@ -34,3 +34,9 @@ def test_listing_data_validation():
 def test_support_contact_invalid_type():
     with pytest.raises(ValueError):
         SupportContact(type="phone", value="123456") # Only email, url, text allowed
+
+
+def test_listing_data_extra_forbid():
+    import pydantic
+    with pytest.raises(pydantic.ValidationError):
+        ListingData(product_name="Test", unknown_field="invalid")

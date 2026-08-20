@@ -377,7 +377,7 @@ async def healthz():
         checks["cloud_tasks_queue"] = f"error: {str(e)}"
 
     all_ok = all(v == "ok" for k, v in checks.items() if k in ["firestore", "cloud_tasks_queue"])
-    any_error = any(v.startswith("error") for v in checks.values())
+    any_error = any(isinstance(v, str) and v.startswith("error") for v in checks.values())
     
     status = "ok"
     if any_error:
