@@ -70,3 +70,10 @@ body {
     font-size: 1.17em;
     font-weight: bold;
   }
+
+@media (prefers-reduced-motion: reduce) {
+  .ellipsis-animation::after {
+    animation: none;
+    content: '...';
+  }
+}

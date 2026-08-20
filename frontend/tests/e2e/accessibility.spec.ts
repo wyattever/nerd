@@ -25,8 +25,8 @@ test('ARIA Live Region Updates', async ({ page }) => {
 
   // Verify aria-live region content updates
   // We use textContent with waitFor to ensure it's polite and captured
-  await expect(log).toContainText('crawler', { timeout: 10000 });
-  await expect(log).toContainText('DOM', { timeout: 10000 });
+  await expect(log).toContainText('Queuing research job...', { timeout: 10000 });
+  await expect(log).toContainText('Opening SSE stream', { timeout: 10000 });
   
   // ARIA tree assertion (Playwright 1.44+)
   // await expect(log).toMatchAriaSnapshot(`- log "System messages and progress log"`);

@@ -128,57 +128,8 @@ const refreshLists = useCallback(async () => {
     }
   }, []);
 
-  const MICRO_MESSAGES = {
-    searching: [
-      "Initializing web crawler...",
-      "Analyzing robots.txt for compliance...",
-      "Traversing DOM tree...",
-      "Extracting meta tags and JSON-LD...",
-      "Following canonical redirects...",
-      "Filtering non-relevant scripts...",
-      "Snapshotting page content for parsing...",
-      "Resolving vendor directory paths...",
-      "Analyzing accessibility landmarks...",
-      "Scoping vendor support resources...",
-    ],
-    synthesizing: [
-      "Assembling research fragments...",
-      "Applying NCADEMI architectural constraints...",
-      "Deduplicating resource URLs...",
-      "Normalizing product description prose...",
-      "Synthesizing AI-generated insights...",
-      "Mapping ACR reports to standard schema...",
-      "Validating final JSON structure...",
-      "Formatting WordPress-ready fragments...",
-      "Calculating data fidelity metrics...",
-      "Finalizing research draft...",
-    ],
-  };
-
-  const heartbeatType = useRef<keyof typeof MICRO_MESSAGES | null>(null);
-
   const logMessage = (msg: string) => {
     setLocalLog(prev => [...prev, msg]);
-  };
-
-  const startHeartbeat = (type: keyof typeof MICRO_MESSAGES) => {
-    if (heartbeatType.current === type) return;
-    stopHeartbeat();
-    heartbeatType.current = type;
-    let index = 0;
-    heartbeatTimer.current = setInterval(() => {
-      const msg = MICRO_MESSAGES[type][index % MICRO_MESSAGES[type].length];
-      logMessage(msg);
-      index++;
-    }, 1000);
-  };
-
-  const stopHeartbeat = () => {
-    if (heartbeatTimer.current) {
-      clearInterval(heartbeatTimer.current);
-      heartbeatTimer.current = null;
-    }
-    heartbeatType.current = null;
   };
 
   useEffect(() => {
@@ -190,28 +141,13 @@ const refreshLists = useCallback(async () => {
           return [...prev, lastMacroMsg];
         });
       }
-      const msgLower = lastMacroMsg?.toLowerCase() || "";
-      if (
-        msgLower.includes("queuing") ||
-        msgLower.includes("opening") ||
-        msgLower.includes("researching") ||
-        msgLower.includes("analyzing")
-      ) {
-        startHeartbeat("searching");
-      } else if (msgLower.includes("synthesizing") || msgLower.includes("insights")) {
-        startHeartbeat("synthesizing");
-      }
     } else if (state.status === "complete") {
-      stopHeartbeat();
       if (state.log.length > 0) {
         const lastMsg = state.log[state.log.length - 1];
         setLocalLog(prev => (prev[prev.length - 1] === lastMsg ? prev : [...prev, lastMsg]));
       }
     } else if (state.status === "error") {
-      stopHeartbeat();
       if (state.error) logMessage(`ERROR: ${state.error}`);
-    } else if (state.status === "idle") {
-      stopHeartbeat();
     }
   }, [state.log, state.status, state.error]);
 
@@ -220,10 +156,6 @@ const refreshLists = useCallback(async () => {
       logRef.current.scrollTop = logRef.current.scrollHeight;
     }
   }, [localLog]);
-
-  useEffect(() => {
-    return () => stopHeartbeat();
-  }, []);
 
 useEffect(() => {
     debugLog("lists", "init-effect:fired");
@@ -424,6 +356,11 @@ useEffect(() => {
           <div className="flex gap-8 items-start">
             <div className="w-1/2 flex flex-col gap-1">
               <label className="text-sm font-semibold text-gray-700">Messages</label>
+              {state.status === "error" && state.error && (
+                <div role="alert" className="bg-red-50 text-red-700 p-3 rounded border border-red-200 text-sm mb-2 font-semibold">
+                  {state.error}
+                </div>
+              )}
               <div
                 ref={logRef}
                 role="log"
@@ -649,7 +586,7 @@ useEffect(() => {
               </button>
 
               {!isProductLoaded && (
-                <div role="toolbar" aria-label="Section editors" className="ml-auto flex items-center gap-2 border-l pl-3">
+                <div aria-label="Section editors" className="ml-auto flex items-center gap-2 border-l pl-3">
                   <span className="text-xs font-semibold text-gray-600">EDIT:</span>
                   {SECTION_KEYS.map(({ key, label }) => (
                     <button
@@ -696,7 +633,7 @@ useEffect(() => {
                                  hover:bg-gray-50 focus:outline-none focus:ring-2
                                  focus:ring-gray-500 focus:ring-offset-2 transition-all"
                     >
-                      <span aria-live="assertive">{saveStatus["candidates"] || "Save Candidate"}</span>
+                      <span aria-live="polite">{saveStatus["candidates"] || "Save Candidate"}</span>
                     </button>
                   )}
                   {activeCandidateSlug && (
@@ -709,7 +646,7 @@ useEffect(() => {
                                  focus:ring-gray-500 focus:ring-offset-2 transition-all
                                  disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <span aria-live="assertive">{saveStatus["update"] || "Update Candidate"}</span>
+                      <span aria-live="polite">{saveStatus["update"] || "Update Candidate"}</span>
                     </button>
                   )}
 
