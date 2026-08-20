@@ -583,14 +583,20 @@ useEffect(() => {
           <>
             <div className="flex gap-3 items-center" role="toolbar" aria-label="Listing actions">
               <button
-                onClick={() => {
-                  fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/render`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(state.listing),
-                  })
-                    .then(r => r.json())
-                    .then(d => navigator.clipboard.writeText(d.html));
+                onClick={async () => {
+                  try {
+                    const token = await getIdToken();
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/render`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? "local-bypass"}` },
+                      body: JSON.stringify(state.listing),
+                    });
+                    if (!res.ok) throw new Error("Failed to copy HTML");
+                    const d = await res.json();
+                    await navigator.clipboard.writeText(d.html);
+                  } catch (err) {
+                    console.error("Copy HTML failed", err);
+                  }
                 }}
                 className="border border-gray-300 text-sm px-4 py-2 rounded
                            hover:bg-gray-50 focus:outline-none focus:ring-2
@@ -599,20 +605,24 @@ useEffect(() => {
                 Copy HTML
               </button>
               <button
-                onClick={() => {
-                  fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/render`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(state.listing),
-                  })
-                    .then(r => r.json())
-                    .then(d => {
-                      const blob = new Blob([d.html], { type: "text/html" });
-                      const a = document.createElement("a");
-                      a.href = URL.createObjectURL(blob);
-                      a.download = `${state.listing?.product_name ?? "listing"}.html`;
-                      a.click();
+                onClick={async () => {
+                  try {
+                    const token = await getIdToken();
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/render`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? "local-bypass"}` },
+                      body: JSON.stringify(state.listing),
                     });
+                    if (!res.ok) throw new Error("Failed to download HTML");
+                    const d = await res.json();
+                    const blob = new Blob([d.html], { type: "text/html" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `${state.listing?.product_name ?? "listing"}.html`;
+                    a.click();
+                  } catch (err) {
+                    console.error("Download HTML failed", err);
+                  }
                 }}
                 className="border border-gray-300 text-sm px-4 py-2 rounded
                            hover:bg-gray-50 focus:outline-none focus:ring-2

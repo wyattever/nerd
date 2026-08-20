@@ -164,6 +164,18 @@ export function useResearch() {
             }
           }
         },
+        onclose: () => {
+          debugLog("sse", "onclose");
+          if (abortControllerRef.current) {
+            debugWarn("sse", "onclose-unexpected");
+            abortControllerRef.current = null;
+            setState((prev) => (
+              prev.status === "streaming"
+                ? { ...prev, status: "error", error: "Stream closed unexpectedly." }
+                : prev
+            ));
+          }
+        },
         onerror: (err) => {
           // FIX 2: Stop retry loop on error
           if (ctrl.signal.aborted) return;
