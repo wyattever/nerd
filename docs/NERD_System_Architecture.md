@@ -1,10 +1,12 @@
 # System Design Document: N.E.R.D.
 
-**NCADEMI EdTech Research for the Directory** *Last Updated: July 09, 2026*
+**NCADEMI EdTech Research & Documentation** *Last Updated: August 20, 2026*
 
 ## 1. Executive Summary
 
-N.E.R.D. (Ncademi EdTech Research & Data) is a distributed, three-tier research platform designed to retrieve, validate, and format digital accessibility documentation for EdTech products. It automates the generation of NCADEMI-branded HTML fragments and JSON research artifacts using Google Vertex AI (Gemini 2.5 Flash) with Google Search Grounding.
+N.E.R.D. is a distributed, three-tier research platform designed to retrieve, validate, and format digital accessibility documentation for EdTech products. It automates the generation of NCADEMI-branded HTML fragments and JSON research artifacts using Google Vertex AI (Gemini 2.5 Flash) with Google Search Grounding.
+
+**Current scope:** active development is limited to the **Import Data** path — validating and parsing an externally-generated (Gemini Gem) Markdown draft through the shared pipeline, not triggering new live research runs. See §3.A and [Decision #30](DECISION_LOG.md#30-generate-listing--deferred-import-data-is-the-active-path).
 
 ## 2. Distributed Architecture
 
@@ -12,69 +14,80 @@ The system utilizes a scalable, asynchronous architecture on Google Cloud Run.
 
 ### A. Frontend (`frontend/`)
 
-* **Next.js 16 (App Router)**: Manages research forms, real-time log streaming via SSE, and an editable data grid (TanStack Table v8).
-* **Tailwind CSS 4**: Modern utility-first styling.
-* **Firebase Auth**: Secure entry point for authenticated Ncademi researchers.
-* **Accessibility**: WCAG 2.1 AA compliant, verified with `@axe-core/playwright`.
+* **Next.js 16 (App Router)**: research/import forms, real-time log streaming via SSE, and per-section HTML override editing.
+* **Tailwind CSS 4**: utility-first styling.
+* **Firebase Auth**: entry point for authenticated NCADEMI researchers.
+* **Accessibility**: WCAG 2.2 AA is a hard requirement, built in from the start — not bolted on. Verified with `@axe-core/playwright`.
+* **Routes**: `/` (Generate Listing / Import Data editor — see §3.A), `/researcher` (seeded product-tracking table), `/tables` (read-only AppSheet recovery tables), `/users` (user directory, no auth gate yet — MVP-stage, see [Decision #29](DECISION_LOG.md#29-security-posture--deferred-until-public-deployment)), `/login`.
+* **Data grids**: hand-rolled sortable tables (`ResearcherTable.tsx`, the generic pattern reused across `/researcher` and `/tables`), not a third-party grid library. An earlier TanStack Table-based `ResourceGrids` component caused the SSE re-render performance issue documented in `docs/superseded/UI_DIAGNOSTICS.md` and is no longer present in the codebase.
 
 ### B. API Orchestrator (`api/`)
 
-* **FastAPI**: Validates OIDC/Bearer tokens, manages job state in **Cloud Firestore**, and enqueues research tasks via **Cloud Tasks**.
-* **SSE (Server-Sent Events)**: Provides real-time progress logs to the frontend.
-* **Admin CRUD**: REST endpoints for managing research candidates and finalized listings.
-* **Deployment Constraint**: Pinned to `--max-instances 1` to preserve in-memory `validation_jobs` state.
+* **FastAPI**: validates Bearer tokens (Firebase ID tokens in production, short-circuited in `LOCAL_MODE`), manages job state in **Cloud Firestore**, enqueues research tasks via **Cloud Tasks**, and serves `POST /ingest/draft` — the Import Data endpoint, synchronous, no job/Cloud Tasks involvement.
+* **SSE (Server-Sent Events)**: real-time progress logs to the frontend, for the (currently deferred) live research path.
+* **Admin CRUD**: REST endpoints for candidates and finalized listings. `POST`/`PUT /admin/candidates` accept `schemas.CandidateRecord` (not `schemas.ListingData`), so `raw_markdown` survives persistence — see [Decision #31](DECISION_LOG.md#31-candidate-persistence--candidaterecord-adopted-on-saveupdate-raw_markdown-preserved).
+* **Deployment constraint**: pinned to `--max-instances 1` to preserve in-memory `validation_jobs` state.
 
 ### C. Processing Worker (`api/worker.py`)
 
-* **Async Processing**: A separate Cloud Run service (Scale-to-Zero) handling crawling, LLM synthesis, and link resolution.
-* **Isolation**: Callable only by Cloud Tasks via OIDC identity tokens.
+* **Async processing**: a separate Cloud Run service (scale-to-zero) handling crawling, LLM synthesis, and link resolution for live research runs.
+* **Isolation**: callable only by Cloud Tasks via OIDC identity tokens. Authenticates to Vertex AI/Gemini and Firestore via Application Default Credentials — never a `GEMINI_API_KEY` secret, which differs intentionally from `nerd-api`. See [Decision #28](DECISION_LOG.md#28-worker-auth--adc-only-no-gemini_api_key-on-nerd-worker).
 
 ### D. Core Business Logic (`nerd_core/`)
 
-* **`services.py`**: Orchestrates Vertex AI GenAI SDK calls.
-* **`link_validator_engine.py`**: A standalone, Playwright-based engine decoupled from the automated research path; reserved for on-demand administrative link checking to optimize cloud costs.
-* **`generators.py`**: Contains core parsing logic and Jinja2-based HTML rendering.
-* **`utils.py`**: General-purpose helpers and security utilities.
+* **`pipeline.py`**: the shared validate-and-build sequence (`validate_links()`, `build_listing()`, `validate_draft()`) extracted from what was previously duplicated between `api/worker.py` and `scripts/ingest_ai_studio_draft.py`. Both the live worker path and `POST /ingest/draft` call through this module — a fix to one benefits the other. Full extraction rationale and build sequencing: `docs/nerd-import-data-architecture-v4.md` §4.1, §11.
+* **`services.py`**: orchestrates the Vertex AI GenAI SDK calls (live research path only).
+* **`generators.py`**: parsing logic and Jinja2-based HTML rendering.
+* **`acr_validation.py` / `adaptive_validation.py`**: ACR/VPAT plausibility checks and per-resource liveness validation.
+* **`utils.py`**: general-purpose helpers and security utilities (SSRF-safe URL resolution, redirect handling).
+* **`tools/liveness_validator.py`**: known false-negative gap on bot-protected sites, see §5.
+* **`tools/administrative_validators/link_validator_engine.py`**: a standalone, Playwright-based engine. **Currently dead code carrying real build cost** — `crawlee[playwright]` sits in `requirements.txt` for this alone, and `playwright install` is never run in `Dockerfile.api`, so the "Playwright support" the Dockerfile claims doesn't actually exist. Pending an archive/delete decision.
 
-### E. Candidate/Product Data Storage — Local vs. Production (clarified 2026-07-09)
+### E. Candidate/Product Data Storage — Local vs. Production
 
 * **Production storage is exclusively Cloud Firestore**, collections `nerd_candidates`/`nerd_products` (`api/store.py`). There is no file-based storage in production; `upsert_candidate`/`upsert_product` never write to disk in either mode.
-* **`LOCAL_MODE` uses an in-memory dict**, seeded **once at container startup** from JSON files in `CANDIDATES_DIR`/`PRODUCTS_DIR` (env-var configurable, default `~/nerd_data/candidates/` and `~/nerd_data/products/` — physically outside the repo per the FinOps directory-decoupling migration, to avoid triggering the Uvicorn reload watcher). Writes made during a local session (including via `save_as_candidate`) update this in-memory store only — they are **not** persisted back to the seed JSON files, and are lost on container restart.
-* **As of 2026-07-09, production Firestore's `nerd_candidates` collection is empty (0 documents)**, confirmed via direct query. The 24 local seed files in `~/nerd_data/candidates/` are not a mirror or export of production data — their actual provenance/relationship to any past production state has not been established. Do not assume local seed data reflects, or has ever been pushed to, production.
+* **`LOCAL_MODE` uses an in-memory dict**, seeded once at container startup from JSON files in `CANDIDATES_DIR`/`PRODUCTS_DIR` (env-var configurable, default `~/nerd_data/candidates/` and `~/nerd_data/products/` — physically outside the repo, to avoid triggering the Uvicorn reload watcher). Writes made during a local session update this in-memory store only — not persisted back to the seed JSON files, lost on container restart.
+* Production Firestore's `nerd_candidates` collection was confirmed empty as of 2026-07-09. Local seed files are not established to be a mirror of any past production state — do not assume otherwise.
 
 ## 3. Core Workflows
 
-### A. Two-Stage Research
+### A. Import Data (current, active)
 
-1. **Initial Research**: A broad sweep identifying core accessibility pages.
-2. **Deep Dive**: Iterative extraction focusing on high-difficulty targets like `.edu` reviews or state-level registries.
+Paste a Gemini-Gem-generated Markdown research draft into the UI; `POST /ingest/draft` runs it through `nerd_core/pipeline.py`'s `validate_draft()` (link validation → parse → adaptive resource validation → ACR plausibility check) and returns a `ListingData` plus diagnostics. The result loads into the same editor surface a live research run would use — `ImportDataModal.tsx` is the only new UI surface; everything downstream (section editors, Copy/Download HTML, Save Candidate) is shared. Full spec: `docs/nerd-import-data-architecture-v4.md`.
 
-### B. Link Resolution & Remediation
+### B. Generate Listing — Two-Stage Research (deferred)
 
-* **Mandatory Resolution**: All redirect URLs from Google Search Grounding are resolved to canonical destinations before storage.
-* **On-Demand Validation**: High-fidelity browser validation is invoked **manually** by administrative users; it is no longer triggered by automated UI research workflows.
-* **Known gap (flagged 2026-07-09, not yet fixed):** as of this date, 12 of 24 local seed candidate files were found to contain unresolved `grounding-api-redirect` markers, discovered only after fixing a stale test path that had silently prevented `tests/integrity/test_candidate_files.py::test_no_unresolved_redirects` from ever running against real data. Remediation via `scripts/rerun_redirect_candidates.py` (re-runs affected candidates through the live research pipeline) is in progress.
+1. **Initial Research**: a broad sweep identifying core accessibility pages.
+2. **Deep Dive**: iterative extraction focusing on high-difficulty targets like `.edu` reviews or state-level registries.
 
-### C. Live Preview & Edit
+Triggering a *new* run via this path (`/research/initial`, `/research/deep-dive`, the SSE streaming UI, Cloud Tasks dispatch) is out of scope for now — see [Decision #30](DECISION_LOG.md#30-generate-listing--deferred-import-data-is-the-active-path). The code is intact and shares `nerd_core/pipeline.py` with the Import Data path, so nothing here needs to be re-architected to bring it back — the deep-dive frontend caller is currently absent, which is the actual blocker.
 
-Researchers can edit Pydantic-mapped listing data in real-time, triggering server-side Jinja2 re-renders for instant preview.
+### C. Link Resolution & Remediation
+
+* **Mandatory resolution intent, not yet real**: `resolve_and_validate_url` currently always returns the *input* URL rather than the resolved destination — redirect resolution is effectively a no-op at the implementation level, despite the design intent. `grounding-api-redirect` URLs from Google Search Grounding persist verbatim into stored listings as a result. This affects both the live research path and, at lower volume, Import Data (a pasted Gem draft can itself contain grounding-redirect URLs if the Gem session used Search grounding).
+* **On-demand validation**: high-fidelity browser validation (`link_validator_engine.py`) is not currently wired into any live path — see §2.D.
+* 12 of the local seed candidate files are known to carry unresolved `grounding-api-redirect` markers; remediation via `scripts/rerun_redirect_candidates.py` is tracked separately, not urgent under current scope.
+
+### D. Live Preview & Edit
+
+Researchers edit Pydantic-mapped listing data in real time, either via per-section HTML overrides or by re-importing a corrected draft; `POST /render` re-renders server-side via Jinja2 for preview.
 
 ## 4. Multi-Layer Testing Strategy
 
 Protected by a 4-layer validation suite (documented in `docs/TESTING.md`):
 
-1. **Unit Tests**: `pytest` for parsers and schema validation.
-2. **Integration Tests**: Validates API routes and SSE streaming.
-3. **Data Integrity Tests**: Ensures 100% schema compliance and zero leaked proxy URLs.
-4. **E2E Tests**: Automates the full UI lifecycle and WCAG compliance.
+1. **Unit Tests**: `pytest` for parsers, schema validation, and pipeline equivalence (`tests/unit/test_pipeline_equivalence.py` — asserts `nerd_core.pipeline.validate_draft` matches the pre-extraction worker behavior field-for-field, unmocked).
+2. **Integration Tests**: API routes, SSE streaming, and `POST /ingest/draft` (`tests/integration/test_ingest_draft_api.py`).
+3. **Data Integrity Tests**: schema compliance and unresolved-redirect scanning.
+4. **E2E Tests**: full UI lifecycle and WCAG compliance via Playwright.
 
-**Known test-suite issues (flagged 2026-07-09, partially fixed):** several tests contained stale references to functionality removed in earlier decisions (`ai_insights` synthesis, per Decision #18; the pre-relocation `link_validator_engine` import path, per the Phase 1 decoupling). `tests/integration/test_job_lifecycle.py` and `scripts/batch_processor.py` were fixed and verified this date. `tests/parser_robustness_test.py`, `tests/unit/test_generators.py` (2 tests), `tests/system_test.py`, and `tests/test_link_validator.py` still contain stale references as of this writing — see `fix_user_screwup.md` for full tracking.
+**Known test-suite issues:** several older tests still contain stale references to functionality removed in earlier decisions (`ai_insights`, per Decision #18; a pre-relocation `link_validator_engine` import path). Not yet fully swept — see `tests/parser_robustness_test.py`, `tests/system_test.py`, `tests/test_link_validator.py`.
 
 ## 5. Security Guardrails
 
 ### A. SSRF Mitigation
 
-Hostnames are resolved to IP addresses before every request, blocking all traffic to internal GCP ranges or private networks.
+Hostnames are resolved to IP addresses before every request, blocking traffic to internal GCP ranges or private networks.
 
 ### B. OIDC Handshake
 
@@ -84,26 +97,23 @@ Worker-to-API communication is authenticated via Google-signed OIDC tokens.
 
 Masking pattern protects long grounding tokens from LLM corruption during formatting.
 
-**Known gap (flagged 2026-07-09, not yet fixed):** the lightweight httpx-based `liveness_validator.py` produces false-negative "dead link" results on sites that block non-browser traffic (confirmed on Zendesk help-center URLs and at least one nonprofit site, both returning `403` to real users but rejected by the validator as unreachable). Likely missing a realistic `User-Agent` header. Not yet fixed.
+**Known gap, not yet fixed:** the lightweight httpx-based `liveness_validator.py` produces false-negative "dead link" results on sites that block non-browser traffic — no `Location` header `urljoin` for relative redirects, and no realistic `User-Agent`. Both fixes are scoped and pending (Tier 0, Import Data path — `adaptive_validate` calls this validator, so a pasted Gem draft can have valid resources silently stripped today).
 
 ## 6. Telemetry & Analytics
 
 Every event is logged to **BigQuery** (`edtech-agent-2026.telemetry.feedback_logs`). Administrative validation events are logged as distinct from automated research logs.
 
-## 7. AI-Studio-Assisted Candidate Generation (added 2026-07-09)
+## 7. AI-Studio-Assisted Candidate Generation
 
-To generate research drafts at zero GC Vertex AI cost, Google AI Studio's free tier can be used as a prompt-testing sandbox:
+To generate research drafts at zero Vertex AI cost, Google AI Studio's free tier can be used as a prompt-testing sandbox:
 
-* `prompts/research_schema_prompt.txt` is a manually-maintained mirror of `prompts/system_prompt.j2`'s markdown output contract, meant for direct paste into AI Studio (model must be set to `gemini-2.5-flash` to match production; Google Search grounding tool required). **Not loaded by any code path** — manual reference only, will drift from `system_prompt.j2` if not updated together.
-* `scripts/ingest_ai_studio_draft.py` validates an AI-Studio-generated markdown draft through the same `nerd_core` functions the real worker pipeline uses (`resolve_and_validate_all`, `filter_broken_links`, `parse_markdown_to_listing`, `adaptive_validate`, `is_likely_vpat_acr`), then submits via `POST /admin/candidates` on the running API — never writes to Firestore directly. Refuses to submit if both resource lists end up empty post-validation.
-* **`scripts/migrate_to_firestore.py` is retired** (as of 2026-07-09) — it previously imported records from `eval/eval_data.json` (the eval Golden Set format) directly into `nerd_candidates`, but Golden Set records silently pass `ListingData` schema validation with empty resource lists (no `extra="forbid"` on the model), which would have overwritten real candidates with empty data. The script now hard-exits immediately with an explanatory error. Golden Set data belongs only in `eval/eval_data.json`, used by the `eval/` harness — never in the candidate pipeline.
+* `prompts/research_schema_prompt.txt` is a manually-maintained mirror of `prompts/system_prompt.j2`'s markdown output contract, meant for direct paste into AI Studio (model must be set to `gemini-2.5-flash`; Google Search grounding tool required). **Not loaded by any code path** — manual reference only, will drift from `system_prompt.j2` if not updated together.
+* `scripts/ingest_ai_studio_draft.py` validates an AI-Studio-generated draft through the same `nerd_core.pipeline.validate_draft` the API's `/ingest/draft` endpoint now also calls, then submits via `POST /admin/candidates`. Refuses to submit if both resource lists end up empty post-validation.
+* `scripts/migrate_to_firestore.py` is **retired** — it previously imported Golden Set records (`eval/eval_data.json`) directly into `nerd_candidates`, which silently passed schema validation with empty resource lists and would have overwritten real candidates. It now hard-exits immediately. Golden Set data belongs only in `eval/` — never in the candidate pipeline.
 
-Full incident history and remediation tracking: `fix_user_screwup.md` (not part of the committed repo — session working doc).
+## 8. Repository Layout
 
----
-
-*N.E.R.D. System Architecture — Version 2.3 (post-AI-Studio-incident update)*
-
+```
 nerd/
 ├── api/                          # FastAPI orchestrator
 │   ├── conversions.py
@@ -116,89 +126,99 @@ nerd/
 │   ├── acr_validation.py
 │   ├── adaptive_validation.py
 │   ├── generators.py
+│   ├── pipeline.py                # shared validate-and-build sequence, see §2.D
 │   ├── services.py
 │   ├── telemetry.py
 │   ├── utils.py
 │   └── tools/
-│       ├── liveness_validator.py    # known false-negative gap on bot-protected sites, see Section 5
+│       ├── liveness_validator.py    # known false-negative gap, see §5
 │       └── administrative_validators/
-│           └── link_validator_engine.py    # decoupled, on-demand only
-├── frontend/                     # Next.js (App Router)
+│           └── link_validator_engine.py    # dead code, pending archive/delete decision
+├── frontend/
 │   ├── app/
 │   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   └── login/page.tsx
+│   │   ├── page.tsx                  # Generate Listing / Import Data editor
+│   │   ├── login/page.tsx
+│   │   ├── researcher/page.tsx        # /researcher
+│   │   ├── tables/page.tsx            # /tables
+│   │   └── users/                     # /users (page.tsx + layout.tsx)
 │   ├── components/
-│   │   ├── InvalidLinksModal.tsx
+│   │   ├── ImportDataModal.tsx
+│   │   ├── InvalidLinksModal.tsx      # dormant, tied to removed link-validation UI
 │   │   ├── ListingCard.tsx
+│   │   ├── ResearcherTable.tsx
 │   │   └── SectionEditor.tsx
 │   ├── hooks/useResearch.ts
 │   ├── lib/
-│   │   ├── api.ts
+│   │   ├── appsheet-tables.json / appsheet-tables.ts   # /tables data layer
+│   │   ├── api.ts                    # dead code, flagged for deletion — see v4 arch doc §7.3
 │   │   ├── debugLog.ts
 │   │   ├── firebase.ts
 │   │   ├── ncademiPreview.ts
-│   │   └── types.ts
-│   ├── middleware.ts    # ⚠ Next.js flags this convention as deprecated in favor of "proxy" (2026-07-09) — not yet migrated
-│   ├── tests/e2e/                # 5 Playwright specs: accessibility, animation_check, candidate_lifecycle, heartbeat_check, live_run
-│   ├── AGENTS.md / CLAUDE.md    # ⚠ UNREVIEWED — same pattern as removed root-level claude.md; purpose/currency not yet confirmed
+│   │   ├── researcher-records.json / researcher-records.ts   # /researcher data layer
+│   │   ├── types.ts
+│   │   └── users.ts
+│   ├── tests/e2e/                 # 5 Playwright specs
+│   ├── middleware.ts              # ⚠ Next.js deprecation warning — "proxy" convention not yet migrated
 │   ├── Dockerfile
 │   └── package.json
 ├── scripts/                      # Ops/migration scripts
 │   ├── deploy.sh
 │   ├── batch_processor.py
 │   ├── crawler.py / scraper.py
-│   ├── ingest_candidates.py / ingest_k12_urls.py    # URL-batch ingestion via /admin/candidates/batch
-│   ├── ingest_ai_studio_draft.py    # NEW 2026-07-09 — validates + submits AI-Studio-generated drafts, see Section 7
-│   ├── rerun_redirect_candidates.py    # NEW 2026-07-09 — re-runs candidates with unresolved redirects through the live pipeline
+│   ├── ingest_candidates.py / ingest_k12_urls.py
+│   ├── ingest_ai_studio_draft.py   # see §7
+│   ├── rerun_redirect_candidates.py
 │   ├── migrate_archive_to_products.py / migrate_candidates.py
-│   ├── migrate_to_firestore.py    # RETIRED 2026-07-09 — hard-exits immediately, see Section 7
+│   ├── migrate_to_firestore.py     # RETIRED, see §7
 │   ├── refresh_candidates.py / regenerate_candidates.py
-│   ├── reprocess_redirects.py    # ⚠ resolves already-stored proxy tokens directly (often expired/fails); prefer rerun_redirect_candidates.py
+│   ├── reprocess_redirects.py      # prefer rerun_redirect_candidates.py
 │   ├── validate_migration.py / verify_gdocs.py / verify_production.py
 │   ├── get_smoke_token.py
 │   └── pull_from_drive.sh / sync_to_drive.sh
 ├── tests/
-│   ├── unit/                     # api_utils, conversions, generators, liveness
-│   ├── integration/               # admin_api, job_lifecycle, sse_api, worker_idempotency
-│   ├── integrity/                 # inventory_candidates, candidate_files
+│   ├── unit/                       # api_utils, conversions, generators, liveness, pipeline_equivalence
+│   ├── integration/                 # admin_api, ingest_draft_api, job_lifecycle, sse_api, worker_idempotency
+│   ├── integrity/                   # inventory_candidates, candidate_files
 │   ├── smoke/
-│   ├── migration_verification.py
-│   └── e2e_live_validation.py, system_test.py, parser_robustness_test.py, service_robustness_test.py, test_sse.py, test_link_validator.py    # ⚠ several contain stale references, see Section 4
-├── templates/                    # Jinja2 (preview-only, not publishing artifacts)
+│   └── e2e_live_validation.py, system_test.py, parser_robustness_test.py, service_robustness_test.py, test_sse.py, test_link_validator.py   # some contain stale references, see §4
+├── templates/                    # Jinja2 (preview only, not a publishing artifact)
 │   ├── ncademi_listing.html
 │   ├── ncademi_wp_fragment.html
 │   ├── batch_report.html
 │   ├── link_validator.html
 │   └── nerd.css
-├── prompts/                      # Gemini/LLM prompt templates
-│   ├── system_prompt.j2 / delta_system_prompt.j2    # live, loaded by nerd_core/services.py
-│   ├── research_schema_prompt.txt    # NEW — AI Studio sandbox mirror, see Section 7
-│   ├── optimized_instructions.json / optimized_instructions_diff.txt    # eval/dspy optimization artifacts, not live-request path
-│   └── (synthesis_prompt.j2 DELETED 2026-07-09 — orphaned, zero live callers)
+├── prompts/
+│   ├── system_prompt.j2 / delta_system_prompt.j2
+│   ├── research_schema_prompt.txt   # AI Studio sandbox mirror, see §7
+│   └── optimized_instructions.json / optimized_instructions_diff.txt
 ├── eval/                         # promptfoo-based eval harness
 │   ├── assertions.py / provider.py / optimize.py
 │   ├── build_grounding_cache.py
-│   ├── eval_data.json    # Golden Set ground-truth data — NEVER a source for the candidate pipeline, see Section 7
+│   ├── eval_data.json            # Golden Set — never a source for the candidate pipeline
 │   └── promptfooconfig.yaml
 ├── docs/
 │   ├── NERD_System_Architecture.md
-│   ├── architecture_evolution.md
 │   ├── DECISION_LOG.md
+│   ├── nerd-import-data-architecture-v4.md   # Import Data feature spec, cited throughout the codebase
 │   ├── TESTING.md
-│   ├── EDTECH_AGENT_LOGIC.md
+│   ├── architecture_evolution.md
+│   ├── extensions.md
 │   ├── GOLDEN_SET.md
 │   ├── SECTION_EDITOR_RESEARCH.md
-│   └── decision-log-6-14-26.rtf / extensions.md / streamlit.md    # ⚠ UNREVIEWED — likely stale (streamlit.md especially, given Streamlit's full removal), not yet confirmed
-├── ncademi-viewer/                # ⚠ UNREVIEWED — purpose not established, not referenced anywhere in this doc or Decision Log prior to 2026-07-09
-├── archive/                      # superseded docs/handover files — NOT live reference
-├── ncademi_archive/               # 44 scraped clean_content/ + 44 raw_html/ product HTML snapshots
-├── artifacts/                    # 190 generated PNGs (test/screenshot output)
-├── storage/                      # Crawlee request-queue/key-value state
+│   ├── appsheet-export/           # raw AppSheet JSON recovery data, provenance for /tables
+│   ├── appsheet-source-html/      # hand-built HTML the /tables fragments were extracted from
+│   └── superseded/                # historical docs, spent dispatch prompts, and reports that no
+│                                    # longer reflect the codebase — not `docs/archive/`, see Decision #33
 ├── constraints.txt
 ├── requirements.txt / requirements-worker.txt / requirements-eval.txt
 ├── Dockerfile.api / Dockerfile.worker
 ├── pytest.ini
 └── README.md
+```
 
-**Root-level clutter not enumerated above** (stray logs, one-off report `.md`/`.txt` files, `.test_env/`, `new_folder_name`): tracked separately as a pending Tier 1 cleanup pass, not yet executed as of this update. See prior session logs for full inventory.
+Directories present locally but not reflected above (gitignored, not part of the tracked repo): `ncademi_archive/` (scraped product HTML snapshots), `artifacts/` (generated screenshot output), `storage/` (Crawlee request-queue state), `~/nerd_data/` (local-mode Firestore seed data).
+
+---
+
+*N.E.R.D. System Architecture — Version 3.0*

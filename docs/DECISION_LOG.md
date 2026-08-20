@@ -161,3 +161,31 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 - **Scope/exception:** Does not relax #27 (`LOCAL_MODE` / `NEXT_PUBLIC_DISABLE_AUTH` must never reach deployed environments) or #28 (worker auth via ADC only). Those guardrails exist specifically to stop local-dev conveniences from leaking into a deployed environment — see the 2026-07-08 incident logged under #27 — and remain in force regardless of this project's current stage.
 - **Rationale:** No value in hardening auth/access-control for routes and features not yet exposed to the public internet. Revisit before any public launch.
 - **Status:** SETTLED.
+
+---
+
+## Current Scope
+
+### 30. GENERATE LISTING — Deferred; Import Data is the active path.
+- **Decision:** Triggering a new live research run (`/research/initial`, `/research/deep-dive`, Cloud Tasks dispatch, the SSE streaming UI) is out of scope for now. Current MVP work is scoped to importing Gemini-Gem-generated drafts via Import Data (`POST /ingest/draft`).
+- **Rationale:** Narrows active surface area to one path while it's being hardened. `nerd_core/pipeline.py` is shared code by design, so fixes to the Import Data path benefit Generate Listing whenever it's reinstated.
+- **Status:** SETTLED. May be reinstated once the Import Data path is stable — this is a scope decision, not a removal.
+
+### 31. CANDIDATE PERSISTENCE — `CandidateRecord` adopted on save/update; `raw_markdown` preserved.
+- **Decision:** `POST`/`PUT /admin/candidates` now accept `schemas.CandidateRecord` instead of `schemas.ListingData`, so `raw_markdown` survives persistence instead of being silently dropped by Pydantic v2's default `extra="ignore"`. `POST /ingest/draft`'s response now also includes `raw_markdown`, closing the loss at its actual origin — the pasted Gem draft was being discarded before it ever reached the frontend, not just at the save step.
+- **Rationale:** For the Import Data path, the pasted draft is the only record of that research. Two separate points in the chain were dropping it.
+- **Status:** SETTLED/VERIFIED.
+
+---
+
+## Repo Organization
+
+### 32. /TABLES NAMING — "Global", not "Products", to avoid confusion with the live NCADEMI directory.
+- **Decision:** The AppSheet-recovered Products table, shown by default on the new `/tables` page, is labeled "Global" rather than "Products (AppSheet source)".
+- **Rationale:** NCADEMI's live product listings are also called "Products" elsewhere in the app; a second, differently-scoped table with the same name would be ambiguous.
+- **Status:** SETTLED.
+
+### 33. DOCS ORGANIZATION — Superseded docs live in `docs/superseded/`, not `docs/archive/`.
+- **Decision:** Stale or superseded root-level and `docs/` files are consolidated under `docs/superseded/`.
+- **Rationale:** `.gitignore` has a bare `archive/` pattern that silently matches any path ending in that name, including `docs/archive/` — files placed there are never tracked by git. Renamed to avoid the collision rather than editing the protected `.gitignore`.
+- **Status:** SETTLED/VERIFIED.
