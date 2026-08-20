@@ -10,7 +10,6 @@ from typing import Dict, Any
 
 from nerd_core.services import (
     run_initial_research,
-    run_deep_dive,
     QuotaExhaustedError,
 )
 # Integration: Using hardened liveness validator
@@ -32,10 +31,6 @@ app = FastAPI(title="N.E.R.D. Worker API")
 
 
 class WorkerInitialRequest(schemas.InitialResearchRequest):
-    job_id: str
-
-
-class WorkerDeepDiveRequest(schemas.DeepDiveRequest):
     job_id: str
 
 

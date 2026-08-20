@@ -137,18 +137,6 @@ function genAcrHtml(listing: ListingData): string {
   return parts.join("\n");
 }
 
-function genAiInsightsHtml(listing: ListingData): string {
-  if (!listing.ai_insights || listing.ai_insights === "Insufficient data") {
-    return "";
-  }
-  const parts = [];
-  parts.push('<div class="ai-insights">');
-  parts.push('<h3>AI Generated Insights</h3>');
-  parts.push(`<p>${escapeHtml(listing.ai_insights)}</p>`);
-  parts.push('</div>');
-  return parts.join('\n');
-}
-
 export function getSectionHtml(listing: ListingData, key: SectionKey): string {
   const override = listing.section_overrides?.[key];
   if (override != null) return override;  // empty string is a valid override — see R6
@@ -158,17 +146,15 @@ export function getSectionHtml(listing: ListingData, key: SectionKey): string {
     case "other_resources":  return genOtherResourcesHtml(listing);
     case "support":          return genSupportHtml(listing);
     case "acr":              return genAcrHtml(listing);
-    case "ai_insights":      return genAiInsightsHtml(listing);
   }
 }
 
-export function buildNcademiListingHtml(listing: ListingData, showAiInsights: boolean = false): string {
+export function buildNcademiListingHtml(listing: ListingData): string {
   const header = getSectionHtml(listing, "header");
   const vendorResources = getSectionHtml(listing, "vendor_resources");
   const otherResources = getSectionHtml(listing, "other_resources");
   const support = getSectionHtml(listing, "support");
   const acr = getSectionHtml(listing, "acr");
-  const aiInsightsHtml = showAiInsights ? getSectionHtml(listing, "ai_insights") : "";
 
   const lastUpdatedHtml = listing.last_updated
     ? `<p class="last-updated">Product information last updated ${escapeHtml(listing.last_updated)}</p>`
@@ -184,7 +170,6 @@ export function buildNcademiListingHtml(listing: ListingData, showAiInsights: bo
             <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-main" style="flex-basis:66.66%">
               ${vendorResources}
               ${otherResources}
-              ${aiInsightsHtml}
             </div>
             <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-side" style="flex-basis:33.33%">
               ${support}

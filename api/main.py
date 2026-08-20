@@ -44,7 +44,7 @@ BASE_DIR = Path(__file__).parent.parent
 # ── Local Mode Config ─────────────────────────────────────────────────────────
 LOCAL_MODE = os.getenv("LOCAL_MODE", "false").lower() == "true"
 if LOCAL_MODE:
-    from .worker import worker_initial, worker_deep_dive, WorkerInitialRequest, WorkerDeepDiveRequest
+    from .worker import worker_initial, WorkerInitialRequest
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Firebase Admin Init ───────────────────────────────────────────────────────
@@ -159,24 +159,6 @@ async def research_initial(
 
     return schemas.EnqueueResponse(job_id=job_id)
 
-@app.post("/research/deep-dive", response_model=schemas.EnqueueResponse)
-async def research_deep_dive(
-    req: schemas.DeepDiveRequest, 
-    background_tasks: BackgroundTasks,
-    uid: str = Depends(verify_token)
-):
-    job_id = req.job_id or str(uuid.uuid4())
-    await create_job(job_id)
-    payload = req.model_dump()
-    payload["job_id"] = job_id
-
-    if LOCAL_MODE:
-        worker_req = WorkerDeepDiveRequest(**payload)
-        background_tasks.add_task(worker_deep_dive, worker_req)
-    else:
-        _enqueue_task("/worker/deep-dive", payload)
-
-    return schemas.EnqueueResponse(job_id=job_id)
 
 @app.get("/jobs/{job_id}")
 async def jobs_sse(request: Request, job_id: str, uid: str = Depends(verify_token)):

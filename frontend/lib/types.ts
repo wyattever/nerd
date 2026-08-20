@@ -26,7 +26,6 @@ export interface SectionOverrides {
   other_resources?: string;
   support?: string;
   acr?: string;
-  ai_insights?: string;
 }
 
 export interface ListingData {
@@ -37,7 +36,6 @@ export interface ListingData {
   product_website_url: string;
   vendor_resources: ResourceLink[];
   other_resources: ResourceLink[];
-  ai_insights: string;
   support_contacts: SupportContact[];
   acr_reports: ACRReport[];
   last_updated?: string;
@@ -61,7 +59,7 @@ export interface IngestDraftResponse {
   diagnostics: DraftDiagnostics;
 }
 
-export type SectionKey = "header" | "vendor_resources" | "other_resources" | "support" | "acr" | "ai_insights";
+export type SectionKey = "header" | "vendor_resources" | "other_resources" | "support" | "acr";
 
 export interface InvalidLink {
   section: string;

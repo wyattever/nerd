@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from nerd_core.services import run_initial_research, run_deep_dive
+from nerd_core.services import run_initial_research
 from nerd_core.generators import parse_markdown_to_listing, render_listing_html
 from nerd_core.utils import resolve_and_validate_all
 from jinja2 import Environment, FileSystemLoader
@@ -97,19 +97,11 @@ async def process_url(url: str, force: bool = False):
         logger.info("  Phase 1: Initial Research...")
         initial_draft, raw_urls = run_initial_research(url, timeout_min=4)
         
-        # 2. Deep Dive
-        listing = parse_markdown_to_listing(initial_draft)
-        logger.info(f"  Phase 2: Deep Dive for {listing.product_name}...")
-        deep_dive_draft, dd_urls = run_deep_dive(url, listing.product_name, initial_draft, timeout_min=4)
-        
-        # 3. Combine drafts (AI Insights synthesis removed per Decision Log #18 -- ai_insights
-        # is no longer synthesized anywhere in the pipeline; this file previously called a
-        # synthesize_insights() function that no longer exists in nerd_core/services.py)
-        full_markdown = f"{initial_draft}\n\n## Additional Research\n\n{deep_dive_draft}"
+        full_markdown = initial_draft
         
         # 4. Resolve Proxy URLs
         logger.info("  Phase 4: Resolving Redirects...")
-        all_proxies = list(set(raw_urls + dd_urls))
+        all_proxies = list(set(raw_urls))
         url_map = await resolve_and_validate_all(all_proxies)
         
         # Apply resolution to markdown

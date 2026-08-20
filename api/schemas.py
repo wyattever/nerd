@@ -73,15 +73,6 @@ class InitialResearchRequest(BaseModel):
     save_as_candidate: bool = False
 
 
-class DeepDiveRequest(BaseModel):
-    product_url: str
-    product_name: str
-    current_draft: str
-    job_id: Optional[str] = None
-    timeout_min: int = Field(default=4, ge=1, le=4)
-    url_cache: dict[str, str] = Field(default_factory=dict)
-
-
 # ---------------------------------------------------------------------------
 # Response models (Unchanged)
 # ---------------------------------------------------------------------------

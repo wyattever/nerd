@@ -3,13 +3,11 @@ import { ListingData } from "@/lib/types";
 import { buildNcademiListingHtml } from "@/lib/ncademiPreview";
 
 export function ListingCard({ 
-  listing, 
-  showAiInsights 
+  listing 
 }: { 
-  listing: ListingData, 
-  showAiInsights: boolean 
+  listing: ListingData 
 }) {
-  const html = buildNcademiListingHtml(listing, showAiInsights);
+  const html = buildNcademiListingHtml(listing);
   const safeHtml = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
 
   return (
