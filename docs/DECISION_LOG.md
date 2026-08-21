@@ -189,3 +189,18 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 - **Decision:** Stale or superseded root-level and `docs/` files are consolidated under `docs/superseded/`.
 - **Rationale:** `.gitignore` has a bare `archive/` pattern that silently matches any path ending in that name, including `docs/archive/` — files placed there are never tracked by git. Renamed to avoid the collision rather than editing the protected `.gitignore`.
 - **Status:** SETTLED/VERIFIED.
+
+### 34. LIVENESS VALIDATOR — Hardened against bot-protected sites.
+- **Decision:** `nerd_core/tools/liveness_validator.py` sends a realistic `User-Agent` header on every request and resolves relative `Location` redirect headers via `urljoin` instead of treating them as absolute URLs.
+- **Rationale:** The validator previously false-negatived on sites that block non-browser traffic and broke entirely on relative redirects (a bare path has no host, so DNS resolution failed and the link was wrongly reported dead). This ran inside `adaptive_validate`, so valid resources were being silently stripped from both the live research path and Import Data.
+- **Status:** SETTLED/VERIFIED. Regression-tested in `tests/unit/test_liveness.py` (`test_liveness_redirect_resolution`, `test_liveness_too_many_redirects`).
+
+### 35. REDIRECT RESOLUTION — `resolve_and_validate_url` now returns the resolved destination.
+- **Decision:** `ValidationResult` carries a `resolved_url` field populated with the terminal URL after following redirects; `nerd_core/utils.py`'s `resolve_and_validate_url` returns `result.resolved_url` instead of the original input URL.
+- **Rationale:** Closes the redirect backlog at its root. `grounding-api-redirect` URLs from Google Search Grounding now resolve to their real destination before persisting into stored listings, on both the live research path and Import Data. Supersedes the partial fix in Decision #10, which only covered the batch processor — the core validator used by the shared pipeline was still returning the input URL unchanged until this fix.
+- **Status:** SETTLED/VERIFIED. Regression-tested in `tests/unit/test_liveness.py`. 12 local seed candidate files predate this fix and still carry unresolved markers from that earlier state — tracked as a data-remediation task via `scripts/rerun_redirect_candidates.py`, not a mechanism bug.
+
+### 36. ACR METADATA PARSING — Version/Date/Auditor/Auditor URL/Preparation Type restored.
+- **Decision:** `nerd_core/generators.py`'s `parse_markdown_to_listing()` again parses the five ACR metadata lines (`Version:`, `Date:`, `Auditor:`, `Auditor URL:`, `Preparation Type:`) into `ACRReport`, mirroring the existing `Link:` line's guard against an empty `acr_reports` list. `Preparation Type` maps case-insensitively to "Internal" or "External", defaulting to "Internal" on malformed or missing input rather than raising.
+- **Rationale:** This had been a deliberate prior cut (the dataclass carried a comment noting the fields were "retained for structure, but no longer parsed"), not an oversight — but it meant real content loss on every imported draft, since the NCADEMI directory has a Version column. Restored after confirming via git history that the original cut carried no blocking rationale against reinstating it.
+- **Status:** SETTLED/VERIFIED. Tested in `tests/unit/test_generators.py` — one case with all 5 metadata lines present, one with them omitted per the "omit if not stated" spec (parses cleanly to dataclass defaults, not an error).
