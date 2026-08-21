@@ -80,6 +80,34 @@ function slugFromNcademiUrl(url: string): string | null {
   return match ? match[1] : null;
 }
 
+const GLOBAL_PREFIX = "nerd-col-aprod-";
+const VENDORS_PREFIX = "nerd-col-vend-";
+
+function stripTags(html: string): string {
+  return decodeEntities(html.replace(/<[^>]+>/g, "")).trim();
+}
+
+function extractCell(rowHtml: string, className: string): { text: string; href?: string } {
+  const cellMatch = rowHtml.match(
+    new RegExp(`<td class="${className}"[^>]*>([\\s\\S]*?)<\\/td>`)
+  );
+  if (!cellMatch) return { text: "" };
+  const inner = cellMatch[1];
+  const hrefMatch = inner.match(/<a href="([^"]*)"/);
+  return {
+    text: stripTags(inner),
+    href: hrefMatch ? hrefMatch[1] : undefined,
+  };
+}
+
+function getTableRowsHtml(slug: string): string[] {
+  const table = getTable(slug);
+  if (!table) return [];
+  const bodyMatch = table.html.match(/<tbody>([\s\S]*?)<\/tbody>/);
+  if (!bodyMatch) return [];
+  return bodyMatch[1].match(/<tr>[\s\S]*?<\/tr>/g) ?? [];
+}
+
 /**
  * Parses the "global" AppSheet table's HTML and returns every product whose
  * Status column exactly matches `status`, as { name, slug } pairs. `slug`
@@ -88,33 +116,17 @@ function slugFromNcademiUrl(url: string): string | null {
  * the product name.
  */
 export function getProductsByStatus(status: string): { name: string; slug: string }[] {
-  const globalTable = getTable("global");
-  if (!globalTable) return [];
-
-  const bodyMatch = globalTable.html.match(/<tbody>([\s\S]*?)<\/tbody>/);
-  if (!bodyMatch) return [];
-
-  const rows = bodyMatch[1].match(/<tr>[\s\S]*?<\/tr>/g) ?? [];
   const results: { name: string; slug: string }[] = [];
 
-  for (const row of rows) {
-    const nameMatch = row.match(/<td class="nerd-col-aprod-name">([^<]*)<\/td>/);
-    const statusMatch = row.match(/<td class="nerd-col-aprod-status">([^<]*)<\/td>/);
-    if (!nameMatch || !statusMatch) continue;
+  for (const row of getTableRowsHtml("global")) {
+    const nameCell = extractCell(row, `${GLOBAL_PREFIX}name`);
+    const statusCell = extractCell(row, `${GLOBAL_PREFIX}status`);
+    if (!nameCell.text || statusCell.text !== status) continue;
 
-    const rowStatus = decodeEntities(statusMatch[1]).trim();
-    if (rowStatus !== status) continue;
+    const ncademiUrl = extractCell(row, `${GLOBAL_PREFIX}ncademiurl`);
+    const slug = (ncademiUrl.href ? slugFromNcademiUrl(ncademiUrl.href) : null) ?? slugify(nameCell.text);
 
-    const name = decodeEntities(nameMatch[1]).trim();
-    if (!name) continue;
-
-    const urlMatch = row.match(
-      /<td class="nerd-col-aprod-ncademiurl"><a href="([^"]*)"/
-    );
-    const slug =
-      (urlMatch ? slugFromNcademiUrl(urlMatch[1]) : null) ?? slugify(name);
-
-    results.push({ name, slug });
+    results.push({ name: nameCell.text, slug });
   }
 
   return results;
@@ -130,6 +142,11 @@ export function getAddedProducts(): { name: string; slug: string }[] {
   return getProductsByStatus("Added to Site");
 }
 
+/** Products with Status exactly "Candidate" in the AppSheet global table. */
+export function getCandidateProducts(): { name: string; slug: string }[] {
+  return getProductsByStatus("Candidate");
+}
+
 /* ------------------------------------------------------------------------
  * Generic sortable-row parsing for the /tables page.
  * ---------------------------------------------------------------------- */
@@ -138,13 +155,6 @@ export interface AppsheetColumnDef {
   key: string;
   label: string;
   sortable: boolean;
-  /**
-   * The original AppSheet-recovery CSS class for this column (e.g.
-   * "nerd-col-aprod-desc"). Applied to both <th> and <td> so the existing
-   * width/wrapping rules in nerd-table.css (keyed off these class names)
-   * still apply now that cells are rendered by AppsheetSortableTable
-   * instead of dumped as raw HTML.
-   */
   className: string;
 }
 
@@ -155,7 +165,6 @@ export interface AppsheetCell {
 
 export type AppsheetRow = Record<string, AppsheetCell>;
 
-/** Labels that must never be marked sortable, per product decision. */
 const UNSORTABLE_LABELS = new Set([
   "Product Description",
   "Notes",
@@ -167,11 +176,6 @@ const UNSORTABLE_LABELS = new Set([
   "Temp: Contact Information",
 ]);
 
-/**
- * Column definitions per table slug, in display order, matching the class
- * suffix used in appsheet-tables.json's HTML (e.g. "name" for
- * "nerd-col-aprod-name"). sortable is derived from UNSORTABLE_LABELS.
- */
 const TABLE_COLUMN_DEFS: Record<string, { prefix: string; columns: { key: string; label: string }[] }> = {
   global: {
     prefix: "nerd-col-aprod-",
@@ -284,23 +288,6 @@ const TABLE_COLUMN_DEFS: Record<string, { prefix: string; columns: { key: string
   },
 };
 
-function stripTags(html: string): string {
-  return decodeEntities(html.replace(/<[^>]+>/g, "")).trim();
-}
-
-function extractCell(rowHtml: string, className: string): AppsheetCell {
-  const cellMatch = rowHtml.match(
-    new RegExp(`<td class="${className}"[^>]*>([\\s\\S]*?)<\\/td>`)
-  );
-  if (!cellMatch) return { text: "" };
-  const inner = cellMatch[1];
-  const hrefMatch = inner.match(/<a href="([^"]*)"/);
-  return {
-    text: stripTags(inner),
-    href: hrefMatch ? hrefMatch[1] : undefined,
-  };
-}
-
 export function getColumnDefs(slug: string): AppsheetColumnDef[] {
   const def = TABLE_COLUMN_DEFS[slug];
   if (!def) return [];
@@ -312,26 +299,183 @@ export function getColumnDefs(slug: string): AppsheetColumnDef[] {
   }));
 }
 
-/**
- * Parses a table's HTML into structured, sortable rows using the column
- * definitions above. Returns [] for unrecognized slugs or malformed HTML
- * rather than throwing -- this is display data, not critical-path data.
- */
 export function getTableRows(slug: string): AppsheetRow[] {
   const def = TABLE_COLUMN_DEFS[slug];
-  const table = getTable(slug);
-  if (!def || !table) return [];
+  if (!def) return [];
 
-  const bodyMatch = table.html.match(/<tbody>([\s\S]*?)<\/tbody>/);
-  if (!bodyMatch) return [];
-
-  const rowHtmls = bodyMatch[1].match(/<tr>[\s\S]*?<\/tr>/g) ?? [];
-
-  return rowHtmls.map((rowHtml) => {
+  return getTableRowsHtml(slug).map((rowHtml) => {
     const row: AppsheetRow = {};
     for (const col of def.columns) {
       row[col.key] = extractCell(rowHtml, `${def.prefix}${col.key}`);
     }
     return row;
   });
+}
+
+/* ------------------------------------------------------------------------
+ * Header data for a single product, by global-table Status (Viewer wiring).
+ * ---------------------------------------------------------------------- */
+
+export interface ProductHeaderData {
+  product_name: string;
+  vendor_name: string;
+  vendor_directory_url: string;
+  product_description: string;
+  product_website_url: string;
+}
+
+/**
+ * Finds the global-table row matching `status` and `slug` (same slug
+ * derivation as getProductsByStatus) and returns the fields genHeaderHtml
+ * needs. vendor_name is looked up by exact name match against the
+ * "vendors" table; if that vendor row has a Vendor Website value,
+ * vendor_directory_url is set to it (making the vendor a link), otherwise
+ * it stays empty (vendor renders as plain text).
+ */
+export function getProductHeaderByStatus(status: string, slug: string): ProductHeaderData | null {
+  for (const row of getTableRowsHtml("global")) {
+    const statusCell = extractCell(row, `${GLOBAL_PREFIX}status`);
+    if (statusCell.text !== status) continue;
+
+    const nameCell = extractCell(row, `${GLOBAL_PREFIX}name`);
+    if (!nameCell.text) continue;
+
+    const ncademiUrl = extractCell(row, `${GLOBAL_PREFIX}ncademiurl`);
+    const rowSlug = (ncademiUrl.href ? slugFromNcademiUrl(ncademiUrl.href) : null) ?? slugify(nameCell.text);
+    if (rowSlug !== slug) continue;
+
+    const vendorCell = extractCell(row, `${GLOBAL_PREFIX}vendor`);
+    const descCell = extractCell(row, `${GLOBAL_PREFIX}desc`);
+    const websiteCell = extractCell(row, `${GLOBAL_PREFIX}website`);
+
+    let vendorDirectoryUrl = "";
+    const vendorName = vendorCell.text;
+    if (vendorName) {
+      for (const vRow of getTableRowsHtml("vendors")) {
+        const vNameCell = extractCell(vRow, `${VENDORS_PREFIX}name`);
+        if (vNameCell.text !== vendorName) continue;
+        const vWebsiteCell = extractCell(vRow, `${VENDORS_PREFIX}website`);
+        if (vWebsiteCell.href) vendorDirectoryUrl = vWebsiteCell.href;
+        break;
+      }
+    }
+
+    return {
+      product_name: nameCell.text,
+      vendor_name: vendorName,
+      vendor_directory_url: vendorDirectoryUrl,
+      product_description: descCell.text,
+      product_website_url: websiteCell.href ?? "",
+    };
+  }
+
+  return null;
+}
+
+/** Header data for a "Published" product, looked up by slug. */
+export function getPublishedProductHeader(slug: string): ProductHeaderData | null {
+  return getProductHeaderByStatus("Published", slug);
+}
+
+/** Header data for an "Added to Site" product, looked up by slug. */
+export function getAddedProductHeader(slug: string): ProductHeaderData | null {
+  return getProductHeaderByStatus("Added to Site", slug);
+}
+
+/** Header data for a "Candidate" product, looked up by slug. */
+export function getCandidateProductHeader(slug: string): ProductHeaderData | null {
+  return getProductHeaderByStatus("Candidate", slug);
+}
+
+/* ------------------------------------------------------------------------
+ * Vendor / Other Resources for a product (Viewer wiring).
+ * ---------------------------------------------------------------------- */
+
+const PRODUCT_RESOURCES_PREFIX = "nerd-col-pres-";
+
+/**
+ * Parses the "product-resources" AppSheet table's HTML and returns every
+ * resource row where Product exactly matches `productName`, Source exactly
+ * matches `source`, and Added to Site is exactly "Yes". Used to build both
+ * Vendor Resources ("Internal") and Other Resources ("External") for the
+ * Viewer header-only injection paths.
+ */
+export function getProductResourcesBySource(
+  productName: string,
+  source: string
+): { text: string; url: string }[] {
+  const results: { text: string; url: string }[] = [];
+
+  for (const row of getTableRowsHtml("product-resources")) {
+    const productCell = extractCell(row, `${PRODUCT_RESOURCES_PREFIX}product`);
+    if (productCell.text !== productName) continue;
+
+    const sourceCell = extractCell(row, `${PRODUCT_RESOURCES_PREFIX}source`);
+    if (sourceCell.text !== source) continue;
+
+    const addedCell = extractCell(row, `${PRODUCT_RESOURCES_PREFIX}added`);
+    if (addedCell.text !== "Yes") continue;
+
+    const nameCell = extractCell(row, `${PRODUCT_RESOURCES_PREFIX}name`);
+    const urlCell = extractCell(row, `${PRODUCT_RESOURCES_PREFIX}url`);
+    if (!nameCell.text || !urlCell.href) continue;
+
+    results.push({ text: nameCell.text, url: urlCell.href });
+  }
+
+  return results;
+}
+
+/** Vendor Resources ("Internal" source) for a product, by exact product name. */
+export function getVendorResourcesForProduct(productName: string): { text: string; url: string }[] {
+  return getProductResourcesBySource(productName, "Internal");
+}
+
+/** Other Resources ("External" source) for a product, by exact product name. */
+export function getOtherResourcesForProduct(productName: string): { text: string; url: string }[] {
+  return getProductResourcesBySource(productName, "External");
+}
+/* ------------------------------------------------------------------------
+ * Support Contacts for a product (Viewer wiring).
+ * ---------------------------------------------------------------------- */
+
+const PRODUCT_SUPPORTS_PREFIX = "nerd-col-psup-";
+
+export interface SupportContact {
+  type: "email" | "url";
+  value: string;
+  label?: string;
+}
+
+/**
+ * Parses the "product-supports" AppSheet table's HTML and returns Support
+ * section contacts for `productName`: website items first (Website Name
+ * linked to Website URL), then email items (mailto:), across every row
+ * where Product matches and Added to Site is exactly "Yes". Matches
+ * genSupportHtml's expected shape in ncademiPreview.ts.
+ */
+export function getSupportContactsForProduct(productName: string): SupportContact[] {
+  const websiteContacts: SupportContact[] = [];
+  const emailContacts: SupportContact[] = [];
+
+  for (const row of getTableRowsHtml("product-supports")) {
+    const productCell = extractCell(row, `${PRODUCT_SUPPORTS_PREFIX}product`);
+    if (productCell.text !== productName) continue;
+
+    const addedCell = extractCell(row, `${PRODUCT_SUPPORTS_PREFIX}added`);
+    if (addedCell.text !== "Yes") continue;
+
+    const websiteNameCell = extractCell(row, `${PRODUCT_SUPPORTS_PREFIX}websitename`);
+    const websiteUrlCell = extractCell(row, `${PRODUCT_SUPPORTS_PREFIX}websiteurl`);
+    if (websiteNameCell.text && websiteUrlCell.href) {
+      websiteContacts.push({ type: "url", value: websiteUrlCell.href, label: websiteNameCell.text });
+    }
+
+    const emailCell = extractCell(row, `${PRODUCT_SUPPORTS_PREFIX}email`);
+    if (emailCell.text) {
+      emailContacts.push({ type: "email", value: emailCell.text });
+    }
+  }
+
+  return [...websiteContacts, ...emailContacts];
 }

@@ -96,8 +96,19 @@ export function SectionEditor({
       }
     }
   };
+  
+// KNOWN DEBT: DEFAULT_RESOURCE_HTML still uses the pre-Phase-2 classes
+// (class="section-heading", class="wp-block-list resource-list"). The
+// live generators in ncademiPreview.ts (genVendorResourcesHtml /
+// genOtherResourcesHtml) were restyled to Bootscore classes
+// (class="h4 mb-3" / class="mb-4") during the header/resources restyle
+// pass. Resetting this section to "Auto-Generated" currently produces
+// output that won't visually match the iframe preview. Needs the same
+// class update applied here once Other/Vendor Resources JSON wiring is
+// confirmed stable. See ncademiPreview.ts genOtherResourcesHtml for the
+// canonical current markup shape.
 
-  const DEFAULT_RESOURCE_HTML = `<h3 class="section-heading">From</h3>
+  const DEFAULT_RESOURCE_HTML = `<h3 class="section-heading">From Other Sources</h3>
 <ul class="wp-block-list resource-list">
 <li><a href="" target="_blank" rel="noopener noreferrer"></a></li>
 <li><a href="" target="_blank" rel="noopener noreferrer"></a></li>

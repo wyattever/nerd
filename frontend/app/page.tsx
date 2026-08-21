@@ -1,15 +1,26 @@
+// frontend/app/page.tsx
 "use client";
 import { debugLog } from "@/lib/debugLog";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useResearch } from "@/hooks/useResearch";
 import { ListingCard } from "@/components/ListingCard";
-import { SectionKey } from "@/lib/types";
+import { ListingData, SectionKey } from "@/lib/types";
 import { SectionEditor } from "@/components/SectionEditor";
 import { getSectionHtml } from "@/lib/ncademiPreview";
 import { getIdToken } from "@/lib/firebase";
 import { ImportDataModal } from "@/components/ImportDataModal";
 import { IngestDraftResponse } from "@/lib/types";
-import { getPublishedProducts } from "@/lib/appsheet-tables";
+import {
+  getPublishedProducts,
+  getPublishedProductHeader,
+  getAddedProducts,
+  getAddedProductHeader,
+  getCandidateProducts,
+  getCandidateProductHeader,
+  getVendorResourcesForProduct,
+  getOtherResourcesForProduct,
+  getSupportContactsForProduct,
+} from "@/lib/appsheet-tables";
 
 interface CandidateRef {
   name: string;
@@ -59,20 +70,71 @@ function diagnosticLines(result: IngestDraftResponse): string[] {
   return lines;
 }
 
+// Builds a ListingData to inject into the Viewer for the read-only product
+// dropdowns (Published / Added / Candidate Products). Assembles header
+// fields, vendor/other resources, and support contacts from whatever data
+// source backs these dropdowns -- currently the AppSheet recovery tables
+// (see appsheet-tables.ts), but this function's shape/name is intentionally
+// source-agnostic since that data source is expected to be replaced.
+// ACR remains empty for this data path -- not yet wired.
+function populateViewerListing(
+  header: {
+    product_name: string;
+    vendor_name: string;
+    vendor_directory_url: string;
+    product_description: string;
+    product_website_url: string;
+  },
+  vendorResources: { text: string; url: string }[],
+  otherResources: { text: string; url: string }[],
+  supportContacts: { type: "email" | "url"; value: string; label?: string }[]
+): ListingData {
+  return {
+    ...header,
+    vendor_resources: vendorResources,
+    other_resources: otherResources,
+    support_contacts: supportContacts,
+    acr_reports: [],
+    last_updated: "",
+  } as unknown as ListingData;
+}
+
 export default function Home() {
   const { state, startResearch, reset, stopResearch, updateListing, injectListing } = useResearch();
   const [url, setUrl] = useState("");
   const [candidates, setCandidates] = useState<CandidateRef[]>([]);
-  const [products, setProducts] = useState<{ name: string; slug: string }[]>([]);
-  // NOTE: Published/Added Products state is UI-only for now -- not wired to
-  // real data sources yet. selectedProductSlug/products above remain the
-  // existing "Added Products" data path unchanged.
+
+  // NOTE: Published / Added / Candidate Products dropdowns are populated
+  // from the static AppSheet global table (see appsheet-tables.ts) and
+  // wire ONLY the header section of the Viewer -- vendor/other resources,
+  // support, and ACR remain empty for these three data paths.
   const [publishedProducts] = useState<{ name: string; slug: string }[]>(() =>
     getPublishedProducts()
   );
+  const [addedProducts] = useState<{ name: string; slug: string }[]>(() =>
+    getAddedProducts()
+  );
+  const [candidateProducts] = useState<{ name: string; slug: string }[]>(() =>
+    getCandidateProducts()
+  );
+
   const [selectedPublishedSlug, setSelectedPublishedSlug] = useState("");
+  const [selectedAddedSlug, setSelectedAddedSlug] = useState("");
+  const [selectedCandidateProductSlug, setSelectedCandidateProductSlug] = useState("");
+
+  // Legacy backend-driven Candidates widget -- untouched functionality,
+  // relabeled "NCADEMI Candidates (legacy)" per product decision.
   const [selectedSlug, setSelectedSlug] = useState("");
-  const [selectedProductSlug, setSelectedProductSlug] = useState("");
+  // Ensures only one product dropdown carries a selection at a time --
+  // selecting in any of the four resets the other three, so their "View"
+  // buttons revert to disabled/inactive.
+  const clearAllProductSelections = () => {
+    setSelectedPublishedSlug("");
+    setSelectedAddedSlug("");
+    setSelectedCandidateProductSlug("");
+    setSelectedSlug("");
+  };
+
   const [activeCandidateSlug, setActiveCandidateSlug] = useState<string | null>(null);
   const [isProductLoaded, setIsProductLoaded] = useState(false);
   const [processHeading, setProcessHeading] = useState("");
@@ -115,21 +177,17 @@ export default function Home() {
     setUnsavedSections(prev => new Set(prev).add(key));
   };
 
-const refreshLists = useCallback(async () => {
+  const refreshLists = useCallback(async () => {
     debugLog("lists", "refreshLists:called");
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
     try {
       const token = await getIdToken();
       const authHeader = `Bearer ${token ?? "local-bypass"}`;
-      const [candRes, prodRes] = await Promise.all([
-        fetch(`${baseUrl}/admin/candidates`, { headers: { Authorization: authHeader } }),
-        fetch(`${baseUrl}/admin/products`, { headers: { Authorization: authHeader } }),
-      ]);
-      const [candData, prodData] = await Promise.all([candRes.json(), prodRes.json()]);
+      const candRes = await fetch(`${baseUrl}/admin/candidates`, { headers: { Authorization: authHeader } });
+      const candData = await candRes.json();
       setCandidates(candData);
-      setProducts(prodData);
-      debugLog("lists", "refreshLists:success", { candidates: candData.length, products: prodData.length });
-      console.log(`Refreshed: ${candData.length} candidates, ${prodData.length} products`);
+      debugLog("lists", "refreshLists:success", { candidates: candData.length });
+      console.log(`Refreshed: ${candData.length} candidates`);
     } catch (err) {
       console.error("Failed to refresh lists:", err);
     }
@@ -164,7 +222,7 @@ const refreshLists = useCallback(async () => {
     }
   }, [localLog]);
 
-useEffect(() => {
+  useEffect(() => {
     debugLog("lists", "init-effect:fired");
     const init = async () => {
       await refreshLists();
@@ -192,6 +250,7 @@ useEffect(() => {
     }
   };
 
+  // Legacy backend-driven Candidates widget handler -- untouched.
   const handleInject = async () => {
     if (!selectedSlug) return;
     setProcessHeading("Viewing Candidate");
@@ -214,34 +273,82 @@ useEffect(() => {
     }
   };
 
-  const handleInjectProduct = async () => {
-    if (!selectedProductSlug) return;
-    setProcessHeading("Viewing Product");
+  const handleInjectPublished = async () => {
+    if (!selectedPublishedSlug) return;
+    setProcessHeading("Viewing Published Product");
     setLocalLog([]);
     setIsDirty(false);
     setUnsavedSections(new Set());
-    try {
-      const token = await getIdToken();
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/admin/products/${selectedProductSlug}`,
-        { headers: { Authorization: `Bearer ${token ?? "local-bypass"}` } }
-      );
-      const data = await res.json();
-      injectListing(data, "Injected data from saved product.");
-      setActiveCandidateSlug(null);
-      setIsProductLoaded(true);
-      setSelectedProductSlug("");
-    } catch (err) {
-      console.error("Failed to fetch product data:", err);
+    setActiveCandidateSlug(null);
+    setIsProductLoaded(true);
+
+    const header = getPublishedProductHeader(selectedPublishedSlug);
+    if (!header) {
+      logMessage(`ERROR: Could not find Published product data for "${selectedPublishedSlug}".`);
+      return;
     }
+
+    const vendorResources = getVendorResourcesForProduct(header.product_name);
+    const otherResources = getOtherResourcesForProduct(header.product_name);
+    const supportContacts = getSupportContactsForProduct(header.product_name);
+
+    injectListing(
+      populateViewerListing(header, vendorResources, otherResources, supportContacts),
+      "Injected header, resources, and support from NCADEMI Published Products (AppSheet global table)."
+    );
+    logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s))`);
   };
 
-  // STUB -- not wired yet. Published Products data source/endpoint is a
-  // pending decision (see project discussion); this only prevents a
-  // dangling handler while the widget is UI-only.
-  const handleInjectPublished = async () => {
-    if (!selectedPublishedSlug) return;
-    logMessage("Published Products viewing is not wired yet.");
+  const handleInjectAdded = async () => {
+    if (!selectedAddedSlug) return;
+    setProcessHeading("Viewing Added Product");
+    setLocalLog([]);
+    setIsDirty(false);
+    setUnsavedSections(new Set());
+    setActiveCandidateSlug(null);
+    setIsProductLoaded(true);
+
+    const header = getAddedProductHeader(selectedAddedSlug);
+    if (!header) {
+      logMessage(`ERROR: Could not find Added product data for "${selectedAddedSlug}".`);
+      return;
+    }
+
+    const vendorResources = getVendorResourcesForProduct(header.product_name);
+    const otherResources = getOtherResourcesForProduct(header.product_name);
+    const supportContacts = getSupportContactsForProduct(header.product_name);
+
+    injectListing(
+      populateViewerListing(header, vendorResources, otherResources, supportContacts),
+      "Injected header, resources, and support from NCADEMI Added Products (AppSheet global table)."
+    );
+    logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s))`);
+  };
+
+  const handleInjectCandidateProduct = async () => {
+    if (!selectedCandidateProductSlug) return;
+    setProcessHeading("Viewing Candidate Product");
+    setLocalLog([]);
+    setIsDirty(false);
+    setUnsavedSections(new Set());
+    setActiveCandidateSlug(null);
+    setIsProductLoaded(true);
+
+    const header = getCandidateProductHeader(selectedCandidateProductSlug);
+    if (!header) {
+      logMessage(`ERROR: Could not find Candidate product data for "${selectedCandidateProductSlug}".`);
+      return;
+    }
+
+    const vendorResources = getVendorResourcesForProduct(header.product_name);
+    const otherResources = getOtherResourcesForProduct(header.product_name);
+    const supportContacts = getSupportContactsForProduct(header.product_name);
+
+    injectListing(
+      populateViewerListing(header, vendorResources, otherResources, supportContacts),
+      "Injected header, resources, and support from NCADEMI Candidate Products (AppSheet global table)."
+    );
+    logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s))`);
   };
 
   const handleImportProcessed = (result: IngestDraftResponse) => {
@@ -452,14 +559,17 @@ useEffect(() => {
                 </form>
               </div>
 
-              {/* NCADEMI Published Products -- UI-only, not wired yet */}
+              {/* NCADEMI Published Products -- header wired to AppSheet global table */}
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-semibold text-gray-700">NCADEMI Published Products</label>
                 <div className="flex gap-3 items-center">
-                  <select
+                <select
                     aria-label="Select NCADEMI Published Product"
                     value={selectedPublishedSlug}
-                    onChange={e => setSelectedPublishedSlug(e.target.value)}
+                    onChange={e => {
+                      clearAllProductSelections();
+                      setSelectedPublishedSlug(e.target.value);
+                    }}
                     disabled={state.status === "streaming"}
                     className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -482,19 +592,22 @@ useEffect(() => {
                                disabled:opacity-30 disabled:cursor-not-allowed transition-all
                                whitespace-nowrap"
                   >
-                    View Published Product
+                    View Published
                   </button>
                 </div>
               </div>
 
-              {/* NCADEMI Added Products -- was "NCADEMI Products", same data path */}
+              {/* NCADEMI Added Products -- header wired to AppSheet global table */}
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-semibold text-gray-700">NCADEMI Added Products</label>
                 <div className="flex gap-3 items-center">
                   <select
                     aria-label="Select NCADEMI Added Product"
-                    value={selectedProductSlug}
-                    onChange={e => setSelectedProductSlug(e.target.value)}
+                    value={selectedAddedSlug}
+                    onChange={e => {
+                      clearAllProductSelections();
+                      setSelectedAddedSlug(e.target.value);
+                    }}
                     disabled={state.status === "streaming"}
                     className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -502,7 +615,7 @@ useEffect(() => {
                                disabled:cursor-not-allowed"
                   >
                     <option value="">select Added Product</option>
-                    {products.map(p => (
+                    {addedProducts.map(p => (
                       <option key={p.slug} value={p.slug}>
                         {p.name}
                       </option>
@@ -510,33 +623,76 @@ useEffect(() => {
                   </select>
                   <button
                     type="button"
-                    onClick={handleInjectProduct}
-                    disabled={!selectedProductSlug || state.status === "streaming"}
+                    onClick={handleInjectAdded}
+                    disabled={!selectedAddedSlug || state.status === "streaming"}
                     className="w-44 bg-[#333] text-white text-sm font-medium px-6 py-2 rounded
                                hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500
                                disabled:opacity-30 disabled:cursor-not-allowed transition-all
                                whitespace-nowrap"
                   >
-                    View Added Product
+                    View Added
                   </button>
                 </div>
               </div>
 
-              {/* NCADEMI Candidate Products -- was "NCADEMI Candidate", same data path */}
+              {/* NCADEMI Candidate Products -- new, header wired to AppSheet global table.
+                  Eventually will write data back into appsheet-tables.json -- read-only for now. */}
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-semibold text-gray-700">NCADEMI Candidate Products</label>
                 <div className="flex gap-3 items-center">
-                  <select
-                    aria-label="Select NCADEMI Candidate Product"
-                    value={selectedSlug}
-                    onChange={e => setSelectedSlug(e.target.value)}
+                              <select
+                    aria-label="Select NCADEMI Candidate Products"
+                    value={selectedCandidateProductSlug}
+                    onChange={e => {
+                      clearAllProductSelections();
+                      setSelectedCandidateProductSlug(e.target.value);
+                    }}
                     disabled={state.status === "streaming"}
                     className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
                                bg-white text-gray-700 disabled:bg-gray-100
                                disabled:cursor-not-allowed"
                   >
-                    <option value="">select Candidate Product</option>
+                    <option value="">select Candidate Products</option>
+                    {candidateProducts.map(p => (
+                      <option key={p.slug} value={p.slug}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleInjectCandidateProduct}
+                    disabled={!selectedCandidateProductSlug || state.status === "streaming"}
+                    className="w-44 bg-[#333] text-white text-sm font-medium px-6 py-2 rounded
+                               hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500
+                               disabled:opacity-30 disabled:cursor-not-allowed transition-all
+                               whitespace-nowrap"
+                  >
+                    View Candidate
+                  </button>
+                </div>
+              </div>
+
+              {/* NCADEMI Candidates (legacy) -- unchanged backend-driven workflow,
+                  relabeled per product decision. */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-semibold text-gray-700">NCADEMI Candidates (legacy)</label>
+                <div className="flex gap-3 items-center">
+                   <select
+                    aria-label="Select Candidate"
+                    value={selectedSlug}
+                    onChange={e => {
+                      clearAllProductSelections();
+                      setSelectedSlug(e.target.value);
+                    }}
+                    disabled={state.status === "streaming"}
+                    className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-blue-500
+                               bg-white text-gray-700 disabled:bg-gray-100
+                               disabled:cursor-not-allowed"
+                  >
+                    <option value="">select Candidate</option>
                     {candidates.map(c => (
                       <option key={c.slug} value={c.slug}>
                         {c.name}
@@ -552,7 +708,7 @@ useEffect(() => {
                                disabled:opacity-30 disabled:cursor-not-allowed transition-all
                                whitespace-nowrap"
                   >
-                    View Candidate Product
+                    View Candidate
                   </button>
                   <button
                     type="button"
