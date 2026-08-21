@@ -1,6 +1,6 @@
 # System Design Document: N.E.R.D.
 
-**NCADEMI EdTech Research & Documentation** *Last Updated: August 20, 2026*
+**NCADEMI EdTech Research & Documentation** *Last Updated: August 21, 2026*
 
 ## 1. Executive Summary
 
@@ -40,7 +40,7 @@ The system utilizes a scalable, asynchronous architecture on Google Cloud Run.
 * **`generators.py`**: parsing logic and Jinja2-based HTML rendering.
 * **`acr_validation.py` / `adaptive_validation.py`**: ACR/VPAT plausibility checks and per-resource liveness validation.
 * **`utils.py`**: general-purpose helpers and security utilities (SSRF-safe URL resolution, redirect handling).
-* **`tools/liveness_validator.py`**: known false-negative gap on bot-protected sites, see §5.
+* **`tools/liveness_validator.py`**: hardened against bot-protected sites (realistic User-Agent header, `urljoin`-based relative-redirect resolution). Regression-tested in `tests/unit/test_liveness.py`.
 * **`tools/administrative_validators/link_validator_engine.py`**: a standalone, Playwright-based engine. **Currently dead code carrying real build cost** — `crawlee[playwright]` sits in `requirements.txt` for this alone, and `playwright install` is never run in `Dockerfile.api`, so the "Playwright support" the Dockerfile claims doesn't actually exist. Pending an archive/delete decision.
 
 ### E. Candidate/Product Data Storage — Local vs. Production
@@ -64,13 +64,17 @@ Triggering a *new* run via this path (`/research/initial`, `/research/deep-dive`
 
 ### C. Link Resolution & Remediation
 
-* **Mandatory resolution intent, not yet real**: `resolve_and_validate_url` currently always returns the *input* URL rather than the resolved destination — redirect resolution is effectively a no-op at the implementation level, despite the design intent. `grounding-api-redirect` URLs from Google Search Grounding persist verbatim into stored listings as a result. This affects both the live research path and, at lower volume, Import Data (a pasted Gem draft can itself contain grounding-redirect URLs if the Gem session used Search grounding).
+* **Redirect resolution is real**: `resolve_and_validate_url` returns `ValidationResult.resolved_url` — the terminal destination after following redirects — not the input URL. `grounding-api-redirect` URLs from Google Search Grounding are resolved to their real destination before persisting into stored listings, on both the live research path and Import Data.
 * **On-demand validation**: high-fidelity browser validation (`link_validator_engine.py`) is not currently wired into any live path — see §2.D.
-* 12 of the local seed candidate files are known to carry unresolved `grounding-api-redirect` markers; remediation via `scripts/rerun_redirect_candidates.py` is tracked separately, not urgent under current scope.
+* 12 of the local seed candidate files were written before the redirect-resolution fix and still carry unresolved `grounding-api-redirect` markers from that earlier state. This is now a data-remediation task, not a mechanism bug — `scripts/rerun_redirect_candidates.py` backfills them; tracked separately, not urgent under current scope.
 
 ### D. Live Preview & Edit
 
 Researchers edit Pydantic-mapped listing data in real time, either via per-section HTML overrides or by re-importing a corrected draft; `POST /render` re-renders server-side via Jinja2 for preview.
+
+### E. NCADEMI Products Viewer (separate initiative, in progress)
+
+A distinct workstream from Import Data / Generate Listing, tracked independently and unaffected by the Generate Listing deferral (Decision #30). Prototype and planning artifacts live under `ncademi-viewer/` (not yet consolidated into `frontend/`). Reuses `ncademiPreview.ts` section generators for rendering parity with the main app. See `ncademi-viewer/NCADEMI Full Architecture & Codebase.md` for the current design.
 
 ## 4. Multi-Layer Testing Strategy
 
@@ -97,7 +101,7 @@ Worker-to-API communication is authenticated via Google-signed OIDC tokens.
 
 Masking pattern protects long grounding tokens from LLM corruption during formatting.
 
-**Known gap, not yet fixed:** the lightweight httpx-based `liveness_validator.py` produces false-negative "dead link" results on sites that block non-browser traffic — no `Location` header `urljoin` for relative redirects, and no realistic `User-Agent`. Both fixes are scoped and pending (Tier 0, Import Data path — `adaptive_validate` calls this validator, so a pasted Gem draft can have valid resources silently stripped today).
+**Fixed:** the lightweight httpx-based `liveness_validator.py` previously produced false-negative "dead link" results on sites that block non-browser traffic (no `Location` header `urljoin` for relative redirects, no realistic `User-Agent`). Both are fixed — a realistic `User-Agent` header and `urljoin`-based relative-redirect resolution are in place, with regression coverage in `tests/unit/test_liveness.py`. `adaptive_validate` (Import Data path) and the live research path both benefit.
 
 ## 6. Telemetry & Analytics
 
@@ -131,9 +135,10 @@ nerd/
 │   ├── telemetry.py
 │   ├── utils.py
 │   └── tools/
-│       ├── liveness_validator.py    # known false-negative gap, see §5
+│       ├── liveness_validator.py    # hardened (User-Agent + redirect resolution), see §5
 │       └── administrative_validators/
 │           └── link_validator_engine.py    # dead code, pending archive/delete decision
+├── ncademi-viewer/                # Products Viewer prototype/planning, see §3.E — not yet in frontend/
 ├── frontend/
 │   ├── app/
 │   │   ├── layout.tsx
@@ -221,4 +226,4 @@ Directories present locally but not reflected above (gitignored, not part of the
 
 ---
 
-*N.E.R.D. System Architecture — Version 3.0*
+*N.E.R.D. System Architecture — Version 3.1*
