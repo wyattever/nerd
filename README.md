@@ -10,6 +10,8 @@ Active development is scoped to the **Import Data** path: pasting a Gemini-Gem-g
 
 **Generate Listing** — triggering a *new* live research run against Gemini directly (`/research/initial`, `/research/deep-dive`, the SSE streaming UI) — is deliberately out of scope for now. See [Decision #30](docs/DECISION_LOG.md#30-generate-listing--deferred-import-data-is-the-active-path). The shared pipeline code means fixes to the Import Data path benefit Generate Listing whenever it's reinstated.
 
+A separate, unaffected initiative — the **NCADEMI Products Viewer** — is also in progress; see [`docs/NERD_System_Architecture.md` §3.E](docs/NERD_System_Architecture.md#e-ncademi-products-viewer-separate-initiative-in-progress).
+
 ## Stack
 
 - **Frontend** (`frontend/`) — Next.js 16 (App Router, TypeScript) + Tailwind + Firebase Auth. Deployed as `nerd-frontend`.
