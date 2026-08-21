@@ -22,6 +22,13 @@ import {
   getSupportContactsForProduct,
   getAcrReportsForProduct,
 } from "@/lib/appsheet-tables";
+import {
+  getPublishedProductHeader as getSnapshotHeader,
+  getPublishedVendorResources as getSnapshotVendorResources,
+  getPublishedOtherResources as getSnapshotOtherResources,
+  getPublishedSupportContacts as getSnapshotSupportContacts,
+  getPublishedAcrReports as getSnapshotAcrReports,
+} from "@/lib/published-tables";
 
 interface CandidateRef {
   name: string;
@@ -124,6 +131,26 @@ export default function Home() {
   const [selectedPublishedSlug, setSelectedPublishedSlug] = useState("");
   const [selectedAddedSlug, setSelectedAddedSlug] = useState("");
   const [selectedCandidateProductSlug, setSelectedCandidateProductSlug] = useState("");
+
+  // Which source the three Published/Added/Candidate dropdowns pull header,
+  // resource, support, and ACR data from when "Show Product" is clicked.
+  // "appsheet" = AppSheet global table (live editorial source of truth).
+  // "published" = static live-site snapshot (published-tables.json) -- what
+  // is actually rendered on ncademi.org today, which can lag or diverge from
+  // AppSheet (see the discrepancy report). Dropdown contents themselves are
+  // NOT filtered by this toggle -- it only changes which fetch path runs
+  // after a slug is selected. A slug with no snapshot counterpart (renamed
+  // or never-published products) surfaces as an explicit error, not a
+  // silent fallback to the other source.
+  const [dataSource, setDataSource] = useState<"appsheet" | "published">("appsheet");
+
+  // Which of the three Show-Product categories is currently loaded in the
+  // Viewer, so toggling dataSource can reload the same product from the new
+  // source automatically instead of requiring another button click. null
+  // when nothing from these three categories is loaded (including when the
+  // legacy Candidates widget or Clear is used instead).
+  const [activeViewerSource, setActiveViewerSource] =
+    useState<"published" | "added" | "candidateProduct" | null>(null);
 
   // Legacy backend-driven Candidates widget -- untouched functionality,
   // relabeled "NCADEMI Candidates (legacy)" per product decision.
@@ -285,6 +312,26 @@ export default function Home() {
     setUnsavedSections(new Set());
     setActiveCandidateSlug(null);
     setIsProductLoaded(true);
+    setActiveViewerSource("published");
+
+    if (dataSource === "published") {
+      const header = getSnapshotHeader(selectedPublishedSlug);
+      if (!header) {
+        logMessage(`ERROR: No Published-snapshot data for "${selectedPublishedSlug}" -- this product may not be live, or its AppSheet slug doesn't match the live site's slug (see the discrepancy report).`);
+        return;
+      }
+      const vendorResources = getSnapshotVendorResources(selectedPublishedSlug);
+      const otherResources = getSnapshotOtherResources(selectedPublishedSlug);
+      const supportContacts = getSnapshotSupportContacts(selectedPublishedSlug);
+      const acrReports = getSnapshotAcrReports(selectedPublishedSlug);
+
+      injectListing(
+        populateViewerListing(header, vendorResources, otherResources, supportContacts, acrReports),
+        "Injected header, resources, support, and ACR from the live-site snapshot (published-tables.json)."
+      );
+      logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s), ${acrReports.length} ACR report(s))`);
+      return;
+    }
 
     const header = getPublishedProductHeader(selectedPublishedSlug);
     if (!header) {
@@ -312,6 +359,26 @@ export default function Home() {
     setUnsavedSections(new Set());
     setActiveCandidateSlug(null);
     setIsProductLoaded(true);
+    setActiveViewerSource("added");
+
+    if (dataSource === "published") {
+      const header = getSnapshotHeader(selectedAddedSlug);
+      if (!header) {
+        logMessage(`ERROR: No Published-snapshot data for "${selectedAddedSlug}" -- this product may not be live, or its AppSheet slug doesn't match the live site's slug (see the discrepancy report).`);
+        return;
+      }
+      const vendorResources = getSnapshotVendorResources(selectedAddedSlug);
+      const otherResources = getSnapshotOtherResources(selectedAddedSlug);
+      const supportContacts = getSnapshotSupportContacts(selectedAddedSlug);
+      const acrReports = getSnapshotAcrReports(selectedAddedSlug);
+
+      injectListing(
+        populateViewerListing(header, vendorResources, otherResources, supportContacts, acrReports),
+        "Injected header, resources, support, and ACR from the live-site snapshot (published-tables.json)."
+      );
+      logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s), ${acrReports.length} ACR report(s))`);
+      return;
+    }
 
     const header = getAddedProductHeader(selectedAddedSlug);
     if (!header) {
@@ -340,6 +407,26 @@ export default function Home() {
     setUnsavedSections(new Set());
     setActiveCandidateSlug(null);
     setIsProductLoaded(true);
+    setActiveViewerSource("candidateProduct");
+
+    if (dataSource === "published") {
+      const header = getSnapshotHeader(selectedCandidateProductSlug);
+      if (!header) {
+        logMessage(`ERROR: No Published-snapshot data for "${selectedCandidateProductSlug}" -- this product may not be live, or its AppSheet slug doesn't match the live site's slug (see the discrepancy report).`);
+        return;
+      }
+      const vendorResources = getSnapshotVendorResources(selectedCandidateProductSlug);
+      const otherResources = getSnapshotOtherResources(selectedCandidateProductSlug);
+      const supportContacts = getSnapshotSupportContacts(selectedCandidateProductSlug);
+      const acrReports = getSnapshotAcrReports(selectedCandidateProductSlug);
+
+      injectListing(
+        populateViewerListing(header, vendorResources, otherResources, supportContacts, acrReports),
+        "Injected header, resources, support, and ACR from the live-site snapshot (published-tables.json)."
+      );
+      logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s), ${acrReports.length} ACR report(s))`);
+      return;
+    }
 
     const header = getCandidateProductHeader(selectedCandidateProductSlug);
     if (!header) {
@@ -358,6 +445,24 @@ export default function Home() {
     );
     logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s), ${acrReports.length} ACR report(s))`);
   };
+
+  // Re-run the currently active category's fetch when the data-source toggle
+  // changes, so switching AppSheet/Published reloads the same product
+  // automatically instead of requiring the category's button to be clicked
+  // again. Intentionally depends on [dataSource] only, not on
+  // activeViewerSource or the handlers themselves -- this effect should fire
+  // ONLY on a toggle change, not whenever a new product is loaded (that case
+  // is already handled by each button's own onClick).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (activeViewerSource === "published") {
+      handleInjectPublished();
+    } else if (activeViewerSource === "added") {
+      handleInjectAdded();
+    } else if (activeViewerSource === "candidateProduct") {
+      handleInjectCandidateProduct();
+    }
+  }, [dataSource]);
 
   const handleImportProcessed = (result: IngestDraftResponse) => {
     // See nerd-import-data-architecture-v4.md §3.3, §6.
@@ -793,6 +898,7 @@ export default function Home() {
                   setProcessHeading("");
                   setIsDirty(false);
                   setActiveCandidateSlug(null);
+                  setActiveViewerSource(null);
                   setIsProductLoaded(false);
                   setEditingSection(null);
                   setUnsavedSections(new Set());
@@ -803,6 +909,39 @@ export default function Home() {
               >
                 Clear
               </button>
+
+              <div
+                role="group"
+                aria-label="Viewer data source"
+                className="flex items-center gap-1 border border-gray-300 rounded p-1 text-sm"
+              >
+                <button
+                  type="button"
+                  onClick={() => setDataSource("appsheet")}
+                  aria-pressed={dataSource === "appsheet"}
+                  className={
+                    (dataSource === "appsheet"
+                      ? "bg-blue-600 text-white "
+                      : "text-gray-700 hover:bg-gray-50 ") +
+                    "px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  }
+                >
+                  AppSheet
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDataSource("published")}
+                  aria-pressed={dataSource === "published"}
+                  className={
+                    (dataSource === "published"
+                      ? "bg-blue-600 text-white "
+                      : "text-gray-700 hover:bg-gray-50 ") +
+                    "px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  }
+                >
+                  Published (Live)
+                </button>
+              </div>
 
               {!isProductLoaded && (
                 <div aria-label="Section editors" className="ml-auto flex items-center gap-2 border-l pl-3">
