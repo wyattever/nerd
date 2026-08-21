@@ -13,33 +13,37 @@ function escapeHtml(str: string): string {
 function genHeaderHtml(listing: ListingData): string {
   const parts: string[] = [];
 
-  // Entry Header
-  parts.push('<header class="entry-header alignwide">');
-  parts.push(`<h1 id="product-name" class="entry-title">${escapeHtml(listing.product_name)}</h1>`);
+  // h1#product-name retained -- used by frontend/tests/e2e/candidate_lifecycle.spec.ts,
+  // frontend/tests/e2e/live_run.spec.ts, and frontend/app/nerd-table.css.
+  // Restyled to match the live page's outer <header class="mb-4"><h1 class="mb-0">
+  // wrapper instead of the old entry-header/entry-title classes.
+  parts.push('<header class="mb-4">');
+  parts.push(`<h1 id="product-name" class="mb-0">${escapeHtml(listing.product_name)}</h1>`);
   parts.push('</header>');
 
-  // Product Header
-  parts.push('<header class="product-header">');
+  parts.push('<div class="entry-content mb-4">');
+
   if (listing.vendor_name) {
     const vendorLink = (listing.vendor_directory_url && listing.vendor_directory_url !== '#')
       ? `<a href="${escapeHtml(listing.vendor_directory_url)}">${escapeHtml(listing.vendor_name)}</a>`
       : escapeHtml(listing.vendor_name);
-    parts.push(`<p class="vendor-line"><strong>Vendor:</strong> ${vendorLink}</p>`);
+    parts.push(`<p class="mb-2"><strong>Vendor:</strong> ${vendorLink}</p>`);
   }
 
   if (listing.product_description) {
-    parts.push(`<p class="product-desc">${escapeHtml(listing.product_description)}</p>`);
+    parts.push(`<p>${escapeHtml(listing.product_description)}</p>`);
   }
 
   if (listing.product_website_url && listing.product_website_url !== '#') {
     parts.push(
-      '<p class="product-website">' +
+      '<p class="mb-0 edtech-website-link">' +
       `<a href="${escapeHtml(listing.product_website_url)}" target="_blank" rel="noopener noreferrer">` +
-      `<i class="fa-solid fa-globe" aria-hidden="true"></i> ${escapeHtml(listing.product_name)} Website` +
+      `<i class="fa-regular fa-globe" aria-hidden="true"></i> ` +
+      `<span>${escapeHtml(listing.product_name)} Website</span>` +
       '</a></p>'
     );
   }
-  parts.push('</header>');
+  parts.push('</div>');
 
   return parts.join("\n");
 }
@@ -51,8 +55,8 @@ function genVendorResourcesHtml(listing: ListingData): string {
 
   const vendorDisplayName = escapeHtml(listing.vendor_name || "Vendor");
   const parts = [
-    `<h3 class="section-heading">From ${vendorDisplayName}</h3>`,
-    '<ul class="wp-block-list resource-list">',
+    `<h3 class="h4 mb-3">From ${vendorDisplayName}</h3>`,
+    '<ul class="mb-4">',
     ...listing.vendor_resources.map(item =>
       `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.text)}</a></li>`
     ),
@@ -67,8 +71,8 @@ function genOtherResourcesHtml(listing: ListingData): string {
   }
 
   const parts = [
-    '<h3 class="section-heading">From Other Sources</h3>',
-    '<ul class="wp-block-list resource-list">',
+    '<h3 class="h4 mb-3">From Other Sources</h3>',
+    '<ul class="mb-4">',
     ...listing.other_resources.map(item =>
       `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.text)}</a></li>`
     ),

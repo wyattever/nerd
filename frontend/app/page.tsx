@@ -9,6 +9,7 @@ import { getSectionHtml } from "@/lib/ncademiPreview";
 import { getIdToken } from "@/lib/firebase";
 import { ImportDataModal } from "@/components/ImportDataModal";
 import { IngestDraftResponse } from "@/lib/types";
+import { getPublishedProducts } from "@/lib/appsheet-tables";
 
 interface CandidateRef {
   name: string;
@@ -63,6 +64,13 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [candidates, setCandidates] = useState<CandidateRef[]>([]);
   const [products, setProducts] = useState<{ name: string; slug: string }[]>([]);
+  // NOTE: Published/Added Products state is UI-only for now -- not wired to
+  // real data sources yet. selectedProductSlug/products above remain the
+  // existing "Added Products" data path unchanged.
+  const [publishedProducts] = useState<{ name: string; slug: string }[]>(() =>
+    getPublishedProducts()
+  );
+  const [selectedPublishedSlug, setSelectedPublishedSlug] = useState("");
   const [selectedSlug, setSelectedSlug] = useState("");
   const [selectedProductSlug, setSelectedProductSlug] = useState("");
   const [activeCandidateSlug, setActiveCandidateSlug] = useState<string | null>(null);
@@ -166,7 +174,7 @@ useEffect(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Safety guard to prevent duplicate triggers
     if (state.status === "streaming") {
       logMessage("Research already in progress. Please wait or Stop.");
@@ -226,6 +234,14 @@ useEffect(() => {
     } catch (err) {
       console.error("Failed to fetch product data:", err);
     }
+  };
+
+  // STUB -- not wired yet. Published Products data source/endpoint is a
+  // pending decision (see project discussion); this only prevents a
+  // dangling handler while the widget is UI-only.
+  const handleInjectPublished = async () => {
+    if (!selectedPublishedSlug) return;
+    logMessage("Published Products viewing is not wired yet.");
   };
 
   const handleImportProcessed = (result: IngestDraftResponse) => {
@@ -389,64 +405,103 @@ useEffect(() => {
             </div>
 
             <div className="w-1/2 flex flex-col gap-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="product-url" className="text-sm font-semibold text-gray-700">
-                    Product URL
-                  </label>
-                  <div className="flex gap-3">
-                    <input
-                      id="product-url"
-                      type="url"
-                      value={url}
-                      onChange={e => setUrl(e.target.value)}
-                      placeholder="https://vendor.com/product"
-                      required
-                      disabled={state.status === "streaming"}
-                      className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
-                                 focus:outline-none focus:ring-2 focus:ring-blue-500
-                                 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!url.trim() || state.status === "streaming"}
-                      className="w-44 bg-blue-700 text-white text-sm font-medium px-5 py-2
-                                 rounded hover:bg-blue-800 focus:outline-none
-                                 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                                 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                    >
-                      {state.status === "streaming" ? "Processing..." : "Generate Listing"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={stopResearch}
-                      disabled={state.status !== "streaming"}
-                      aria-disabled={state.status !== "streaming"}
-                      className="bg-[#bf1712] text-white text-sm font-medium px-5 py-2 rounded
-                                 hover:bg-red-800 focus:outline-none focus:ring-2
-                                 focus:ring-red-500 focus:ring-offset-2
-                                 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                    >
-                      Stop
-                    </button>
+              {/* Product URL / Generate Listing / Stop -- hidden per current milestone */}
+              <div className="hidden">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="product-url" className="text-sm font-semibold text-gray-700">
+                      Product URL
+                    </label>
+                    <div className="flex gap-3">
+                      <input
+                        id="product-url"
+                        type="url"
+                        value={url}
+                        onChange={e => setUrl(e.target.value)}
+                        placeholder="https://vendor.com/product"
+                        required
+                        disabled={state.status === "streaming"}
+                        className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
+                                   focus:outline-none focus:ring-2 focus:ring-blue-500
+                                   disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!url.trim() || state.status === "streaming"}
+                        className="w-44 bg-blue-700 text-white text-sm font-medium px-5 py-2
+                                   rounded hover:bg-blue-800 focus:outline-none
+                                   focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                   disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                      >
+                        {state.status === "streaming" ? "Processing..." : "Generate Listing"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopResearch}
+                        disabled={state.status !== "streaming"}
+                        aria-disabled={state.status !== "streaming"}
+                        className="bg-[#bf1712] text-white text-sm font-medium px-5 py-2 rounded
+                                   hover:bg-red-800 focus:outline-none focus:ring-2
+                                   focus:ring-red-500 focus:ring-offset-2
+                                   disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                      >
+                        Stop
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </form>
+                </form>
+              </div>
 
+              {/* NCADEMI Published Products -- UI-only, not wired yet */}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-gray-700">NCADEMI Products</label>
+                <label className="text-sm font-semibold text-gray-700">NCADEMI Published Products</label>
                 <div className="flex gap-3 items-center">
                   <select
-                    aria-label="Select NCADEMI Product"
+                    aria-label="Select NCADEMI Published Product"
+                    value={selectedPublishedSlug}
+                    onChange={e => setSelectedPublishedSlug(e.target.value)}
+                    disabled={state.status === "streaming"}
+                    className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-blue-500
+                               bg-white text-gray-700 disabled:bg-gray-100
+                               disabled:cursor-not-allowed"
+                  >
+                    <option value="">select Published Product</option>
+                    {publishedProducts.map(p => (
+                      <option key={p.slug} value={p.slug}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleInjectPublished}
+                    disabled={!selectedPublishedSlug || state.status === "streaming"}
+                    className="w-44 bg-[#333] text-white text-sm font-medium px-6 py-2 rounded
+                               hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500
+                               disabled:opacity-30 disabled:cursor-not-allowed transition-all
+                               whitespace-nowrap"
+                  >
+                    View Published Product
+                  </button>
+                </div>
+              </div>
+
+              {/* NCADEMI Added Products -- was "NCADEMI Products", same data path */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-semibold text-gray-700">NCADEMI Added Products</label>
+                <div className="flex gap-3 items-center">
+                  <select
+                    aria-label="Select NCADEMI Added Product"
                     value={selectedProductSlug}
                     onChange={e => setSelectedProductSlug(e.target.value)}
                     disabled={state.status === "streaming"}
                     className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
-                               bg-white text-gray-700 disabled:bg-gray-100 
+                               bg-white text-gray-700 disabled:bg-gray-100
                                disabled:cursor-not-allowed"
                   >
-                    <option value="">select Product</option>
+                    <option value="">select Added Product</option>
                     {products.map(p => (
                       <option key={p.slug} value={p.slug}>
                         {p.name}
@@ -462,25 +517,26 @@ useEffect(() => {
                                disabled:opacity-30 disabled:cursor-not-allowed transition-all
                                whitespace-nowrap"
                   >
-                    View Product
+                    View Added Product
                   </button>
                 </div>
               </div>
 
+              {/* NCADEMI Candidate Products -- was "NCADEMI Candidate", same data path */}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-gray-700">NCADEMI Candidate</label>
+                <label className="text-sm font-semibold text-gray-700">NCADEMI Candidate Products</label>
                 <div className="flex gap-3 items-center">
                   <select
-                    aria-label="Select NCADEMI Candidate"
+                    aria-label="Select NCADEMI Candidate Product"
                     value={selectedSlug}
                     onChange={e => setSelectedSlug(e.target.value)}
                     disabled={state.status === "streaming"}
                     className="w-[55%] border border-gray-300 rounded px-3 py-2 text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500
-                               bg-white text-gray-700 disabled:bg-gray-100 
+                               bg-white text-gray-700 disabled:bg-gray-100
                                disabled:cursor-not-allowed"
                   >
-                    <option value="">select Candidate</option>
+                    <option value="">select Candidate Product</option>
                     {candidates.map(c => (
                       <option key={c.slug} value={c.slug}>
                         {c.name}
@@ -496,7 +552,7 @@ useEffect(() => {
                                disabled:opacity-30 disabled:cursor-not-allowed transition-all
                                whitespace-nowrap"
                   >
-                    View Candidate
+                    View Candidate Product
                   </button>
                   <button
                     type="button"

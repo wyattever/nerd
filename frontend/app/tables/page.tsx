@@ -1,6 +1,14 @@
+// frontend/app/tables/page.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
-import { APPSHEET_TABLES, getTable, DEFAULT_TABLE_SLUG } from "@/lib/appsheet-tables";
+import {
+  APPSHEET_TABLES,
+  getTable,
+  DEFAULT_TABLE_SLUG,
+  getColumnDefs,
+  getTableRows,
+} from "@/lib/appsheet-tables";
+import { AppsheetSortableTable } from "@/components/AppsheetSortableTable";
 import "../nerd-table.css";
 
 interface PageProps {
@@ -18,6 +26,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 export default async function TablesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const active = getTable(params.table) ?? getTable(DEFAULT_TABLE_SLUG)!;
+  const columns = getColumnDefs(active.slug);
+  const rows = getTableRows(active.slug);
+  const caption = `${active.title} — ${rows.length} records, ${columns.length} columns.`;
 
   return (
     <div className="nerd-table-page">
@@ -49,7 +60,15 @@ export default async function TablesPage({ searchParams }: PageProps) {
         </ul>
       </nav>
 
-      <main dangerouslySetInnerHTML={{ __html: active.html }} />
+      <main>
+        <AppsheetSortableTable
+          tableId={active.table_id}
+          statusId={active.status_id}
+          caption={caption}
+          columns={columns}
+          rows={rows}
+        />
+      </main>
     </div>
   );
 }
