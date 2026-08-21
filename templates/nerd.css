@@ -140,7 +140,11 @@
 .nerd-artifact .acr-report ul li {
   padding: 2px 0;
 }
-
+.nerd-artifact .acr-report .acr-availability-note {
+  font-size: 0.9em;
+  color: #555;
+  margin: 0 0 0.5rem;
+}
 /* ── Last-updated footer ────────────────────────────────────── */
 .nerd-artifact .last-updated {
   font-size: 0.9em;

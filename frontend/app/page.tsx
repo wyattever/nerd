@@ -20,6 +20,7 @@ import {
   getVendorResourcesForProduct,
   getOtherResourcesForProduct,
   getSupportContactsForProduct,
+  getAcrReportsForProduct,
 } from "@/lib/appsheet-tables";
 
 interface CandidateRef {
@@ -87,14 +88,15 @@ function populateViewerListing(
   },
   vendorResources: { text: string; url: string }[],
   otherResources: { text: string; url: string }[],
-  supportContacts: { type: "email" | "url"; value: string; label?: string }[]
+  supportContacts: { type: "email" | "url"; value: string; label?: string }[],
+  acrReports: { title: string; url: string | null; version: string | null; date: string | null; auditor_name: string | null; auditor_url: string | null }[]
 ): ListingData {
   return {
     ...header,
     vendor_resources: vendorResources,
     other_resources: otherResources,
     support_contacts: supportContacts,
-    acr_reports: [],
+    acr_reports: acrReports,
     last_updated: "",
   } as unknown as ListingData;
 }
@@ -273,6 +275,7 @@ export default function Home() {
     }
   };
 
+
   const handleInjectPublished = async () => {
     if (!selectedPublishedSlug) return;
     setProcessHeading("Viewing Published Product");
@@ -291,12 +294,13 @@ export default function Home() {
     const vendorResources = getVendorResourcesForProduct(header.product_name);
     const otherResources = getOtherResourcesForProduct(header.product_name);
     const supportContacts = getSupportContactsForProduct(header.product_name);
+    const acrReports = getAcrReportsForProduct(header.product_name);
 
     injectListing(
-      populateViewerListing(header, vendorResources, otherResources, supportContacts),
-      "Injected header, resources, and support from NCADEMI Published Products (AppSheet global table)."
+      populateViewerListing(header, vendorResources, otherResources, supportContacts, acrReports),
+      "Injected header, resources, support, and ACR from NCADEMI Published Products (AppSheet global table)."
     );
-    logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s))`);
+    logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s), ${acrReports.length} ACR report(s))`);
   };
 
   const handleInjectAdded = async () => {
@@ -317,14 +321,16 @@ export default function Home() {
     const vendorResources = getVendorResourcesForProduct(header.product_name);
     const otherResources = getOtherResourcesForProduct(header.product_name);
     const supportContacts = getSupportContactsForProduct(header.product_name);
+    const acrReports = getAcrReportsForProduct(header.product_name);
 
     injectListing(
-      populateViewerListing(header, vendorResources, otherResources, supportContacts),
-      "Injected header, resources, and support from NCADEMI Added Products (AppSheet global table)."
+      populateViewerListing(header, vendorResources, otherResources, supportContacts, acrReports),
+      "Injected header, resources, support, and ACR from NCADEMI Added Products (AppSheet global table)."
     );
-    logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s))`);
+    logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s), ${acrReports.length} ACR report(s))`);
   };
 
+  
   const handleInjectCandidateProduct = async () => {
     if (!selectedCandidateProductSlug) return;
     setProcessHeading("Viewing Candidate Product");
@@ -343,12 +349,13 @@ export default function Home() {
     const vendorResources = getVendorResourcesForProduct(header.product_name);
     const otherResources = getOtherResourcesForProduct(header.product_name);
     const supportContacts = getSupportContactsForProduct(header.product_name);
+    const acrReports = getAcrReportsForProduct(header.product_name);
 
     injectListing(
-      populateViewerListing(header, vendorResources, otherResources, supportContacts),
-      "Injected header, resources, and support from NCADEMI Candidate Products (AppSheet global table)."
+      populateViewerListing(header, vendorResources, otherResources, supportContacts, acrReports),
+      "Injected header, resources, support, and ACR from NCADEMI Candidate Products (AppSheet global table)."
     );
-    logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s))`);
+    logMessage(`Loaded header for: ${header.product_name} (${vendorResources.length} vendor resource(s), ${otherResources.length} other resource(s), ${supportContacts.length} support contact(s), ${acrReports.length} ACR report(s))`);
   };
 
   const handleImportProcessed = (result: IngestDraftResponse) => {

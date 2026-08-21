@@ -479,3 +479,45 @@ export function getSupportContactsForProduct(productName: string): SupportContac
 
   return [...websiteContacts, ...emailContacts];
 }
+
+
+const ACRS_PREFIX = "nerd-col-acr-";
+
+export interface AcrReport {
+  title: string;
+  url: string | null;
+  version: string | null;
+  date: string | null;
+  auditor_name: string | null;
+  auditor_url: string | null;
+}
+
+export function getAcrReportsForProduct(productName: string): AcrReport[] {
+  const reports: AcrReport[] = [];
+
+  for (const row of getTableRowsHtml("acrs")) {
+    const productCell = extractCell(row, `${ACRS_PREFIX}product`);
+    if (productCell.text !== productName) continue;
+
+    const addedCell = extractCell(row, `${ACRS_PREFIX}added`);
+    if (addedCell.text !== "Yes") continue;
+
+    const nameCell = extractCell(row, `${ACRS_PREFIX}name`);
+    const urlCell = extractCell(row, `${ACRS_PREFIX}url`);
+    const dateCell = extractCell(row, `${ACRS_PREFIX}datepub`);
+    const versionCell = extractCell(row, `${ACRS_PREFIX}version`);
+    const completedByCell = extractCell(row, `${ACRS_PREFIX}completedby`);
+    const completedByUrlCell = extractCell(row, `${ACRS_PREFIX}completedbyurl`);
+
+    reports.push({
+      title: nameCell.text || "Available on Request",
+      url: urlCell.href || null,
+      version: versionCell.text || null,
+      date: dateCell.text || null,
+      auditor_name: completedByCell.text || null,
+      auditor_url: completedByUrlCell.href || null,
+    });
+  }
+
+  return reports;
+}

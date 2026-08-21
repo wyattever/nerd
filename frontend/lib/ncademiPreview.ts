@@ -122,21 +122,41 @@ function genAcrHtml(listing: ListingData): string {
   } else {
     listing.acr_reports.forEach(acr => {
       parts.push('<div class="acr-report">');
-      
+
+      const isAvailableOnRequest = acr.title === "Available on Request";
       const hasValidUrl = acr.url && acr.url !== "#";
       const titleElement = hasValidUrl
         ? `<a href="${escapeHtml(acr.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.title)}</a>`
         : escapeHtml(acr.title);
 
       parts.push(`<h4>${titleElement}</h4>`);
-      parts.push('<ul>');
-      parts.push('<li><strong>Version:</strong> </li>');
-      parts.push('<li><strong>Date:</strong> </li>');
-      parts.push('<li><strong>Completed by:</strong> </li>');
-      parts.push('</ul></div>');
+
+      if (isAvailableOnRequest) {
+        parts.push('<p class="acr-availability-note">An Accessibility Conformance Report is available by contacting support.</p>');
+      }
+
+      const liItems: string[] = [];
+      if (acr.version) {
+        liItems.push(`<li><strong>Version:</strong> ${escapeHtml(acr.version)}</li>`);
+      }
+      if (acr.date) {
+        liItems.push(`<li><strong>Date:</strong> ${escapeHtml(acr.date)}</li>`);
+      }
+      if (acr.auditor_name) {
+        const auditor = acr.auditor_url
+          ? `<a href="${escapeHtml(acr.auditor_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.auditor_name)}</a>`
+          : escapeHtml(acr.auditor_name);
+        liItems.push(`<li><strong>Completed by:</strong> ${auditor}</li>`);
+      }
+
+      if (liItems.length > 0) {
+        parts.push(`<ul>${liItems.join("")}</ul>`);
+      }
+
+      parts.push('</div>');
     });
   }
-  
+
   parts.push('</div>');
   return parts.join("\n");
 }
