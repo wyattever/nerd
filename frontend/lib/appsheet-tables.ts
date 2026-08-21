@@ -322,6 +322,7 @@ export interface ProductHeaderData {
   vendor_directory_url: string;
   product_description: string;
   product_website_url: string;
+  last_updated: string;
 }
 
 /**
@@ -347,6 +348,11 @@ export function getProductHeaderByStatus(status: string, slug: string): ProductH
     const vendorCell = extractCell(row, `${GLOBAL_PREFIX}vendor`);
     const descCell = extractCell(row, `${GLOBAL_PREFIX}desc`);
     const websiteCell = extractCell(row, `${GLOBAL_PREFIX}website`);
+    // Raw AppSheet timestamp, e.g. "4/7/2026 10:16:32 AM" -- NOT reformatted
+    // to match the live page's "March 6, 2026" style. Reformatting wasn't
+    // part of this fix; flagging rather than silently inventing a date
+    // formatter. genHeaderHtml renders this value as-is.
+    const lastUpdatedCell = extractCell(row, `${GLOBAL_PREFIX}lastupdated`);
 
     let vendorDirectoryUrl = "";
     const vendorName = vendorCell.text;
@@ -366,6 +372,7 @@ export function getProductHeaderByStatus(status: string, slug: string): ProductH
       vendor_directory_url: vendorDirectoryUrl,
       product_description: descCell.text,
       product_website_url: websiteCell.href ?? "",
+      last_updated: lastUpdatedCell.text,
     };
   }
 

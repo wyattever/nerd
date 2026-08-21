@@ -72,7 +72,7 @@ function genOtherResourcesHtml(listing: ListingData): string {
 
   const parts = [
     '<h3 class="h4 mb-3">From Other Sources</h3>',
-    '<ul class="mb-4">',
+    '<ul class="mb-0">',
     ...listing.other_resources.map(item =>
       `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.text)}</a></li>`
     ),
@@ -81,15 +81,23 @@ function genOtherResourcesHtml(listing: ListingData): string {
   return parts.join("\n");
 }
 
+// Restyled to match the live page's sidebar card markup:
+// <section class="card edtech-info-card edtech-info-card--support mb-3">
+//   <div class="card-body p-3 p-lg-4"><h2 class="h4 mb-3">Support</h2><ul class="mb-0">...
+// The old .product-support/.section-heading/.resource-list classes only ever
+// meant something to templates/nerd.css, which never matched the live theme --
+// see session notes on the bootscore restyle. Confirmed against live
+// view-source of the Adobe Express product page.
 function genSupportHtml(listing: ListingData): string {
   if (!listing.support_contacts || listing.support_contacts.length === 0) {
     return "";
   }
 
   const parts: string[] = [];
-  parts.push('<div class="product-support">');
-  parts.push('<h3 class="section-heading">Support</h3>');
-  parts.push('<ul class="wp-block-list resource-list">');
+  parts.push('<section class="card edtech-info-card edtech-info-card--support mb-3">');
+  parts.push('<div class="card-body p-3 p-lg-4">');
+  parts.push('<h2 class="h4 mb-3">Support</h2>');
+  parts.push('<ul class="mb-0">');
   listing.support_contacts.forEach(contact => {
     parts.push('<li>');
     if (contact.type === "email") {
@@ -102,38 +110,44 @@ function genSupportHtml(listing: ListingData): string {
     }
     parts.push('</li>');
   });
-  parts.push('</ul></div>');
+  parts.push('</ul>');
+  parts.push('</div>');
+  parts.push('</section>');
   return parts.join("\n");
 }
 
+// Restyled to match the live page's sidebar card markup:
+// <section class="card edtech-info-card edtech-info-card--reports">
+//   <div class="card-body p-3 p-lg-4"><h2 class="h4 mb-4">Accessibility Conformance
+//   Reports</h2><div class="vstack gap-3"><article><h3 class="h6 mb-1">...
+// Per-report entries are <article> elements inside a .vstack, not the old
+// .acr-report divs. Confirmed against live view-source of the Adobe Express
+// product page (3 real ACR entries; that page has no zero-ACR example, so the
+// empty-state fallback below is adapted from the old markup, not independently
+// verified against a live "no ACR" page -- flagging in case it needs a check).
 function genAcrHtml(listing: ListingData): string {
   const parts: string[] = [];
-  parts.push('<div class="edtech-acr">');
-  parts.push('<h3 class="section-heading">Accessibility Conformance Reports</h3>');
+  parts.push('<section class="card edtech-info-card edtech-info-card--reports">');
+  parts.push('<div class="card-body p-3 p-lg-4">');
+  parts.push('<h2 class="h4 mb-4">Accessibility Conformance Reports</h2>');
 
   if (!listing.acr_reports || listing.acr_reports.length === 0) {
-    parts.push('<div class="acr-report">');
-    parts.push('<h4><a href="#" rel="noopener noreferrer">None found</a></h4>');
-    parts.push('<ul>');
-    parts.push('<li><strong>Version:</strong> </li>');
-    parts.push('<li><strong>Date:</strong> </li>');
-    parts.push('<li><strong>Completed by:</strong> </li>');
-    parts.push('</ul></div>');
+    parts.push('<div class="vstack gap-3">');
+    parts.push('<article>');
+    parts.push('<h3 class="h6 mb-1">None found</h3>');
+    parts.push('</article>');
+    parts.push('</div>');
   } else {
+    parts.push('<div class="vstack gap-3">');
     listing.acr_reports.forEach(acr => {
-      parts.push('<div class="acr-report">');
+      parts.push('<article>');
 
-      const isAvailableOnRequest = acr.title === "Available on Request";
       const hasValidUrl = acr.url && acr.url !== "#";
       const titleElement = hasValidUrl
         ? `<a href="${escapeHtml(acr.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.title)}</a>`
         : escapeHtml(acr.title);
 
-      parts.push(`<h4>${titleElement}</h4>`);
-
-      if (isAvailableOnRequest) {
-        parts.push('<p class="acr-availability-note">An Accessibility Conformance Report is available by contacting support.</p>');
-      }
+      parts.push(`<h3 class="h6 mb-1">${titleElement}</h3>`);
 
       const liItems: string[] = [];
       if (acr.version) {
@@ -150,14 +164,16 @@ function genAcrHtml(listing: ListingData): string {
       }
 
       if (liItems.length > 0) {
-        parts.push(`<ul>${liItems.join("")}</ul>`);
+        parts.push(`<ul class="small mb-0">${liItems.join("")}</ul>`);
       }
 
-      parts.push('</div>');
+      parts.push('</article>');
     });
+    parts.push('</div>');
   }
 
   parts.push('</div>');
+  parts.push('</section>');
   return parts.join("\n");
 }
 
@@ -173,6 +189,17 @@ export function getSectionHtml(listing: ListingData, key: SectionKey): string {
   }
 }
 
+// Outer wrapper restyled to match the live page's <div class="row g-4 g-lg-5
+// align-items-start"><div class="col-12 col-lg-8">...resources...</div>
+// <div class="col-12 col-lg-4">...support/acr cards...</div></div> structure.
+// The old wp-block-columns/resources-grid/h2.resources-heading wrapper never
+// matched bootscore and is dropped here. Known simplification, flagged rather
+// than silently expanded: genHeaderHtml's returned block (header + .entry-content)
+// is kept as one unit per the existing "header" SectionKey/override contract
+// and rendered above the two-column row, rather than splitting .entry-content
+// into col-lg-8 as the live page does -- that would require changing the
+// SectionKey shape (types.ts, SectionEditor.tsx) and is out of scope here.
+// Confirmed against live view-source of the Adobe Express product page.
 export function buildNcademiListingHtml(listing: ListingData): string {
   const header = getSectionHtml(listing, "header");
   const vendorResources = getSectionHtml(listing, "vendor_resources");
@@ -181,28 +208,30 @@ export function buildNcademiListingHtml(listing: ListingData): string {
   const acr = getSectionHtml(listing, "acr");
 
   const lastUpdatedHtml = listing.last_updated
-    ? `<p class="last-updated">Product information last updated ${escapeHtml(listing.last_updated)}</p>`
+    ? `<p class="text-end text-body-secondary mt-4 mb-0"><em>Product information last updated ${escapeHtml(listing.last_updated)}</em></p>`
+    : "";
+
+  const resourcesSection = (vendorResources || otherResources)
+    ? `<section class="edtech-resources mb-4">
+        <h2 class="h3 mb-4">Accessibility Documentation &amp; Resources</h2>
+        ${vendorResources}
+        ${otherResources}
+      </section>`
     : "";
 
   return `
-    ${header}
-    <article class="product type-product status-publish hentry">
-      <div class="nerd-artifact">
-        <div class="entry-content">
-          <h2 class="resources-heading">Accessibility Documentation &amp; Resources</h2>
-          <div class="wp-block-columns is-layout-flex wp-container-core-columns-is-layout-1 wp-block-columns-is-layout-flex resources-grid">
-            <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-main" style="flex-basis:66.66%">
-              ${vendorResources}
-              ${otherResources}
-            </div>
-            <div class="wp-block-column is-layout-flow wp-block-column-is-layout-flow col-side" style="flex-basis:33.33%">
-              ${support}
-              ${acr}
-            </div>
-          </div>
-          ${lastUpdatedHtml}
+    <article class="nc-single-product product type-product status-publish hentry">
+      <div class="row g-4 g-lg-5 align-items-start">
+        <div class="col-12 col-lg-8">
+          ${header}
+          ${resourcesSection}
+        </div>
+        <div class="col-12 col-lg-4">
+          ${support}
+          ${acr}
         </div>
       </div>
+      ${lastUpdatedHtml}
     </article>
   `;
 }

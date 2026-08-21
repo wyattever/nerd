@@ -85,6 +85,7 @@ function populateViewerListing(
     vendor_directory_url: string;
     product_description: string;
     product_website_url: string;
+    last_updated: string;
   },
   vendorResources: { text: string; url: string }[],
   otherResources: { text: string; url: string }[],
@@ -97,7 +98,7 @@ function populateViewerListing(
     other_resources: otherResources,
     support_contacts: supportContacts,
     acr_reports: acrReports,
-    last_updated: "",
+    last_updated: header.last_updated,
   } as unknown as ListingData;
 }
 
