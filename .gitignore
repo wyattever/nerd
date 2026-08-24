@@ -186,3 +186,5 @@ UPDATE_CANDIDATE_PLAN.md
 CLAUDE_TESTING_PROMPT.md
 .scratch/
 repomix-output.xml
+.claude/
+JSON-viewer-editor/
