@@ -1,22 +1,15 @@
-// frontend/app/api/local/published/route.ts
+// frontend/app/api/local/added/route.ts
 /**
- * Local-only server-side write path for published-tables.json.
+ * Local-only server-side write path for added-tables.json.
  *
- * Gated to development (see assertLocalOnly in lib/local-write.ts). GET
- * reads fresh from disk on every request -- never the frozen static import
- * used by the public /tables/published viewer -- so a save is reflected
- * immediately without depending on Turbopack watcher/HMR behavior. POST
- * validates before writing and uses a whole-file SHA-256 ETag with
- * If-Match/412 to catch a save racing an out-of-band edit (IDE, git
- * checkout) of the same file. See JSON-Editor-validation.md.
+ * Mirrors app/api/local/published/route.ts exactly, differing only in the
+ * DataKind ("added") passed to readPublishedRaw/writePublishedAtomic. See
+ * that file's header comment and JSON-Editor-validation.md for the full
+ * rationale (gating, ETag concurrency, atomic writes).
  *
  * Node runtime is the default for App Router route handlers, but it is
  * declared explicitly here: fs is unavailable on Edge, and this guards
  * against an accidental edge opt-in or a future default change.
- *
- * Sibling routes app/api/local/added and app/api/local/candidate mirror
- * this file exactly, differing only in the DataKind passed to
- * readPublishedRaw/writePublishedAtomic.
  */
 
 import { assertLocalOnly, readPublishedRaw, writePublishedAtomic } from "@/lib/local-write";
@@ -35,7 +28,7 @@ export async function GET(): Promise<Response> {
   const blocked = assertLocalOnly();
   if (blocked) return blocked;
 
-  const { data, etag } = await readPublishedRaw("published");
+  const { data, etag } = await readPublishedRaw("added");
   return new Response(data, {
     status: 200,
     headers: { "Content-Type": "application/json", ETag: etag },
@@ -46,7 +39,7 @@ export async function POST(request: Request): Promise<Response> {
   const blocked = assertLocalOnly();
   if (blocked) return blocked;
 
-  const { etag: currentEtag } = await readPublishedRaw("published");
+  const { etag: currentEtag } = await readPublishedRaw("added");
   const ifMatch = request.headers.get("If-Match");
   if (ifMatch !== currentEtag) {
     return jsonResponse(
@@ -81,8 +74,8 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const bytes = `${JSON.stringify(body, null, 2)}\n`;
-  await writePublishedAtomic("published", bytes);
+  await writePublishedAtomic("added", bytes);
 
-  const { etag: newEtag } = await readPublishedRaw("published");
+  const { etag: newEtag } = await readPublishedRaw("added");
   return jsonResponse({ ok: true, etag: newEtag }, 200, { ETag: newEtag });
 }

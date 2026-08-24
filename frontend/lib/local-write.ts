@@ -4,9 +4,12 @@
  * path. See JSON-Editor-validation.md for the full architecture rationale.
  *
  * This module is deliberately narrow:
- *   - PUBLISHED_PATH is a hardcoded constant. The editor writes exactly one
- *     file; nothing here ever builds a path from request input, which is
- *     what eliminates the path-traversal vector rather than sanitizing it.
+ *   - Every path this module ever touches comes from the FILE_NAMES lookup
+ *     below, keyed by one of exactly three literal DataKind values -- never
+ *     built from request input. That is what eliminates the path-traversal
+ *     vector rather than sanitizing it: readPublishedRaw/writePublishedAtomic
+ *     take a `kind: DataKind` parameter, not a filename, so there is no
+ *     string to sanitize in the first place.
  *   - readPublishedRaw() reads fresh from disk on every call rather than
  *     relying on the static `import data from "./published-tables.json"`
  *     used elsewhere in the app. That static import is frozen in process
@@ -24,7 +27,22 @@ import { promises as fs } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 
-export const PUBLISHED_PATH = path.join(process.cwd(), "lib", "published-tables.json");
+/**
+ * The three JSON documents the /editor page's local write API can read and
+ * write. A closed union rather than a free-form filename -- see the module
+ * header above.
+ */
+export type DataKind = "published" | "added" | "candidate";
+
+const FILE_NAMES: Record<DataKind, string> = {
+  published: "published-tables.json",
+  added: "added-tables.json",
+  candidate: "candidate-tables.json",
+};
+
+function pathFor(kind: DataKind): string {
+  return path.join(process.cwd(), "lib", FILE_NAMES[kind]);
+}
 
 /**
  * Gates every handler in this route to local development only. Returns 404
@@ -48,19 +66,19 @@ export function assertLocalOnly(): Response | null {
 }
 
 /**
- * Reads published-tables.json fresh from disk and returns its raw bytes
- * (as a UTF-8 string) alongside a strong ETag: the SHA-256 hash of the exact
+ * Reads the given document fresh from disk and returns its raw bytes (as a
+ * UTF-8 string) alongside a strong ETag: the SHA-256 hash of the exact
  * bytes read. The hash is computed over the Buffer, before any string
  * decoding, so it reflects what is actually on disk.
  */
-export async function readPublishedRaw(): Promise<{ data: string; etag: string }> {
-  const buffer = await fs.readFile(PUBLISHED_PATH);
+export async function readPublishedRaw(kind: DataKind): Promise<{ data: string; etag: string }> {
+  const buffer = await fs.readFile(pathFor(kind));
   const etag = createHash("sha256").update(buffer).digest("hex");
   return { data: buffer.toString("utf8"), etag };
 }
 
 /**
- * Replaces published-tables.json with `bytes`, atomically and durably.
+ * Replaces the given document with `bytes`, atomically and durably.
  *
  * 1. Write the new content to a temp file in the SAME directory as the
  *    target (a sibling, never /tmp) -- fs.rename() is only atomic within a
@@ -74,9 +92,10 @@ export async function readPublishedRaw(): Promise<{ data: string; etag: string }
  *    itself can survive a crash while the directory entry pointing at it
  *    does not, and the old file reappears on an unclean reboot.
  */
-export async function writePublishedAtomic(bytes: string): Promise<void> {
-  const dir = path.dirname(PUBLISHED_PATH);
-  const tempPath = `${PUBLISHED_PATH}.tmp`;
+export async function writePublishedAtomic(kind: DataKind, bytes: string): Promise<void> {
+  const targetPath = pathFor(kind);
+  const dir = path.dirname(targetPath);
+  const tempPath = `${targetPath}.tmp`;
 
   await fs.writeFile(tempPath, bytes, "utf8");
 
@@ -87,7 +106,7 @@ export async function writePublishedAtomic(bytes: string): Promise<void> {
     await fileHandle.close();
   }
 
-  await fs.rename(tempPath, PUBLISHED_PATH);
+  await fs.rename(tempPath, targetPath);
 
   const dirHandle = await fs.open(dir, "r");
   try {
