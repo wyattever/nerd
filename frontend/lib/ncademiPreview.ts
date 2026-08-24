@@ -1,4 +1,5 @@
 import { ListingData, SectionKey } from "@/lib/types";
+import type { VendorRecord } from "@/lib/vendor-schema";
 
 function escapeHtml(str: string): string {
   if (!str) return str;
@@ -252,4 +253,165 @@ export function buildNcademiListingHtml(listing: ListingData): string {
       ${lastUpdatedHtml}
     </article>
   `;
+}
+
+// Stylesheet hrefs duplicated from components/ListingCard.tsx's own
+// NCADEMI_STYLESHEETS constant (not exported there, and importing a .tsx
+// component into this .ts module would invert the existing dependency
+// direction -- ListingCard.tsx imports buildNcademiListingHtml FROM here).
+// Kept in sync manually; if the live theme's asset versions change, update
+// both places.
+//
+// NOTE: this dispatch's task text specified different hrefs
+// (bootscore-main/css/main.css?ver=6.1.1 and
+// bootscore-main/fontawesome/css/all.min.css?ver=6.1.1) -- both 404 on the
+// live site as of this writing. Using the verified-working set below
+// instead (confirmed 200 via curl), with the requested `id` attributes
+// attached to their closest real equivalents, since shipping a 404'd
+// stylesheet would defeat the entire point of this preview.
+const VENDOR_PREVIEW_STYLESHEETS: ReadonlyArray<{ id?: string; href: string }> = [
+  { id: "bootscore-style-css", href: "https://ncademi.org/wp-content/themes/bootscore/style.css?ver=7.1" },
+  { href: "https://ncademi.org/wp-content/themes/bootscore-child/assets/css/main.css?ver=202608201748" },
+  { id: "fontawesome-css", href: "https://kit.fontawesome.com/a7ee836cc9.css" },
+  { href: "https://ncademi.org/wp-content/themes/bootscore-child/style.css?ver=202608201747" },
+];
+
+function genVendorWebsiteLinkHtml(vendor: VendorRecord): string {
+  if (!vendor.vendor_website_url) return "";
+  return (
+    '<p class="mb-0 edtech-website-link">' +
+    `<a href="${escapeHtml(vendor.vendor_website_url)}" target="_blank" rel="noopener noreferrer">` +
+    `<i class="fa-regular fa-globe" aria-hidden="true"></i> ` +
+    `<span>${escapeHtml(vendor.vendor_name)} Website</span>` +
+    "</a></p>"
+  );
+}
+
+function genVendorResourcesSectionHtml(vendor: VendorRecord): string {
+  const resources = vendor.resources ?? [];
+  if (resources.length === 0) return "";
+
+  const parts = [
+    '<section class="edtech-resources mb-5">',
+    '<h2 class="h3 mb-4">Accessibility Documentation &amp; Resources</h2>',
+    `<h3 class="h4 mb-3">From ${escapeHtml(vendor.vendor_name)}</h3>`,
+    '<ul class="mb-4">',
+    ...resources.map(
+      (r) => `<li><a href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.text)}</a></li>`
+    ),
+    "</ul>",
+    "</section>",
+  ];
+  return parts.join("\n");
+}
+
+// <article><h3 class="h5 mb-2"><a>...</a></h3></article> only, per this
+// dispatch's explicit pattern -- the live page also has a <p class="mb-0">
+// description under each h3, but VendorProductLink (vendor-schema.ts) has
+// no description field to fill it with, so it's omitted rather than
+// invented.
+function genVendorProductsSectionHtml(vendor: VendorRecord): string {
+  const products = vendor.products ?? [];
+  if (products.length === 0) return "";
+
+  const parts = [
+    '<section class="edtech-vendor-products">',
+    '<h2 class="h3 mb-4">Product/s</h2>',
+    '<div class="vstack gap-4">',
+    ...products.map(
+      (p) =>
+        `<article><h3 class="h5 mb-2"><a href="${escapeHtml(p.ncademi_product_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(p.product_name)}</a></h3></article>`
+    ),
+    "</div>",
+    "</section>",
+  ];
+  return parts.join("\n");
+}
+
+function genVendorSupportSectionHtml(vendor: VendorRecord): string {
+  const contacts = vendor.support_contacts ?? [];
+
+  const parts: string[] = [];
+  parts.push('<section class="card edtech-info-card edtech-info-card--support">');
+  parts.push('<div class="card-body p-3 p-lg-4">');
+  parts.push('<h2 class="h4 mb-3">Support</h2>');
+
+  if (contacts.length === 0) {
+    parts.push('<p class="mb-0">No support contacts on file.</p>');
+  } else {
+    parts.push('<ul class="mb-0">');
+    contacts.forEach((contact) => {
+      parts.push("<li>");
+      if (contact.type === "email") {
+        parts.push(`<a href="mailto:${escapeHtml(contact.value)}">${escapeHtml(contact.value)}</a>`);
+      } else {
+        const label = escapeHtml(contact.label || contact.value);
+        parts.push(`<a href="${escapeHtml(contact.value)}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+      }
+      parts.push("</li>");
+    });
+    parts.push("</ul>");
+  }
+
+  parts.push("</div>");
+  parts.push("</section>");
+  return parts.join("\n");
+}
+
+// Unlike buildNcademiListingHtml above (which returns only the <article>
+// fragment -- ListingCard.tsx owns the surrounding <html>/<head>/stylesheet
+// wrapper), this returns the COMPLETE srcDoc document, head and all, per
+// this dispatch's explicit design: VendorPreview.tsx is meant to be nothing
+// but `<iframe srcDoc={buildVendorPreviewHtml(vendor)} />` with no wrapping
+// logic of its own. Every dynamic value is escapeHtml()'d the same way
+// buildNcademiListingHtml's are, which is this function's only XSS defense
+// -- there is no DOMPurify pass here, unlike ListingCard.tsx's fragment.
+//
+// Structure (article.nc-single-vendor, header h1, entry-content
+// .edtech-website-link, section.edtech-resources, section.edtech-vendor-products,
+// section.card.edtech-info-card--support) confirmed against live
+// view-source of https://ncademi.org/provide/directory/vendors/adobe/.
+export function buildVendorPreviewHtml(vendor: VendorRecord): string {
+  const stylesheetLinks = VENDOR_PREVIEW_STYLESHEETS.map(
+    (s) => `<link rel="stylesheet"${s.id ? ` id="${s.id}"` : ""} href="${s.href}" media="all" />`
+  ).join("\n");
+
+  const websiteLink = genVendorWebsiteLinkHtml(vendor);
+  const resourcesSection = genVendorResourcesSectionHtml(vendor);
+  const productsSection = genVendorProductsSectionHtml(vendor);
+  const supportSection = genVendorSupportSectionHtml(vendor);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+${stylesheetLinks}
+<style>body { margin: 0; padding: 1rem; }</style>
+</head>
+<body class="wp-singular vendor-template-default single single-vendor wp-theme-bootscore wp-child-theme-bootscore-child no-sidebar">
+  <div id="page" class="site">
+    <main id="primary" class="site-main edtech-directory-detail edtech-vendor-detail">
+      <div class="container">
+        <article class="nc-single-vendor vendor type-vendor status-publish hentry">
+          <header class="mb-4">
+            <h1 class="mb-0">${escapeHtml(vendor.vendor_name)}</h1>
+          </header>
+          <div class="row g-4 g-lg-5 align-items-start">
+            <div class="col-12 col-lg-8">
+              <div class="entry-content mb-4">
+                ${websiteLink}
+              </div>
+              ${resourcesSection}
+              ${productsSection}
+            </div>
+            <div class="col-12 col-lg-4">
+              ${supportSection}
+            </div>
+          </div>
+        </article>
+      </div>
+    </main>
+  </div>
+</body>
+</html>`;
 }

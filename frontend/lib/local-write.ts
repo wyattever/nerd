@@ -28,16 +28,17 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 
 /**
- * The three JSON documents the /editor page's local write API can read and
- * write. A closed union rather than a free-form filename -- see the module
- * header above.
+ * The JSON documents the /editor and /vendors pages' local write APIs can
+ * read and write. A closed union rather than a free-form filename -- see
+ * the module header above.
  */
-export type DataKind = "published" | "added" | "candidate";
+export type DataKind = "published" | "added" | "candidate" | "vendors";
 
 const FILE_NAMES: Record<DataKind, string> = {
   published: "published-tables.json",
   added: "added-tables.json",
   candidate: "candidate-tables.json",
+  vendors: "vendors.json",
 };
 
 function pathFor(kind: DataKind): string {
