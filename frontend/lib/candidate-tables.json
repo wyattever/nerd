@@ -56,7 +56,9 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:17:17 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_priority": "Medium",
+      "tracking_status": "Gathering"
     },
     {
       "slug": "concept-quests",
