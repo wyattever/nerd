@@ -102,6 +102,7 @@ export function EditorSidebar({
   onSelectSlug,
 }: EditorSidebarProps) {
   const [filter, setFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const sourceList = useMemo(() => {
     switch (activeTab) {
@@ -121,6 +122,19 @@ export function EditorSidebar({
       (p) => p.slug.includes(q) || p.product_name.toLowerCase().includes(q)
     );
   }, [sourceList, filter]);
+
+  // Sorted separately from filtered rather than folded into it: the "N of M
+  // shown" count above reads off filtered.length/sourceList.length, neither
+  // of which sorting should touch.
+  const sorted = useMemo(() => {
+    const copy = [...filtered];
+    copy.sort((a, b) =>
+      sortOrder === "asc"
+        ? a.product_name.localeCompare(b.product_name)
+        : b.product_name.localeCompare(a.product_name)
+    );
+    return copy;
+  }, [filtered, sortOrder]);
 
   const filterId = "editor-sidebar-filter";
   const activeNoun = TABS.find((t) => t.key === activeTab)?.noun ?? activeTab;
@@ -188,12 +202,43 @@ export function EditorSidebar({
         />
       </div>
 
-      <p className="text-xs text-gray-500">
-        {filtered.length} of {sourceList.length} shown
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500">
+          {filtered.length} of {sourceList.length} shown
+        </p>
+
+        <div role="group" aria-label="Sort products by name" className="flex gap-1">
+          <button
+            type="button"
+            aria-label="Sort A to Z"
+            aria-pressed={sortOrder === "asc"}
+            onClick={() => setSortOrder("asc")}
+            className={`rounded border px-1.5 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              sortOrder === "asc"
+                ? "border-gray-400 bg-gray-200 text-gray-900"
+                : "border-gray-300 text-gray-500 hover:bg-gray-50"
+            }`}
+          >
+            A-Z
+          </button>
+          <button
+            type="button"
+            aria-label="Sort Z to A"
+            aria-pressed={sortOrder === "desc"}
+            onClick={() => setSortOrder("desc")}
+            className={`rounded border px-1.5 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              sortOrder === "desc"
+                ? "border-gray-400 bg-gray-200 text-gray-900"
+                : "border-gray-300 text-gray-500 hover:bg-gray-50"
+            }`}
+          >
+            Z-A
+          </button>
+        </div>
+      </div>
 
       <ul className="flex flex-1 flex-col gap-1 overflow-y-scroll">
-        {filtered.map((p) => {
+        {sorted.map((p) => {
           const isActive = p.slug === selectedSlug;
           return (
             <li key={p.slug}>
