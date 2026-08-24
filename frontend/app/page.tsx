@@ -322,7 +322,13 @@ export default function Home() {
       }
       const vendorResources = getSnapshotVendorResources(selectedPublishedSlug);
       const otherResources = getSnapshotOtherResources(selectedPublishedSlug);
-      const supportContacts = getSnapshotSupportContacts(selectedPublishedSlug);
+      // populateViewerListing's local support-contact type predates the
+      // published-tables.json schema allowing label: null -- map null to
+      // undefined here rather than widen that legacy type.
+      const supportContacts = getSnapshotSupportContacts(selectedPublishedSlug).map((c) => ({
+        ...c,
+        label: c.label ?? undefined,
+      }));
       const acrReports = getSnapshotAcrReports(selectedPublishedSlug);
 
       injectListing(
@@ -369,7 +375,12 @@ export default function Home() {
       }
       const vendorResources = getSnapshotVendorResources(selectedAddedSlug);
       const otherResources = getSnapshotOtherResources(selectedAddedSlug);
-      const supportContacts = getSnapshotSupportContacts(selectedAddedSlug);
+      // See the same mapping in the Published branch above -- populateViewerListing's
+      // local support-contact type predates label: null in the schema.
+      const supportContacts = getSnapshotSupportContacts(selectedAddedSlug).map((c) => ({
+        ...c,
+        label: c.label ?? undefined,
+      }));
       const acrReports = getSnapshotAcrReports(selectedAddedSlug);
 
       injectListing(
@@ -417,7 +428,12 @@ export default function Home() {
       }
       const vendorResources = getSnapshotVendorResources(selectedCandidateProductSlug);
       const otherResources = getSnapshotOtherResources(selectedCandidateProductSlug);
-      const supportContacts = getSnapshotSupportContacts(selectedCandidateProductSlug);
+      // See the same mapping in the Published branch above -- populateViewerListing's
+      // local support-contact type predates label: null in the schema.
+      const supportContacts = getSnapshotSupportContacts(selectedCandidateProductSlug).map((c) => ({
+        ...c,
+        label: c.label ?? undefined,
+      }));
       const acrReports = getSnapshotAcrReports(selectedCandidateProductSlug);
 
       injectListing(
