@@ -114,6 +114,7 @@ import { DeletePublishedModal } from "@/components/DeletePublishedModal";
 import type { SnapshotMeta } from "@/components/PublishedJsonWorkbench";
 import { toListingData } from "@/lib/editor-preview";
 import { USERS, fullName } from "@/lib/users";
+import vendorsData from "@/lib/vendors.json";
 import type {
   PublishedAcrReport,
   PublishedProductRecord,
@@ -145,6 +146,21 @@ const ENDPOINT_FOR_TAB: Record<SourceTab, string> = {
 // not something that changes at runtime, so there's nothing to re-derive
 // per render or refetch on mount.
 const RESEARCHER_NAMES = USERS.filter((u) => u.role === "Researcher").map(fullName);
+
+/** One entry from frontend/lib/vendors.json's `vendors` array -- only the
+ *  fields this page actually reads (see vendor_schema_proposal.ts for the
+ *  full VendorRecord/VendorResource shape). */
+interface VendorRegistryEntry {
+  vendor_name: string;
+  resources: PublishedResourceLink[];
+}
+
+// vendorsData is a static JSON import, same as USERS above -- always
+// synchronously available at module load, so it's a plain derived constant
+// rather than state populated from an effect (which is what tripped the
+// "Calling setState synchronously within an effect" rule this codebase has
+// hit before -- see the effect below's own header comment on that rule).
+const VENDORS_REGISTRY: VendorRegistryEntry[] = vendorsData.vendors;
 
 interface FetchedDocument {
   products: PublishedProductRecord[];
@@ -305,7 +321,22 @@ export default function EditorPage() {
     [activeProducts, selectedSlug]
   );
 
-  const listing = useMemo(() => (selected ? toListingData(selected) : null), [selected]);
+  // Enriches the PREVIEW ONLY -- selected/activeProducts (what gets edited
+  // and saved) never include the global vendor's resources, only the
+  // product's own. globalVendor is looked up by exact vendor_name match,
+  // matching the same join convention vendors.json's own header documents
+  // (see vendor_schema_proposal.ts). Ordering is load-bearing: product-
+  // specific resources must render before the vendor's global resources to
+  // match the live NCADEMI site's own "From {vendor}" list.
+  const listing = useMemo(() => {
+    if (!selected) return null;
+    const globalVendor = VENDORS_REGISTRY.find((v) => v.vendor_name === selected.vendor_name);
+    const previewRecord = {
+      ...selected,
+      vendor_resources: [...(selected.vendor_resources || []), ...(globalVendor?.resources || [])],
+    };
+    return toListingData(previewRecord);
+  }, [selected]);
 
   // Switching tabs resets the selection to that tab's own first record (or
   // none, if it's empty) rather than carrying over a slug that belongs to a
