@@ -2,19 +2,24 @@
 "use client";
 
 /**
- * Client shell for /tables/published. Owns the draft, the selection, and the
- * export. The Server Component above it does the data loading; this does the
- * state.
+ * Client shell for /tables/published. Owns the draft, the selection, and
+ * saving. The Server Component above it does the initial data load (from the
+ * frozen static import); this component re-fetches from the local write API
+ * on mount to get live disk bytes plus an ETag, and saves back through that
+ * same API.
  *
- * Persistence model, stated plainly because it is easy to get wrong later:
- * edits live in memory only. published-tables.json is a build-time import,
- * and this app deploys as a Next standalone container on Cloud Run, so a
- * runtime filesystem write would be lost on the next revision, invisible to
- * other instances, and absent from git. Export downloads the whole file; the
- * reviewer drops it into frontend/lib/ and commits it.
+ * Persistence model: in local development (NEXT_PUBLIC_DISABLE_AUTH=true,
+ * NODE_ENV!=='production'), Save to disk POSTs the whole document to
+ * /api/local/published, which validates again server-side, then atomically
+ * overwrites frontend/lib/published-tables.json on disk (see
+ * lib/local-write.ts and JSON-Editor-validation.md). That write is NOT
+ * itself a git commit -- the change still needs review and `git commit` like
+ * any other edit. In a production build the API is gated to 404; the editor
+ * still works against the server-rendered snapshot, and Save to disk fails
+ * with a clear error rather than doing nothing silently.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { JsonRecordDisclosure, type JsonValue } from "@/components/JsonDisclosure";
 import { RawJsonEditor } from "@/components/RawJsonEditor";
 import { validateProductRecord, hasBlockingError } from "@/lib/published-validate";
@@ -56,7 +61,10 @@ export function PublishedJsonWorkbench({
   const [viewMode, setViewMode] = useState<ViewMode>("structured");
   const [isEditing, setIsEditing] = useState(false);
   const [status, setStatus] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [filter, setFilter] = useState("");
+  const [etag, setEtag] = useState<string | null>(null);
+  const [isSaving, startSaveTransition] = useTransition();
 
   const editButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -99,6 +107,37 @@ export function PublishedJsonWorkbench({
     return () => window.removeEventListener("beforeunload", handler);
   }, [editedSlugs.size]);
 
+  // Refresh from the local write API on mount. The server-rendered `products`
+  // prop comes from a build-time static import, which is frozen in process
+  // memory and does not reflect a write that already landed on disk since
+  // then -- the API reads fs fresh on every request instead. In a production
+  // build (or anywhere the local API is gated off) this fetch fails
+  // harmlessly and the editor keeps working against the static snapshot;
+  // Save to disk simply has no ETag yet and reports that clearly rather than
+  // silently no-opping.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/local/published");
+        if (!res.ok || cancelled) return;
+        const newEtag = res.headers.get("ETag");
+        const body = (await res.json()) as { products?: unknown };
+        if (cancelled) return;
+        if (Array.isArray(body.products)) {
+          setDraft(body.products as PublishedProductRecord[]);
+        }
+        if (newEtag) setEtag(newEtag);
+      } catch {
+        // Local write API unreachable -- editor still works against the
+        // server-rendered snapshot.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSave = useCallback(
     (next: PublishedProductRecord) => {
       const previousSlug = selectedSlug;
@@ -121,37 +160,75 @@ export function PublishedJsonWorkbench({
     editButtonRef.current?.focus();
   }, []);
 
-  const handleExport = useCallback(() => {
+  // Replaces the old client-side Blob download. POSTs the whole document to
+  // the local-only write API, which validates again server-side and
+  // atomically overwrites published-tables.json on disk. See
+  // lib/local-write.ts and JSON-Editor-validation.md for the write path.
+  const handleSaveToServer = useCallback(() => {
     const blocking = draft.filter((p) => hasBlockingError(validateProductRecord(p)));
     if (blocking.length > 0) {
-      setStatus(
-        `Export blocked. ${blocking.length} record${blocking.length === 1 ? "" : "s"} would not validate: ${blocking
+      setSaveError(
+        `Save blocked. ${blocking.length} record${blocking.length === 1 ? "" : "s"} would not validate: ${blocking
           .map((p) => p.slug)
           .join(", ")}.`
       );
       return;
     }
+    if (!etag) {
+      setSaveError(
+        "Cannot save: no ETag from the server. The local write API may be unavailable (this feature only works in local development)."
+      );
+      return;
+    }
+
+    setSaveError("");
+    setStatus("Saving…");
 
     // $meta describes the SCRAPE, not this edit. Rewriting snapshot_taken_at
     // here would falsely claim the data was re-fetched from ncademi.org.
     const file = { $schema_version: schemaVersion, $meta: meta, products: draft };
-    const blob = new Blob([`${JSON.stringify(file, null, 2)}\n`], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "published-tables.json";
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    // Revoking synchronously after click() can be too early in some engines.
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-    setStatus(
-      `Download started: published-tables.json, ${draft.length} records, ${editedSlugs.size} edited this session. Move it into frontend/lib/ and commit it.`
-    );
-  }, [draft, meta, schemaVersion, editedSlugs.size]);
+    startSaveTransition(async () => {
+      try {
+        const res = await fetch("/api/local/published", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "If-Match": etag },
+          body: JSON.stringify(file),
+        });
+
+        if (res.status === 412) {
+          setStatus("");
+          setSaveError(
+            "Save failed: the file on disk changed since this copy was loaded. Reload the page and re-apply your edits."
+          );
+          return;
+        }
+
+        if (res.status === 400) {
+          const body = await res.json().catch(() => null);
+          setStatus("");
+          setSaveError(`Save failed: ${body?.error ?? "the server rejected this data."}`);
+          return;
+        }
+
+        if (!res.ok) {
+          setStatus("");
+          setSaveError(`Save failed: unexpected server response (${res.status}).`);
+          return;
+        }
+
+        const result = (await res.json()) as { etag?: string };
+        const newEtag = res.headers.get("ETag") ?? result.etag ?? null;
+        if (newEtag) setEtag(newEtag);
+        setEditedSlugs(new Set());
+        setSaveError("");
+        setStatus(`Saved ${draft.length} records to published-tables.json on disk.`);
+      } catch {
+        setStatus("");
+        setSaveError("Save failed: could not reach the local write API.");
+      }
+    });
+  }, [draft, etag, meta, schemaVersion]);
 
   if (!selected) {
     return <p className="nerd-json-empty-state">The snapshot contains no products.</p>;
@@ -231,15 +308,27 @@ export function PublishedJsonWorkbench({
           >
             Edit raw JSON
           </button>
-          <button className="nerd-btn" onClick={handleExport} type="button">
-            Export file{editedSlugs.size > 0 ? ` (${editedSlugs.size} edited)` : ""}
+          <button className="nerd-btn" disabled={isSaving} onClick={handleSaveToServer} type="button">
+            {isSaving
+              ? "Saving…"
+              : `Save to disk${editedSlugs.size > 0 ? ` (${editedSlugs.size} edited)` : ""}`}
           </button>
         </div>
 
         {/* Page-level status. Rendered unconditionally so the region exists
-            in the DOM before anything is put into it. */}
+            in the DOM before anything is put into it. Polite: "Saving…",
+            per-record save confirmations, and the final "Saved" message. */}
         <p className="nerd-json-status" role="status" aria-live="polite">
           {status}
+        </p>
+
+        {/* Separate assertive region for save failures, so a 412/400/network
+            error interrupts rather than waiting its turn behind polite
+            announcements. Also rendered unconditionally, populated later --
+            a live region created and filled in the same commit is
+            frequently not announced at all. */}
+        <p className="nerd-json-alert" role="alert">
+          {saveError}
         </p>
 
         {viewMode === "structured" ? (
@@ -261,8 +350,10 @@ export function PublishedJsonWorkbench({
             . {meta.total_products} products, schema version {schemaVersion}.
           </p>
           <p className="nerd-json-meta-note">
-            Edits are held in this browser tab only. Use <strong>Export file</strong> to download
-            the complete JSON, then move it into <code>frontend/lib/</code> and commit it.
+            <strong>Save to disk</strong> writes directly to{" "}
+            <code>frontend/lib/published-tables.json</code> via the local-only write API, available in
+            local development only. The write is not a git commit; review and commit the change
+            afterward like any other edit.
           </p>
         </footer>
       </main>

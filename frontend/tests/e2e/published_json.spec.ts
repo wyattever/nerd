@@ -246,27 +246,82 @@ test.describe('Raw JSON editor dialog', () => {
     await page.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('button', { name: 'Edit raw JSON' })).toBeFocused();
   });
+});
 
-  test('a clean round trip exports a byte-identical file', async ({ page }) => {
-    await page.goto(PAGE);
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: /^Export file/ }).click(),
-    ]);
-    expect(download.suggestedFilename()).toBe('published-tables.json');
+test.describe('Server-side save (local write API)', () => {
+  const FILE_PATH = 'lib/published-tables.json';
+  const API_URL = 'http://localhost:3000/api/local/published';
+  let original: string;
 
-    const stream = await download.createReadStream();
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) chunks.push(chunk as Buffer);
-    const exported = Buffer.concat(chunks).toString('utf8');
+  // Snapshot the committed file before each test in this block and restore
+  // it afterward, byte-for-byte, so a save test never leaves the repo dirty
+  // -- whether it passes or fails partway through.
+  test.beforeEach(async () => {
+    const fs = await import('node:fs/promises');
+    original = await fs.readFile(FILE_PATH, 'utf8');
+  });
+
+  test.afterEach(async () => {
+    const fs = await import('node:fs/promises');
+    await fs.writeFile(FILE_PATH, original, 'utf8');
+  });
+
+  test('saving through the editor persists new bytes and a new ETag to disk', async ({
+    page,
+    request,
+  }) => {
+    const before = await request.get(API_URL);
+    expect(before.ok()).toBe(true);
+    const beforeEtag = before.headers()['etag'];
+    expect(beforeEtag).toBeTruthy();
+
+    await page.goto(`${PAGE}?slug=i-ready`);
+    await page.locator('.nerd-json-list-item').first().waitFor();
+
+    // Edit one record through the dialog -- this only updates in-memory
+    // draft state, not disk.
+    await page.getByRole('button', { name: 'Edit raw JSON' }).click();
+    await expect(page.locator('dialog.nerd-json-dialog')).toBeVisible();
+    const textarea = page.locator('.nerd-json-textarea');
+    const record = JSON.parse(await textarea.inputValue());
+    record.ai_insights = 'PLAYWRIGHT_SAVE_TEST_MARKER';
+    await textarea.fill(JSON.stringify(record, null, 2));
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.locator('dialog.nerd-json-dialog')).toBeHidden();
+
+    // Now persist to disk via the local write API.
+    await page.getByRole('button', { name: /^Save to disk/ }).click();
+    await expect(page.locator('.nerd-json-status')).toContainText(/Saved \d+ records/);
+    await expect(page.locator('.nerd-json-alert')).toBeEmpty();
 
     const fs = await import('node:fs/promises');
-    const source = await fs.readFile('lib/published-tables.json', 'utf8');
-    // Compare parsed structure and $meta verbatim. If this fails, the
-    // serializer is mutating data and every later gate is suspect.
-    expect(JSON.parse(exported)).toEqual(JSON.parse(source));
-    expect(JSON.parse(exported).$meta.snapshot_taken_at).toBe(
-      JSON.parse(source).$meta.snapshot_taken_at
-    );
+    const afterBytes = await fs.readFile(FILE_PATH, 'utf8');
+    expect(afterBytes).not.toBe(original);
+    expect(afterBytes).toContain('PLAYWRIGHT_SAVE_TEST_MARKER');
+
+    const after = await request.get(API_URL);
+    expect(after.ok()).toBe(true);
+    const afterEtag = after.headers()['etag'];
+    expect(afterEtag).toBeTruthy();
+    expect(afterEtag).not.toBe(beforeEtag);
+  });
+
+  test('a stale ETag is rejected with 412 and does not touch disk', async ({ request }) => {
+    const current = await request.get(API_URL);
+    const currentEtag = current.headers()['etag'];
+    const body = await current.json();
+
+    const res = await request.post(API_URL, {
+      headers: { 'If-Match': 'not-the-real-etag' },
+      data: body,
+    });
+    expect(res.status()).toBe(412);
+
+    const fs = await import('node:fs/promises');
+    const bytesAfter = await fs.readFile(FILE_PATH, 'utf8');
+    expect(bytesAfter).toBe(original);
+
+    const stillCurrent = await request.get(API_URL);
+    expect(stillCurrent.headers()['etag']).toBe(currentEtag);
   });
 });
