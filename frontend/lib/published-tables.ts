@@ -50,6 +50,18 @@ export interface PublishedProductRecord {
   acr_reports: PublishedAcrReport[];
   last_updated: string | null;
   ai_insights: string | null;
+  /**
+   * Editor-only workflow metadata for the /editor Candidate tab (see
+   * app/editor/page.tsx's TRACKING: fieldset). Genuinely optional -- may be
+   * entirely absent, not just null -- because no existing record in any of
+   * the three snapshot files has these keys yet and the UI does not write
+   * them yet either; published-validate.ts's OPTIONAL_STRING_FIELDS
+   * validates them only when present, so their absence is never an error.
+   */
+  tracking_priority?: string | null;
+  tracking_status?: string | null;
+  tracking_gatherer?: string | null;
+  tracking_reviewer?: string | null;
 }
 
 interface PublishedTablesFile {

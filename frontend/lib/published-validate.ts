@@ -14,10 +14,12 @@
  * from PublishedProductRecord without being handled here.
  *
  * Ground truth as of the 2026-08-21 snapshot (verified against the real file,
- * all 60 records): every record carries all 13 keys, no extras, no nulls in
- * any array field, no duplicate slugs, and support_contacts.type is only ever
- * "email" (44) or "url" (41). No record deviates from the interface. These
- * rules therefore describe the file as it actually is, not as it might be.
+ * all 60 records): every record carries all 13 core keys, no extras, no
+ * nulls in any array field, no duplicate slugs, and support_contacts.type is
+ * only ever "email" (44) or "url" (41). No record deviates from the
+ * interface. These rules therefore describe the file as it actually is, not
+ * as it might be. The four tracking_* fields added later are genuinely
+ * optional and not part of that ground truth -- no record has them yet.
  */
 
 import type {
@@ -56,10 +58,24 @@ const ARRAY_FIELDS = [
 ] as const;
 
 /**
+ * Editor-only workflow metadata (see PublishedProductRecord's own comment
+ * in published-tables.ts). Unlike NULLABLE_STRING_FIELDS, these may be
+ * MISSING entirely -- no existing record has them yet -- so they get their
+ * own category: valid as a string or null when present, never an error
+ * when absent.
+ */
+const OPTIONAL_STRING_FIELDS = [
+  "tracking_priority",
+  "tracking_status",
+  "tracking_gatherer",
+  "tracking_reviewer",
+] as const;
+
+/**
  * Compile-time drift guard, with no runtime cost.
  *
  * AssertNever<T> only accepts `never`. So if a field is added to
- * PublishedProductRecord and not added to one of the three lists above,
+ * PublishedProductRecord and not added to one of the four lists above,
  * Exclude<> is non-empty, the constraint is violated, and `tsc --noEmit`
  * fails the build. The reverse alias catches a field removed from the
  * interface but left behind here.
@@ -69,7 +85,8 @@ const ARRAY_FIELDS = [
 type CoveredField =
   | (typeof REQUIRED_STRING_FIELDS)[number]
   | (typeof NULLABLE_STRING_FIELDS)[number]
-  | (typeof ARRAY_FIELDS)[number];
+  | (typeof ARRAY_FIELDS)[number]
+  | (typeof OPTIONAL_STRING_FIELDS)[number];
 
 type AssertNever<T extends never> = T;
 
@@ -209,11 +226,24 @@ export function validateProductRecord(candidate: unknown): ValidationIssue[] {
     }
   }
 
+  // Genuinely optional -- unlike NULLABLE_STRING_FIELDS, absence is never an
+  // error. Only checked when the key is actually present.
+  for (const f of OPTIONAL_STRING_FIELDS) {
+    if (f in candidate && !isNullableString(candidate[f])) {
+      issues.push({
+        path: f,
+        message: `"${f}" must be a string or null.`,
+        severity: "error",
+      });
+    }
+  }
+
   const extras = Object.keys(candidate).filter(
     (k) =>
       !(REQUIRED_STRING_FIELDS as readonly string[]).includes(k) &&
       !(NULLABLE_STRING_FIELDS as readonly string[]).includes(k) &&
-      !(ARRAY_FIELDS as readonly string[]).includes(k)
+      !(ARRAY_FIELDS as readonly string[]).includes(k) &&
+      !(OPTIONAL_STRING_FIELDS as readonly string[]).includes(k)
   );
   for (const k of extras) {
     issues.push({

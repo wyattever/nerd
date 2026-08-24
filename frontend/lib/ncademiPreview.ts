@@ -10,6 +10,24 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
+// last_updated is not uniformly shaped: the published snapshot already
+// carries a human-readable "March 20, 2026" string, while records created
+// through ImportJsonModal's boilerplate fill get `new Date().toISOString()`
+// (see ImportJsonModal.tsx). Both parse via the Date constructor, so this
+// normalizes either shape to one display format rather than assuming one or
+// the other. An unparseable value (empty string already filtered by the
+// `listing.last_updated ?` check below; anything else malformed) falls back
+// to the raw string so a bad value renders as-is instead of "Invalid Date".
+function formatLastUpdated(raw: string): string {
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(d);
+}
+
 function genHeaderHtml(listing: ListingData): string {
   const parts: string[] = [];
 
@@ -208,7 +226,7 @@ export function buildNcademiListingHtml(listing: ListingData): string {
   const acr = getSectionHtml(listing, "acr");
 
   const lastUpdatedHtml = listing.last_updated
-    ? `<p class="text-end text-body-secondary mt-4 mb-0"><em>Product information last updated ${escapeHtml(listing.last_updated)}</em></p>`
+    ? `<p class="text-end text-body-secondary mt-4 mb-0"><em>Product information last updated ${escapeHtml(formatLastUpdated(listing.last_updated))}</em></p>`
     : "";
 
   const resourcesSection = (vendorResources || otherResources)
