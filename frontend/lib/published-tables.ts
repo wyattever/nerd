@@ -161,3 +161,20 @@ export function getPublishedAcrReports(slug: string): PublishedAcrReport[] {
 export function getAllPublishedSlugs(): string[] {
   return PUBLISHED_DATA.products.map((p) => p.slug);
 }
+
+/**
+ * Every product in the snapshot, in file order. Used by the raw JSON
+ * viewer/editor at /tables/published, which needs the whole array rather than
+ * slug-keyed access.
+ */
+export function getAllPublishedProducts(): PublishedProductRecord[] {
+  return PUBLISHED_DATA.products;
+}
+
+/**
+ * Schema version of the snapshot file. The editor writes it back verbatim on
+ * export so a round-trip with no edits produces a byte-identical file.
+ */
+export function getPublishedSchemaVersion(): number {
+  return PUBLISHED_DATA.$schema_version;
+}
