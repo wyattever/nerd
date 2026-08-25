@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-page-custom-font */
 // frontend/components/EditorSidebar.tsx
 "use client";
 
@@ -177,7 +178,7 @@ export function EditorSidebar({
               className={`flex flex-1 items-center justify-center rounded border p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 isActive
                   ? "border-blue-600 bg-blue-50 text-blue-700"
-                  : "border-gray-300 text-gray-500 hover:bg-gray-50"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-50"
               }`}
             >
               <span aria-hidden="true" style={ICON_STYLE}>
@@ -203,7 +204,7 @@ export function EditorSidebar({
       </div>
 
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-600">
           {filtered.length} of {sourceList.length} shown
         </p>
 
@@ -216,7 +217,7 @@ export function EditorSidebar({
             className={`rounded border px-1.5 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               sortOrder === "asc"
                 ? "border-gray-400 bg-gray-200 text-gray-900"
-                : "border-gray-300 text-gray-500 hover:bg-gray-50"
+                : "border-gray-300 text-gray-600 hover:bg-gray-50"
             }`}
           >
             A-Z
@@ -229,7 +230,7 @@ export function EditorSidebar({
             className={`rounded border px-1.5 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               sortOrder === "desc"
                 ? "border-gray-400 bg-gray-200 text-gray-900"
-                : "border-gray-300 text-gray-500 hover:bg-gray-50"
+                : "border-gray-300 text-gray-600 hover:bg-gray-50"
             }`}
           >
             Z-A
@@ -251,7 +252,7 @@ export function EditorSidebar({
                 }`}
               >
                 <span className="block text-sm font-medium text-gray-900">{p.product_name}</span>
-                <span className="block font-mono text-xs text-gray-500">{p.slug}</span>
+                <span className="block font-mono text-xs text-gray-600">{p.slug}</span>
               </button>
             </li>
           );

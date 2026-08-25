@@ -14,21 +14,38 @@
  * so "fresh from disk" is the only read path.
  *
  * The EDIT: fieldset's four buttons (Header, Global Resources, Product/s,
- * Support) are stubs for this dispatch -- no structured field editors exist
- * yet for VendorRecord, unlike PublishedProductRecord's five. "Save vendor"
- * and "Delete vendor" are real: both go through saveToServer, which is
+ * Support) open dedicated Vendor*Editor.tsx dialogs (VendorHeaderEditor,
+ * VendorGlobalResourcesEditor, VendorProductsEditor, VendorSupportEditor),
+ * one per VendorRecord field group -- mirroring /editor's five
+ * Published*Editor dialogs (open state + button ref + onSave/onClose
+ * handler per editor) but writing into the single flat `vendors` array
+ * instead of routing through setActiveProducts. "Save vendor" and "Delete
+ * vendor" are real: both go through saveToServer, which is
  * /editor's handleSaveToServer narrowed to one document instead of one of
  * three -- same ETag/If-Match/412 handling, same recordsToSave override so
  * handleDeleteVendor can pass the freshly filtered array directly rather
  * than relying on `vendors` state, which would still hold the pre-delete
  * array until React's async update lands (see /editor's header comment on
  * handleDeleteConfirm for the full reasoning).
+ *
+ * "Add Vendor" (styled like /editor's "Import Candidate" primary button,
+ * always enabled unlike the four edit buttons) opens VendorCreateModal,
+ * which authors a brand-new VendorRecord from scratch rather than editing
+ * `selected`. Its onAdd handler (handleAddVendor) appends to `vendors` and
+ * selects the new record by name -- same local-state-only, "not yet saved
+ * to disk" pattern as the field editors, not a new persistence path.
  */
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { VendorSidebar } from "@/components/VendorSidebar";
 import { VendorPreview } from "@/components/VendorPreview";
-import type { VendorRecord, VendorsFile } from "@/lib/vendor-schema";
+import { VendorHeaderEditor, type VendorHeaderFields } from "@/components/VendorHeaderEditor";
+import { VendorGlobalResourcesEditor } from "@/components/VendorGlobalResourcesEditor";
+import { VendorProductsEditor } from "@/components/VendorProductsEditor";
+import { VendorSupportEditor } from "@/components/VendorSupportEditor";
+import { VendorCreateModal } from "@/components/VendorCreateModal";
+import type { PublishedSupportContact } from "@/lib/published-tables";
+import type { VendorProductLink, VendorRecord, VendorResource, VendorsFile } from "@/lib/vendor-schema";
 
 type LoadState = "loading" | "ready" | "unavailable";
 
@@ -49,6 +66,19 @@ export default function VendorsPage() {
   const [statusMessage, setStatusMessage] = useState("");
   const [saveError, setSaveError] = useState("");
   const [isSaving, startSaveTransition] = useTransition();
+
+  // Field-editor dialog state, mirroring /editor's isHeaderEditorOpen etc.
+  const [isHeaderEditorOpen, setIsHeaderEditorOpen] = useState(false);
+  const [isGlobalResourcesEditorOpen, setIsGlobalResourcesEditorOpen] = useState(false);
+  const [isProductsEditorOpen, setIsProductsEditorOpen] = useState(false);
+  const [isSupportEditorOpen, setIsSupportEditorOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const editHeaderButtonRef = useRef<HTMLButtonElement>(null);
+  const editGlobalResourcesButtonRef = useRef<HTMLButtonElement>(null);
+  const editProductsButtonRef = useRef<HTMLButtonElement>(null);
+  const editSupportButtonRef = useRef<HTMLButtonElement>(null);
+  const addVendorButtonRef = useRef<HTMLButtonElement>(null);
 
   // Fresh fetch on mount -- see file header.
   useEffect(() => {
@@ -94,6 +124,92 @@ export default function VendorsPage() {
     () => vendors.find((v) => v.vendor_name === selectedName) ?? null,
     [vendors, selectedName]
   );
+
+  // Local-state-only update, mirroring /editor's handleHeaderSave. Also
+  // re-points selectedName at the (possibly new) vendor_name -- unlike
+  // /editor's slug, vendor_name IS the join key `selected` is looked up by
+  // (see vendor-schema.ts), so a rename here would otherwise orphan the
+  // current selection.
+  const handleHeaderSave = useCallback(
+    (fields: VendorHeaderFields) => {
+      setVendors((prev) => prev.map((v) => (v.vendor_name === selectedName ? { ...v, ...fields } : v)));
+      setSelectedName(fields.vendor_name);
+      setStatusMessage(`Updated header for ${fields.vendor_name} (not yet saved to disk).`);
+    },
+    [selectedName]
+  );
+
+  const handleHeaderEditorClosed = useCallback(() => {
+    setIsHeaderEditorOpen(false);
+    editHeaderButtonRef.current?.focus();
+  }, []);
+
+  // Same local-state-only pattern as handleHeaderSave.
+  const handleGlobalResourcesSave = useCallback(
+    (resources: VendorResource[]) => {
+      setVendors((prev) => prev.map((v) => (v.vendor_name === selectedName ? { ...v, resources } : v)));
+      setStatusMessage(
+        `Updated global resources (${resources.length}) for ${selectedName || "this vendor"} (not yet saved to disk).`
+      );
+    },
+    [selectedName]
+  );
+
+  const handleGlobalResourcesEditorClosed = useCallback(() => {
+    setIsGlobalResourcesEditorOpen(false);
+    editGlobalResourcesButtonRef.current?.focus();
+  }, []);
+
+  // Same local-state-only pattern as handleHeaderSave.
+  const handleProductsSave = useCallback(
+    (products: VendorProductLink[]) => {
+      setVendors((prev) => prev.map((v) => (v.vendor_name === selectedName ? { ...v, products } : v)));
+      setStatusMessage(
+        `Updated products (${products.length}) for ${selectedName || "this vendor"} (not yet saved to disk).`
+      );
+    },
+    [selectedName]
+  );
+
+  const handleProductsEditorClosed = useCallback(() => {
+    setIsProductsEditorOpen(false);
+    editProductsButtonRef.current?.focus();
+  }, []);
+
+  // Same local-state-only pattern as handleHeaderSave.
+  const handleSupportSave = useCallback(
+    (contacts: PublishedSupportContact[]) => {
+      setVendors((prev) =>
+        prev.map((v) => (v.vendor_name === selectedName ? { ...v, support_contacts: contacts } : v))
+      );
+      setStatusMessage(
+        `Updated support contacts (${contacts.length}) for ${selectedName || "this vendor"} (not yet saved to disk).`
+      );
+    },
+    [selectedName]
+  );
+
+  const handleSupportEditorClosed = useCallback(() => {
+    setIsSupportEditorOpen(false);
+    editSupportButtonRef.current?.focus();
+  }, []);
+
+  // Injects a freshly authored VendorRecord (from VendorCreateModal) into
+  // local state and selects it, so the viewer displays it immediately --
+  // same "not yet saved to disk" local-state-only pattern as the field
+  // editors above, just appending instead of mapping an existing record.
+  const handleAddVendor = useCallback((record: VendorRecord) => {
+    setVendors((prev) => [...prev, record]);
+    setSelectedName(record.vendor_name);
+    setStatusMessage(
+      `Added "${record.vendor_name}" to the viewer (not yet saved to disk). Click "Save vendor" to persist it.`
+    );
+  }, []);
+
+  const handleCreateModalClosed = useCallback(() => {
+    setIsCreateModalOpen(false);
+    addVendorButtonRef.current?.focus();
+  }, []);
 
   // Persists the vendors array to disk via /api/local/vendors. Mirrors
   // /editor's handleSaveToServer -- see the file header for how this
@@ -184,14 +300,39 @@ export default function VendorsPage() {
       <VendorSidebar vendors={vendors} selectedName={selectedName} onSelectName={setSelectedName} />
 
       <div className="flex min-w-[1200px] flex-1 flex-col gap-6 p-6">
-        <header className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-gray-900">Vendors Editor</h1>
+        <header className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Vendors Editor</h1>
+            <p aria-live="polite" className="mt-2 text-sm text-green-700">
+              {statusMessage}
+            </p>
+          </div>
 
-          {/* Polite region: load status, "Saving…" / "Saved" -- rendered
-              unconditionally so it exists in the DOM before it is populated. */}
-          <p role="status" aria-live="polite" className="text-sm text-gray-600">
-            {statusMessage}
-          </p>
+          <fieldset className="flex flex-wrap items-center gap-3 border-0 p-0 m-0">
+            <legend className="mb-2.5 text-sm font-bold text-gray-500">TRACKING:</legend>
+
+            <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Status
+              <select
+                value={selected?.tracking_status ?? ""}
+                onChange={(e) =>
+                  setVendors((prev) =>
+                    prev.map((v) =>
+                      v.vendor_name === selectedName
+                        ? { ...v, tracking_status: (e.target.value as "ready for site" | "published to site") || null }
+                        : v
+                    )
+                  )
+                }
+                disabled={!selected}
+                className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">set status</option>
+                <option value="ready for site">ready for site</option>
+                <option value="published to site">published to site</option>
+              </select>
+            </label>
+          </fieldset>
         </header>
 
         {/* Separate assertive region for save failures (412 / 400 / network),
@@ -207,7 +348,8 @@ export default function VendorsPage() {
 
             <button
               type="button"
-              onClick={() => alert("Stubbed")}
+              ref={editHeaderButtonRef}
+              onClick={() => setIsHeaderEditorOpen(true)}
               disabled={!selected}
               className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -216,7 +358,8 @@ export default function VendorsPage() {
 
             <button
               type="button"
-              onClick={() => alert("Stubbed")}
+              ref={editGlobalResourcesButtonRef}
+              onClick={() => setIsGlobalResourcesEditorOpen(true)}
               disabled={!selected}
               className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -225,7 +368,8 @@ export default function VendorsPage() {
 
             <button
               type="button"
-              onClick={() => alert("Stubbed")}
+              ref={editProductsButtonRef}
+              onClick={() => setIsProductsEditorOpen(true)}
               disabled={!selected}
               className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -234,11 +378,26 @@ export default function VendorsPage() {
 
             <button
               type="button"
-              onClick={() => alert("Stubbed")}
+              ref={editSupportButtonRef}
+              onClick={() => setIsSupportEditorOpen(true)}
               disabled={!selected}
               className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Support
+            </button>
+
+            {/* Always enabled (no `disabled={!selected}`), unlike the four
+                edit buttons above -- creating a new vendor has no
+                dependency on a vendor already being selected. Styled like
+                /editor's "Import Candidate" button (ml-3.5 bg-blue-600
+                primary action, separated from the edit-action siblings). */}
+            <button
+              type="button"
+              ref={addVendorButtonRef}
+              onClick={() => setIsCreateModalOpen(true)}
+              className="ml-3.5 rounded border border-transparent bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Add Vendor
             </button>
           </fieldset>
 
@@ -274,6 +433,54 @@ export default function VendorsPage() {
             <p className="text-sm text-gray-500">Select a vendor to preview it.</p>
           )}
         </section>
+
+        {isHeaderEditorOpen && selected ? (
+          // key forces a fresh mount per record, so a future refactor that
+          // keeps the editor mounted across a selection change cannot
+          // silently leak one record's draft into another.
+          <VendorHeaderEditor
+            key={selected.vendor_name}
+            record={selected}
+            onSave={handleHeaderSave}
+            onClose={handleHeaderEditorClosed}
+          />
+        ) : null}
+
+        {isGlobalResourcesEditorOpen && selected ? (
+          <VendorGlobalResourcesEditor
+            key={selected.vendor_name}
+            record={selected}
+            onSave={handleGlobalResourcesSave}
+            onClose={handleGlobalResourcesEditorClosed}
+          />
+        ) : null}
+
+        {isProductsEditorOpen && selected ? (
+          <VendorProductsEditor
+            key={selected.vendor_name}
+            record={selected}
+            onSave={handleProductsSave}
+            onClose={handleProductsEditorClosed}
+          />
+        ) : null}
+
+        {isSupportEditorOpen && selected ? (
+          <VendorSupportEditor
+            key={selected.vendor_name}
+            record={selected}
+            onSave={handleSupportSave}
+            onClose={handleSupportEditorClosed}
+          />
+        ) : null}
+
+        {isCreateModalOpen ? (
+          <VendorCreateModal
+            isOpen={isCreateModalOpen}
+            existingVendorNames={vendors.map((v) => v.vendor_name)}
+            onAdd={handleAddVendor}
+            onClose={handleCreateModalClosed}
+          />
+        ) : null}
       </div>
     </div>
   );

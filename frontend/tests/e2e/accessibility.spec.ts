@@ -16,7 +16,7 @@ test('ARIA Live Region Updates', async ({ page }) => {
   await page.goto('http://localhost:3000');
 
   // Check initial state of the log
-  const log = page.locator('[role="log"]');
+  const log = page.locator('[role="status"]');
   await expect(log).toBeVisible();
   
   // Trigger an action that updates the log (e.g., failed research)

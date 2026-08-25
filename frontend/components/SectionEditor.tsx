@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useRef, useState } from "react";
 import { SectionKey } from "@/lib/types";
 
@@ -58,6 +59,7 @@ export function SectionEditor({
   // --- Dialog Lifecycle & State Sync ---
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentHtml(initialHtml);
       originalHtmlRef.current = initialHtml;
       dialogRef.current?.showModal();

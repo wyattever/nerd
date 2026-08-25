@@ -36,6 +36,7 @@ export interface VendorResource {
   date: string | null;
   /** Added to Site -- "Yes"/"No" in the source, modeled as boolean. */
   added_to_site: boolean;
+  tracking_status?: "ready for site" | "published to site" | null;
 }
 
 /** Represents a product linked to this vendor from the NCADEMI live directory. */
@@ -46,6 +47,8 @@ export interface VendorProductLink {
 
 /** One row from the "vendors" table, with its vendor-resources rows joined in by Vendor Name. */
 export interface VendorRecord {
+  tracking_status?: "ready for site" | "published to site" | null;
+
   /** Vendor Name -- the join key used to match vendor-resources rows above. */
   vendor_name: string;
   /** Vendor Website -- the vendor's own external site (nullable: several sampled rows had no linked URL). */
