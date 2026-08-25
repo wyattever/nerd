@@ -1,7 +1,9 @@
+// frontend/app/records/page.tsx
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { EditorSidebar, type SourceTab } from "@/components/EditorSidebar";
+import { USERS, fullName } from "@/lib/users";
 
 // Types based on the extracted JSON schema
 type Resource = { text: string; url: string };
@@ -21,6 +23,10 @@ type ProductRecord = {
   acr_reports: ACR[];
   last_updated: string | null;
   is_protected: boolean;
+  tracking_priority?: string | null;
+  tracking_status?: string | null;
+  tracking_gatherer?: string | null;
+  tracking_reviewer?: string | null;
 };
 
 const ENDPOINT_FOR_TAB: Record<SourceTab, string> = {
@@ -28,6 +34,8 @@ const ENDPOINT_FOR_TAB: Record<SourceTab, string> = {
   added: "/api/local/added",
   candidate: "/api/local/candidate",
 };
+
+const RESEARCHER_NAMES = USERS.filter((u) => u.role === "Researcher").map(fullName);
 
 interface FetchedDocument {
   products: ProductRecord[];
@@ -43,7 +51,7 @@ async function fetchDocument(url: string): Promise<FetchedDocument> {
 }
 
 export default function RecordsPage() {
-  const [activeTab, setActiveTab] = useState<SourceTab>("published");
+  const [activeTab, setActiveTab] = useState<SourceTab>("candidate");
   const [dataSource, setDataSource] = useState<"stored" | "live">("stored");
   const [hasLiveScrapeData, setHasLiveScrapeData] = useState(false);
 
@@ -108,7 +116,7 @@ export default function RecordsPage() {
       const candidateDoc = candidateResult.status === "fulfilled" ? candidateResult.value : null;
       const publishedDoc = publishedResult.status === "fulfilled" ? publishedResult.value : null;
       
-      if (activeTab === "candidate" && candidateDoc && candidateDoc.products.length > 0) {
+      if (candidateDoc && candidateDoc.products.length > 0) {
         setSelectedSlug(candidateDoc.products[0].slug || candidateDoc.products[0].ncademi_product_url);
       } else if (publishedDoc && publishedDoc.products.length > 0) {
         setSelectedSlug(publishedDoc.products[0].slug || publishedDoc.products[0].ncademi_product_url);
@@ -142,7 +150,7 @@ export default function RecordsPage() {
   );
 
   return (
-    <div className="flex min-h-full font-sans">
+    <div className="flex min-h-screen overflow-y-scroll">
       
       {/* 3. Side panel exact visual layout via EditorSidebar */}
       <EditorSidebar
@@ -157,71 +165,152 @@ export default function RecordsPage() {
 
       <div className="flex min-w-[1200px] flex-1 flex-col gap-6 p-6">
         {/* 1. Keep H1 in the same place */}
-        <header className="flex items-end justify-between">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold text-gray-900 capitalize">
+        <header className="flex items-end justify-between mb-4">
+          <div className="flex flex-row items-center gap-4">
+            <h1 className="text-2xl font-bold text-gray-900 capitalize whitespace-nowrap shrink-0">
               {activeTab} Product Records
             </h1>
-            <p role="status" aria-live="polite" className="text-sm text-gray-600">
-              {statusMessage}
-            </p>
           </div>
         </header>
 
-        <div className="flex items-center justify-between pb-4">
-          <div className="flex items-center gap-8">
-            {/* 2. Keep SITE DATA fieldset, remove tracking/edit/save/delete */}
-            {activeTab === "published" ? (
-              <fieldset className="flex flex-wrap items-center gap-2 border-0 p-0 m-0">
-                <legend className="mb-2.5 text-sm font-bold text-gray-500">SITE DATA:</legend>
+        {/* Tracking Metadata - Read Only */}
+        <div className="w-full rounded-md border border-gray-300 bg-white mb-2">
+          <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">
+            Tracking
+          </div>
 
-                <button
-                  type="button"
-                  onClick={() => setDataSource("stored")}
-                  className={`rounded border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    dataSource === "stored"
-                      ? "bg-blue-50 text-blue-700 border-blue-200"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  Stored Data
-                </button>
+          <div className="flex flex-wrap items-center gap-3 p-4">
+            <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Priority
+              <select
+                value={selectedRecord?.tracking_priority ?? ""}
+                disabled
+                className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700 cursor-not-allowed opacity-75 focus:outline-none"
+              >
+                <option value="">set priority</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </label>
 
-                <button
-                  type="button"
-                  onClick={() => alert("Stubbed")}
-                  className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {/* Status logic matched to /editor-test */}
+            {activeTab === "candidate" || activeTab === "added" ? (
+              <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Status
+                <select
+                  value={selectedRecord?.tracking_status ?? ""}
+                  disabled
+                  className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700 cursor-not-allowed opacity-75 focus:outline-none"
                 >
-                  Update Stored Data
-                </button>
+                  <option value="">set status</option>
+                  <optgroup label="Candidate">
+                    <option value="Gathering">Gathering</option>
+                    <option value="Needs Review">Needs Review</option>
+                    <option value="Discussion">Discussion</option>
+                    <option value="Ready for Site">Ready for Site</option>
+                  </optgroup>
+                  <optgroup label="Added">
+                    <option value="contacted vendor">contacted vendor</option>
+                    <option value="replied back to vendor">replied back to vendor</option>
+                  </optgroup>
+                </select>
+              </label>
+            ) : null}
 
-                <button
-                  type="button"
-                  disabled={!hasLiveScrapeData}
-                  onClick={() => setDataSource("live")}
-                  className={`rounded border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                    dataSource === "live"
-                      ? "bg-blue-50 text-blue-700 border-blue-200"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  Live Data
-                </button>
+            {/* Gatherer/Reviewer logic matched to /editor-test */}
+            {activeTab === "candidate" ? (
+              <>
+                <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Gatherer
+                  <select
+                    value={selectedRecord?.tracking_gatherer ?? ""}
+                    disabled
+                    className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700 cursor-not-allowed opacity-75 focus:outline-none"
+                  >
+                    <option value="">set gatherer</option>
+                    {RESEARCHER_NAMES.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    alert("Stubbed");
-                    setHasLiveScrapeData(true);
-                  }}
-                  className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Retrieve Live Data
-                </button>
-              </fieldset>
+                <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Reviewer
+                  <select
+                    value={selectedRecord?.tracking_reviewer ?? ""}
+                    disabled
+                    className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700 cursor-not-allowed opacity-75 focus:outline-none"
+                  >
+                    <option value="">set reviewer</option>
+                    {RESEARCHER_NAMES.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
             ) : null}
           </div>
         </div>
+
+        {/* 2. SITE DATA element styled identically to Tracking/Edit */}
+        {activeTab === "published" ? (
+          <div className="w-full rounded-md border border-gray-300 bg-white mb-2">
+            <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">
+              Site Data
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 p-4">
+              <button
+                type="button"
+                onClick={() => setDataSource("stored")}
+                className={`rounded border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  dataSource === "stored"
+                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                Stored Data
+              </button>
+
+              <button
+                type="button"
+                onClick={() => alert("Stubbed")}
+                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Update Stored Data
+              </button>
+
+              <button
+                type="button"
+                disabled={!hasLiveScrapeData}
+                onClick={() => setDataSource("live")}
+                className={`rounded border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  dataSource === "live"
+                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                Live Data
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  alert("Stubbed");
+                  setHasLiveScrapeData(true);
+                }}
+                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Retrieve Live Data
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {/* 4. Display inside "Visual preview" section */}
         <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4">
@@ -358,6 +447,19 @@ export default function RecordsPage() {
             </article>
           )}
         </section>
+
+        <footer className="mt-auto pt-6">
+          <div className="w-full rounded-md border border-gray-300 bg-white">
+            <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">
+              Messages
+            </div>
+            <div className="flex flex-col gap-1 p-4">
+              <p role="status" aria-live="polite" className="text-sm text-gray-600 min-h-[1.25rem]">
+                {statusMessage}
+              </p>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );

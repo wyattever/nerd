@@ -697,22 +697,17 @@ export default function EditorPage() {
 
       <div className="flex min-w-[1200px] flex-1 flex-col gap-6 p-6">
         <header className="flex items-end justify-between">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold text-gray-900 capitalize">
+          <div className="flex flex-row items-center gap-4">
+            <h1 className="text-2xl font-bold text-gray-900 capitalize whitespace-nowrap shrink-0">
               {activeTab} Products Editor
             </h1>
-
-            {/* Polite region: load status, per-section edit confirmations,
-                "Saving…" / "Saved" -- rendered unconditionally so it exists
-                in the DOM before it is populated. */}
-            <p role="status" aria-live="polite" className="text-sm text-gray-600">
-              {statusMessage}
-            </p>
           </div>
+        </header>
 
-          <fieldset className="flex flex-wrap items-center gap-3 border-0 p-0 m-0">
-            <legend className="mb-2.5 text-sm font-bold text-gray-500">TRACKING:</legend>
+        <div className="w-full rounded-md border border-gray-300 bg-white mb-2">
+          <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Tracking</div>
 
+            <div className="flex flex-wrap items-center gap-3 p-4">
             <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
               Priority
               <select
@@ -826,21 +821,13 @@ export default function EditorPage() {
                 </label>
               </>
             ) : null}
-          </fieldset>
-        </header>
+            </div>
+        </div>
 
-        {/* Separate assertive region for save failures (412 / 400 / network),
-            so a save error interrupts rather than waiting behind polite
-            announcements. Also rendered unconditionally, populated later. */}
-        <p role="alert" className="text-sm font-semibold text-red-700">
-          {saveError}
-        </p>
+        <div className="w-full rounded-md border border-gray-300 bg-white mb-2">
+          <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Edit</div>
 
-        <div className="flex items-center justify-between pb-4">
-          <div className="flex items-center gap-8">
-            <fieldset className="flex flex-wrap items-center gap-2 border-0 p-0 m-0">
-              <legend className="mb-2.5 text-sm font-bold text-gray-500">EDIT:</legend>
-
+              <div className="flex flex-wrap items-center gap-3 p-4">
               <button
                 type="button"
                 ref={editHeaderButtonRef}
@@ -901,10 +888,11 @@ export default function EditorPage() {
                   Import Candidate
                 </button>
               ) : null}
-            </fieldset>
-          </div>
+              </div>
+        </div>
 
-          <div className="flex items-center gap-2">
+        <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4">
+          <div className="flex justify-end gap-3 pb-[10px]">
             {activeTab === "candidate" ? (
               <button
                 type="button"
@@ -972,15 +960,15 @@ export default function EditorPage() {
               </button>
             ) : null}
           </div>
-        </div>
 
-        <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4">
           {loadState === "loading" ? (
             <p className="text-sm text-gray-500">Loading…</p>
           ) : loadState === "unavailable" ? (
             <p className="text-sm text-gray-500">No preview available.</p>
           ) : listing ? (
-            <ListingCard listing={listing} />
+            <div className="w-full bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
+              <ListingCard listing={listing} />
+            </div>
           ) : (
             <p className="text-sm text-gray-500">Select a product to preview it.</p>
           )}
@@ -1052,6 +1040,22 @@ export default function EditorPage() {
             onClose={handleDeletePublishedModalClosed}
           />
         ) : null}
+
+        <footer className="mt-auto pt-6">
+          <div className="w-full rounded-md border border-gray-300 bg-white">
+            <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">
+              Messages
+            </div>
+            <div className="flex flex-col gap-1 p-4">
+              <p role="status" aria-live="polite" className="text-sm text-gray-600 min-h-[1.25rem]">
+                {statusMessage}
+              </p>
+              <p role="alert" className="text-sm font-semibold text-red-700 min-h-[1.25rem]">
+                {saveError}
+              </p>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
