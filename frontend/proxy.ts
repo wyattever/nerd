@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Local development bypass per Decision Log #6
   if (process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true') {
     return NextResponse.next();
