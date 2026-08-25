@@ -221,12 +221,6 @@ export default function EditorPage() {
   const [isDeleteAddedModalOpen, setIsDeleteAddedModalOpen] = useState(false);
   const [isDeletePublishedModalOpen, setIsDeletePublishedModalOpen] = useState(false);
 
-  // Stands in for a real live-scrape check until that pipeline exists --
-  // toggled on by "Retrieve Data" below so "Live" only appears once there's
-  // something for it to show. See the SITE DATA: fieldset (Published tab
-  // only).
-  const [hasLiveScrapeData, setHasLiveScrapeData] = useState(false);
-
   const editHeaderButtonRef = useRef<HTMLButtonElement>(null);
   const editVendorResourcesButtonRef = useRef<HTMLButtonElement>(null);
   const editOtherResourcesButtonRef = useRef<HTMLButtonElement>(null);
@@ -908,52 +902,6 @@ export default function EditorPage() {
                 </button>
               ) : null}
             </fieldset>
-
-            {activeTab === "published" ? (
-              <fieldset className="flex flex-wrap items-center gap-2 border-0 p-0 m-0">
-                <legend className="mb-2.5 text-sm font-bold text-gray-500">SITE DATA:</legend>
-
-                {/* Global actions, not tied to the selected record -- see the
-                    file header on hasLiveScrapeData. None of these four are
-                    disabled on !selected. */}
-                <button
-                  type="button"
-                  onClick={() => alert("Stubbed")}
-                  className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Stored
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => alert("Stubbed")}
-                  className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Update Stored
-                </button>
-
-                {hasLiveScrapeData ? (
-                  <button
-                    type="button"
-                    onClick={() => alert("Stubbed")}
-                    className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    Live
-                  </button>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    alert("Stubbed");
-                    setHasLiveScrapeData(true);
-                  }}
-                  className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Retrieve Data
-                </button>
-              </fieldset>
-            ) : null}
           </div>
 
           <div className="flex items-center gap-2">
