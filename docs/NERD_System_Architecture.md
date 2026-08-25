@@ -261,3 +261,87 @@ Directories present locally but not reflected above (gitignored, not part of the
 ---
 
 *N.E.R.D. System Architecture — Version 4.0*
+> **Provenance:** Field-level schema recovered from `NCADEMI-Agent-Design-Document.md` (archived 2026-06-11 design doc for a since-abandoned conversational-agent concept; the design doc itself is not retained — see `docs/DECISION_LOG.md`). Only this schema section survives, since it documents the live ncademi.org directory's actual field structure, which N.E.R.D. generates content for, and no equivalent schema documentation existed elsewhere in this doc prior to this addition.
+
+## 9. Domain Model: NCADEMI Directory Product Schema
+
+The NCADEMI EdTech Directory at ncademi.org publishes each product listing against a consistent schema. N.E.R.D. researches, validates, and generates content against these same fields, so this schema is the ground truth for what a complete listing requires.
+
+### 9.1 Exemplar: Canvas LMS
+
+The Canvas LMS listing is the reference exemplar for this schema. It demonstrates a fully-populated entry and is used throughout this document to illustrate expected data fields.
+
+| Product name | Canvas LMS |
+| :---- | :---- |
+| Vendor | Instructure (linked to vendor profile page within the directory) |
+| Description | Canvas is a learning management system (LMS) developed by Instructure that provides educators and students with tools for course management, online learning, and collaboration. |
+| Product website | https://www.instructure.com/canvas |
+
+### 9.2 Complete Field Schema
+
+### Field 1: Product Identification
+
+| Product name | Page title; no subtitle or tagline. |
+| :---- | :---- |
+| Vendor | Optional. Linked reference to a separate vendor profile page. Not present on all listings. |
+| Description | One to three sentences. Neutral, encyclopedic. No accessibility content. |
+| Product website | Single URL to the vendor’s official product homepage. |
+
+### Field 2: Accessibility Documentation & Resources
+
+This section is divided into two sub-sections:
+
+| From [Vendor] | Official resources published by the vendor. Each entry includes link text, URL, and optional media type indicator (e.g., "Video"). When no vendor resources are found, the listing states this explicitly. |
+| :---- | :---- |
+| From Other Sources | Third-party resources such as university accessibility guides, disability organization tutorials, blog posts, and webinar recordings. Each entry includes link text and URL. |
+
+Resource types observed across the directory include:
+
+* Accessibility statements and commitment pages
+
+* Help articles and knowledge base entries (FAQ, how-to)
+
+* Video tutorials and demos (typically YouTube-hosted)
+
+* Community forum threads and category hubs
+
+* Infographics and blog posts
+
+* University and institutional accessibility guides
+
+* K-12 district blog posts and tutorials
+
+* Screen reader-specific guides (JAWS, NVDA, VoiceOver)
+
+* Low vision and braille-specific resources
+
+### Field 3: Support
+
+| Support contacts | One or more of: accessibility-specific email address, help center URL, support request form link. The Canvas LMS exemplar provides a dedicated accessibility support email: support_a11y@instructure.com. |
+| :---- | :---- |
+
+### Field 4: Accessibility Conformance Reports (ACRs / VPATs)
+
+This is the most structured field in the schema. Each ACR entry includes:
+
+| Report title | Linked to the ACR document (PDF, web page, or trust portal). |
+| :---- | :---- |
+| VPAT version | e.g., 2.4, 2.5, 2.5 Rev |
+| Date completed | Month and year of the evaluation. |
+| Evaluating organization | Optional. Named and linked when disclosed (e.g., WebAIM for Canvas LMS, Deque Systems for Adobe Acrobat). |
+
+Variation patterns observed across the directory:
+
+* Some products have multiple ACRs covering different platforms (e.g., iOS, Android, web, mobile app, desktop)
+
+* Some products have no ACR on file. In these cases the listing states: “No Accessibility Conformance Report information found, contact vendor for more information.”
+
+* Some ACR links require access to a vendor trust portal (e.g., ChatGPT), which is noted in the listing
+
+* The evaluating organization field is not consistently populated
+
+### Field 5: Metadata
+
+| Last updated | Plain-text date stamp at the bottom of the content area indicating the last editorial review. Format: “Product information last updated [Month Day, Year].” |
+| :---- | :---- |
+
