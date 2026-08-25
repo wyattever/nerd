@@ -175,7 +175,7 @@ nerd/
 │   │   ├── SectionEditor.tsx
 │   │   ├── EditorSidebar.tsx          # /editor tab routing, see §3.F
 │   │   ├── VendorSidebar.tsx / VendorPreview.tsx   # /vendors, see §3.F
-│   │   ├── PublishedJsonWorkbench.tsx / RawJsonEditor.tsx / JsonDisclosure.tsx   # raw-JSON view within /editor
+│   │   ├── RawJsonEditor.tsx / JsonDisclosure.tsx   # raw-JSON view within /editor
 │   │   ├── PublishedHeaderEditor.tsx / PublishedAcrEditor.tsx / PublishedOtherResourcesEditor.tsx / PublishedSupportEditor.tsx / PublishedVendorResourcesEditor.tsx   # per-section field editors, /editor's published tab
 │   │   └── Delete{Added,Candidate,Published}Modal.tsx
 │   ├── hooks/useResearch.ts

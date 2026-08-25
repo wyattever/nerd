@@ -93,10 +93,11 @@
  * outer wrapper has no max-width, so the page can grow past 1200px+320px
  * freely rather than being centered in a fixed band.
  *
- * "Save" persists the ACTIVE TAB's in-memory array, mirroring
- * PublishedJsonWorkbench.tsx's save flow: POST the whole document
+ * "Save" persists the ACTIVE TAB's in-memory array: POST the whole document
  * ({ $schema_version, $meta, products }) to that tab's /api/local/*
- * endpoint with its own current ETag in If-Match, wrapped in useTransition.
+ * endpoint with its own current ETag in If-Match, wrapped in useTransition
+ * (see docs/superseded/legacy_published_json_workbench.tsx for the original
+ * raw-JSON editor this pattern was adapted from).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -111,7 +112,6 @@ import { ImportJsonModal } from "@/components/ImportJsonModal";
 import { DeleteCandidateModal } from "@/components/DeleteCandidateModal";
 import { DeleteAddedModal } from "@/components/DeleteAddedModal";
 import { DeletePublishedModal } from "@/components/DeletePublishedModal";
-import type { SnapshotMeta } from "@/components/PublishedJsonWorkbench";
 import { toListingData } from "@/lib/editor-preview";
 import { USERS, fullName } from "@/lib/users";
 import vendorsData from "@/lib/vendors.json";
@@ -126,6 +126,14 @@ import type {
  *  that gates the preview/edit UI by default. added/candidate degrade to an
  *  empty array on failure without moving this flag; see the file header. */
 type LoadState = "loading" | "ready" | "unavailable";
+
+interface SnapshotMeta {
+  purpose: string;
+  source_listing_url: string;
+  snapshot_taken_at: string;
+  total_products: number;
+  generated_from: string;
+}
 
 interface FileMeta {
   schemaVersion: number | null;
