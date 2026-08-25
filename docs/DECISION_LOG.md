@@ -204,3 +204,26 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 - **Decision:** `nerd_core/generators.py`'s `parse_markdown_to_listing()` again parses the five ACR metadata lines (`Version:`, `Date:`, `Auditor:`, `Auditor URL:`, `Preparation Type:`) into `ACRReport`, mirroring the existing `Link:` line's guard against an empty `acr_reports` list. `Preparation Type` maps case-insensitively to "Internal" or "External", defaulting to "Internal" on malformed or missing input rather than raising.
 - **Rationale:** This had been a deliberate prior cut (the dataclass carried a comment noting the fields were "retained for structure, but no longer parsed"), not an oversight — but it meant real content loss on every imported draft, since the NCADEMI directory has a Version column. Restored after confirming via git history that the original cut carried no blocking rationale against reinstating it.
 - **Status:** SETTLED/VERIFIED. Tested in `tests/unit/test_generators.py` — one case with all 5 metadata lines present, one with them omitted per the "omit if not stated" spec (parses cleanly to dataclass defaults, not an error).
+
+---
+
+## Editor & Vendor Registry (v1.0)
+
+### 37. EDITOR CONSOLIDATION & VENDOR REGISTRY.
+- **Decision:** Introduced `/editor` (visual editor over `published-tables.json`/`added-tables.json`/`candidate-tables.json`) and `/vendors` (visual editor over the new global vendor registry, `frontend/lib/vendors.json`) as the canonical local editing surfaces, replacing the legacy `/` page and the raw-JSON `/tables/published` editor (see [Decision #38](#38-directory-hygiene-pass-v10)). Both pages are backed by a shared local-write API (`frontend/app/api/local/{published,added,candidate,vendors}/route.ts`, `frontend/lib/local-write.ts`) that is gated to local development only (`NODE_ENV !== "production"` AND `NEXT_PUBLIC_DISABLE_AUTH === "true"`, returning a bare 404 rather than 403 when blocked) and uses a whole-file SHA-256 ETag with `If-Match`/`412` to catch a save racing an out-of-band edit, plus a hand-rolled temp-file + fsync + rename + directory-fsync sequence for atomic, durable writes. The vendor registry itself is populated by `scripts/scrape_vendors.py` (crawls each vendor's own NCADEMI directory page) and cleaned up by `scripts/dedupe_vendor_resources.py` (strips a product's own `vendor_resources` entries that duplicate a URL already captured under that vendor in `vendors.json`).
+- **Rationale:** The legacy `/` page mixed the Generate Listing/Import Data editor with AppSheet-recovery browsing in one 1000+ line file; the raw-JSON `/tables/published` editor required hand-editing JSON with no structured field validation; the `ncademi-viewer/` prototype duplicated rendering logic in a third, never-finished surface. One consistent visual-editing pattern, one persistence layer, replaces all three.
+- **Status:** PARTIAL. `/editor` is fully built out with per-section field editors (`Published{Header,Acr,OtherResources,Support,VendorResources}Editor.tsx`). `/vendors`' four structured field-editor stubs (Header, Global Resources, Product/s, Support) are not yet implemented — vendor records are currently edited as raw fields. "Save vendor" and "Delete vendor" are real and fully wired through the same ETag/atomic-write path.
+
+---
+
+## Directory Hygiene Pass (v1.0)
+
+### 38. DIRECTORY HYGIENE PASS (v1.0).
+- **Decision:** As part of preparing the repo for a v1.0 state, the following were retired or relocated:
+  - `nerd_core/tools/administrative_validators/link_validator_engine.py` deleted outright (dead code — never wired into a live path, and the `crawlee[playwright]` dependency and Dockerfile "Playwright support" claim it alone justified were both removed in the same pass). `tests/test_link_validator.py` still imports it by its old path and is now broken with a `ModuleNotFoundError`; not fixed as part of this pass.
+  - `scripts/migrate_to_firestore.py` archived to `docs/superseded/migrate_to_firestore.py` — already retired/hard-exiting (see §7 of the architecture doc), kept as a reference for if/when this migration path is rebuilt for the cloud.
+  - The legacy `/` page (`frontend/app/page.tsx`, the 1000+ line Generate Listing/Import Data editor) and the raw-JSON `/tables/published` editor (`frontend/app/tables/published/page.tsx`) archived to `docs/superseded/legacy_root_page.tsx` and `docs/superseded/legacy_published_json_page.tsx` respectively. `frontend/app/page.tsx` is now a 5-line redirect to `/editor`, the canonical replacement (see Decision #37).
+  - `ncademi-viewer/` (a fully redundant prototype, see architecture doc §3.E) archived whole to `docs/superseded/ncademi-viewer/`.
+  - `GEM-instructions.txt` moved from the repo root to `prompts/GEM-instructions.txt`, alongside the project's other prompt-management files.
+- **Rationale:** Consolidate around the `/editor`/`/vendors` suite (Decision #37) as the single current editing surface, and stop carrying dead code, a superseded prototype, and a misplaced root-level file into the v1.0 state.
+- **Status:** SETTLED/VERIFIED.

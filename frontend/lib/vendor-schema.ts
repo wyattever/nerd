@@ -3,7 +3,7 @@
  * Schema for the global vendors registry (frontend/lib/vendors.json), read
  * and written by /api/local/vendors and the /vendors editor page.
  *
- * Ported from vendor_schema_proposal.ts (repo root) -- that file documents
+ * Ported from docs/superseded/vendor_schema_proposal.ts -- that file documents
  * the full provenance of every field below against the AppSheet "vendors"
  * and "vendor-resources" table columns; see it for the "why" behind each
  * one. The one addition here: `support_contacts` on VendorRecord, matching

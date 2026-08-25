@@ -1,6 +1,6 @@
 # System Design Document: N.E.R.D.
 
-**NCADEMI EdTech Research & Documentation** *Last Updated: August 21, 2026*
+**NCADEMI EdTech Research & Documentation** *Last Updated: August 25, 2026*
 
 ## 1. Executive Summary
 
@@ -18,7 +18,7 @@ The system utilizes a scalable, asynchronous architecture on Google Cloud Run.
 * **Tailwind CSS 4**: utility-first styling.
 * **Firebase Auth**: entry point for authenticated NCADEMI researchers.
 * **Accessibility**: WCAG 2.2 AA is a hard requirement, built in from the start — not bolted on. Verified with `@axe-core/playwright`.
-* **Routes**: `/` (Generate Listing / Import Data editor — see §3.A), `/researcher` (seeded product-tracking table), `/tables` (read-only AppSheet recovery tables), `/users` (user directory, no auth gate yet — MVP-stage, see [Decision #29](DECISION_LOG.md#29-security-posture--deferred-until-public-deployment)), `/login`.
+* **Routes**: `/` (redirects to `/editor` as of the v1.0 hygiene pass — see [Decision #38](DECISION_LOG.md#38-directory-hygiene-pass-v10)), `/editor` (canonical visual editor for published/added/candidate product data — see §3.F), `/vendors` (visual editor for the global vendor registry — see §3.F), `/researcher` (seeded product-tracking table), `/tables` (read-only AppSheet recovery tables; its `/tables/published` raw-JSON-editor child route is retired, archived to `docs/superseded/legacy_published_json_page.tsx` — see §3.F), `/users` (user directory, no auth gate yet — MVP-stage, see [Decision #29](DECISION_LOG.md#29-security-posture--deferred-until-public-deployment)), `/login`.
 * **Data grids**: hand-rolled sortable tables (`ResearcherTable.tsx`, the generic pattern reused across `/researcher` and `/tables`), not a third-party grid library. An earlier TanStack Table-based `ResourceGrids` component caused the SSE re-render performance issue documented in `docs/superseded/UI_DIAGNOSTICS.md` and is no longer present in the codebase.
 
 ### B. API Orchestrator (`api/`)
@@ -41,7 +41,7 @@ The system utilizes a scalable, asynchronous architecture on Google Cloud Run.
 * **`acr_validation.py` / `adaptive_validation.py`**: ACR/VPAT plausibility checks and per-resource liveness validation.
 * **`utils.py`**: general-purpose helpers and security utilities (SSRF-safe URL resolution, redirect handling).
 * **`tools/liveness_validator.py`**: hardened against bot-protected sites (realistic User-Agent header, `urljoin`-based relative-redirect resolution). Regression-tested in `tests/unit/test_liveness.py`.
-* **`tools/administrative_validators/link_validator_engine.py`**: a standalone, Playwright-based engine. **Currently dead code carrying real build cost** — `crawlee[playwright]` sits in `requirements.txt` for this alone, and `playwright install` is never run in `Dockerfile.api`, so the "Playwright support" the Dockerfile claims doesn't actually exist. Pending an archive/delete decision.
+* **`tools/administrative_validators/link_validator_engine.py`**: **deleted** as of the v1.0 hygiene pass ([Decision #38](DECISION_LOG.md#38-directory-hygiene-pass-v10)) — it was dead code carrying real build cost (`crawlee[playwright]` in `requirements.txt` for this alone, with `playwright install` never actually run in `Dockerfile.api`, so the "Playwright support" the Dockerfile used to claim never existed). Both the dependency and the Dockerfile claim were removed in the same pass. `tests/test_link_validator.py` still imports this module by its old path and will now fail with `ModuleNotFoundError` rather than the pre-existing stale-path failure noted in §4 — it was not updated as part of this hygiene pass.
 
 ### E. Candidate/Product Data Storage — Local vs. Production
 
@@ -65,16 +65,30 @@ Triggering a *new* run via this path (`/research/initial`, `/research/deep-dive`
 ### C. Link Resolution & Remediation
 
 * **Redirect resolution is real**: `resolve_and_validate_url` returns `ValidationResult.resolved_url` — the terminal destination after following redirects — not the input URL. `grounding-api-redirect` URLs from Google Search Grounding are resolved to their real destination before persisting into stored listings, on both the live research path and Import Data.
-* **On-demand validation**: high-fidelity browser validation (`link_validator_engine.py`) is not currently wired into any live path — see §2.D.
+* **On-demand validation**: the high-fidelity browser validation engine (`link_validator_engine.py`) that would have provided this was never wired into any live path and has since been deleted — see §2.D.
 * 12 of the local seed candidate files were written before the redirect-resolution fix and still carry unresolved `grounding-api-redirect` markers from that earlier state. This is now a data-remediation task, not a mechanism bug — `scripts/rerun_redirect_candidates.py` backfills them; tracked separately, not urgent under current scope.
 
 ### D. Live Preview & Edit
 
 Researchers edit Pydantic-mapped listing data in real time, either via per-section HTML overrides or by re-importing a corrected draft; `POST /render` re-renders server-side via Jinja2 for preview.
 
-### E. NCADEMI Products Viewer (separate initiative, in progress)
+### E. NCADEMI Products Viewer (retired prototype)
 
-A distinct workstream from Import Data / Generate Listing, tracked independently and unaffected by the Generate Listing deferral (Decision #30). Prototype and planning artifacts live under `ncademi-viewer/` (not yet consolidated into `frontend/`). Reuses `ncademiPreview.ts` section generators for rendering parity with the main app. See `ncademi-viewer/NCADEMI Full Architecture & Codebase.md` for the current design.
+A distinct workstream from Import Data / Generate Listing, previously tracked independently of the Generate Listing deferral (Decision #30). Fully superseded by the `/editor` + `/vendors` suite described in §3.F; archived in the v1.0 hygiene pass ([Decision #38](DECISION_LOG.md#38-directory-hygiene-pass-v10)) as a redundant prototype. Planning artifacts now live under `docs/superseded/ncademi-viewer/` (moved from the repo-root `ncademi-viewer/`) — see `docs/superseded/ncademi-viewer/NCADEMI Full Architecture & Codebase.md` for the retired design.
+
+### F. Local Editor Suite (`/editor`, `/vendors`) & Vendor Registry (current, v1.0)
+
+Introduced to replace three separate, inconsistent surfaces — the 1000+ line legacy `/` page (Generate Listing/Import Data editor mixed with AppSheet-recovery browsing), the raw-JSON `/tables/published` editor, and the abandoned `ncademi-viewer/` prototype (§3.E) — with one consistent visual-editing pattern. See [Decision #37](DECISION_LOG.md#37-editor-consolidation--vendor-registry).
+
+* **`/editor`** (`frontend/app/editor/page.tsx`): visual editor over three parallel documents — `published-tables.json`, `added-tables.json`, and `candidate-tables.json` — fetched concurrently client-side via `Promise.allSettled` so one document's fetch failure degrades only that tab. A single `activeTab` value (shared type with `EditorSidebar.tsx`) drives which `/api/local/*` endpoint, in-memory array, and ETag a save targets.
+* **`/vendors`** (`frontend/app/vendors/page.tsx`): visual editor over the single global vendor registry document, `frontend/lib/vendors.json`. Structurally simpler than `/editor` (one document, no tab routing). As of this pass, "Save vendor" and "Delete vendor" are fully implemented; the four structured field-editor stubs (Header, Global Resources, Product/s, Support) are not yet built — vendor records are still edited as raw fields, not through `PublishedProductRecord`-style per-section editors.
+* **Local-write API** (`frontend/app/api/local/{published,added,candidate,vendors}/route.ts`, backed by `frontend/lib/local-write.ts`): the server-side persistence layer both pages share.
+  * **Gated to local development only** — `assertLocalOnly()` requires `NODE_ENV !== "production"` AND `NEXT_PUBLIC_DISABLE_AUTH === "true"`, both must hold. Returns a bare 404 (not 403) when blocked, so the route is indistinguishable from nonexistent in any environment where it shouldn't run.
+  * **ETag concurrency pattern**: `GET` reads the target JSON file fresh from disk on every call (never the frozen static import used elsewhere in the app) and returns it with a strong ETag — the SHA-256 hash of the exact bytes on disk. `POST` requires an `If-Match` header equal to that ETag; a mismatch (the file changed on disk since the client's last read — an IDE edit, a git checkout, a concurrent save) is rejected with `412 Precondition Failed` rather than silently overwriting. A successful `POST` returns the new ETag so the client can continue editing without a re-fetch.
+  * **Atomic, durable writes**: `writePublishedAtomic()` writes to a sibling temp file, `fsync`s it, `rename()`s it over the target (atomic on the same filesystem), then `fsync`s the parent directory too — so a crash mid-write can never leave a truncated file, and a crash between rename and directory-flush can't resurrect the old file on an unclean reboot.
+  * **No path-traversal surface by construction**: every handler takes a closed-union `DataKind` (`"published" | "added" | "candidate" | "vendors"`) mapped to a fixed filename, never a filename built from request input — there is no string to sanitize because no request-controlled string ever reaches the filesystem path.
+  * A fifth route, `/api/local/migrate-appsheet`, is a one-off bootstrap (POST-only, no ETag check by design — it's a deliberate overwrite, not the concurrent-edit path) that seeds `added-tables.json`/`candidate-tables.json` from the legacy AppSheet global table.
+* **`vendors.json`** (`frontend/lib/vendors.json`): the global vendor registry, schema defined in `frontend/lib/vendor-schema.ts` (`VendorRecord`/`VendorResource`/`VendorsFile`). Populated by `scripts/scrape_vendors.py`, which crawls each vendor's own NCADEMI directory page starting from the deduplicated `vendor_directory_url`s in a products JSON file. `scripts/dedupe_vendor_resources.py` then strips a product's own `vendor_resources` entries that exactly duplicate a URL already captured under that same vendor in `vendors.json` (matched by `(vendor_name, url)`), so the frontend doesn't have to de-duplicate at render time.
 
 ## 4. Multi-Layer Testing Strategy
 
@@ -111,9 +125,10 @@ Every event is logged to **BigQuery** (`edtech-agent-2026.telemetry.feedback_log
 
 To generate research drafts at zero Vertex AI cost, Google AI Studio's free tier can be used as a prompt-testing sandbox:
 
+* `prompts/GEM-instructions.txt` (moved from the repo root in the v1.0 hygiene pass, [Decision #38](DECISION_LOG.md#38-directory-hygiene-pass-v10)) is the full role/formatting-rules prompt for the Gemini Gem referenced in §3.A — the "digital accessibility documentation researcher" persona that takes a single product URL and returns one Markdown candidate profile for a human researcher to review.
 * `prompts/research_schema_prompt.txt` is a manually-maintained mirror of `prompts/system_prompt.j2`'s markdown output contract, meant for direct paste into AI Studio (model must be set to `gemini-2.5-flash`; Google Search grounding tool required). **Not loaded by any code path** — manual reference only, will drift from `system_prompt.j2` if not updated together.
 * `scripts/ingest_ai_studio_draft.py` validates an AI-Studio-generated draft through the same `nerd_core.pipeline.validate_draft` the API's `/ingest/draft` endpoint now also calls, then submits via `POST /admin/candidates`. Refuses to submit if both resource lists end up empty post-validation.
-* `scripts/migrate_to_firestore.py` is **retired** — it previously imported Golden Set records (`eval/eval_data.json`) directly into `nerd_candidates`, which silently passed schema validation with empty resource lists and would have overwritten real candidates. It now hard-exits immediately. Golden Set data belongs only in `eval/` — never in the candidate pipeline.
+* `docs/superseded/migrate_to_firestore.py` (archived from `scripts/` in the v1.0 hygiene pass, [Decision #38](DECISION_LOG.md#38-directory-hygiene-pass-v10)) is **retired** — it previously imported Golden Set records (`eval/eval_data.json`) directly into `nerd_candidates`, which silently passed schema validation with empty resource lists and would have overwritten real candidates. Its `main()` hard-exits immediately with an error message before doing anything else. Golden Set data belongs only in `eval/` — never in the candidate pipeline. Kept as reference for if/when this migration path needs to be rebuilt for the cloud, not deleted outright.
 
 ## 8. Repository Layout
 
@@ -136,27 +151,41 @@ nerd/
 │   ├── utils.py
 │   └── tools/
 │       ├── liveness_validator.py    # hardened (User-Agent + redirect resolution), see §5
-│       └── administrative_validators/
-│           └── link_validator_engine.py    # dead code, pending archive/delete decision
-├── ncademi-viewer/                # Products Viewer prototype/planning, see §3.E — not yet in frontend/
+│       └── administrative_validators/   # link_validator_engine.py deleted, see §2.D
 ├── frontend/
 │   ├── app/
 │   │   ├── layout.tsx
-│   │   ├── page.tsx                  # Generate Listing / Import Data editor
+│   │   ├── page.tsx                  # redirects to /editor, see §3.F
+│   │   ├── editor/page.tsx            # /editor — canonical visual editor, see §3.F
+│   │   ├── vendors/page.tsx           # /vendors — vendor registry editor, see §3.F
+│   │   ├── api/local/                 # local-write API, see §3.F
+│   │   │   ├── published/route.ts
+│   │   │   ├── added/route.ts
+│   │   │   ├── candidate/route.ts
+│   │   │   ├── vendors/route.ts
+│   │   │   └── migrate-appsheet/route.ts
 │   │   ├── login/page.tsx
 │   │   ├── researcher/page.tsx        # /researcher
-│   │   ├── tables/page.tsx            # /tables
+│   │   ├── tables/page.tsx            # /tables (its /tables/published child route is retired, see §3.E/§3.F)
 │   │   └── users/                     # /users (page.tsx + layout.tsx)
 │   ├── components/
-│   │   ├── ImportDataModal.tsx
-│   │   ├── InvalidLinksModal.tsx      # dormant, tied to removed link-validation UI
+│   │   ├── ImportDataModal.tsx / ImportJsonModal.tsx
 │   │   ├── ListingCard.tsx
-│   │   ├── ResearcherTable.tsx
-│   │   └── SectionEditor.tsx
+│   │   ├── ResearcherTable.tsx / AppsheetSortableTable.tsx
+│   │   ├── SectionEditor.tsx
+│   │   ├── EditorSidebar.tsx          # /editor tab routing, see §3.F
+│   │   ├── VendorSidebar.tsx / VendorPreview.tsx   # /vendors, see §3.F
+│   │   ├── PublishedJsonWorkbench.tsx / RawJsonEditor.tsx / JsonDisclosure.tsx   # raw-JSON view within /editor
+│   │   ├── PublishedHeaderEditor.tsx / PublishedAcrEditor.tsx / PublishedOtherResourcesEditor.tsx / PublishedSupportEditor.tsx / PublishedVendorResourcesEditor.tsx   # per-section field editors, /editor's published tab
+│   │   └── Delete{Added,Candidate,Published}Modal.tsx
 │   ├── hooks/useResearch.ts
 │   ├── lib/
 │   │   ├── appsheet-tables.json / appsheet-tables.ts   # /tables data layer
-│   │   ├── api.ts                    # dead code, flagged for deletion — see v4 arch doc §7.3
+│   │   ├── published-tables.json / published-tables.ts / added-tables.json / candidate-tables.json   # /editor's three documents, see §3.F
+│   │   ├── vendors.json / vendor-schema.ts             # /vendors registry + schema, see §3.F
+│   │   ├── local-write.ts             # ETag/atomic-write local persistence layer, see §3.F
+│   │   ├── published-validate.ts      # field-by-field validation for the published tab's save path
+│   │   ├── editor-preview.ts / json-position.ts
 │   │   ├── debugLog.ts
 │   │   ├── firebase.ts
 │   │   ├── ncademiPreview.ts
@@ -164,7 +193,7 @@ nerd/
 │   │   ├── types.ts
 │   │   └── users.ts
 │   ├── tests/e2e/                 # 5 Playwright specs
-│   ├── middleware.ts              # ⚠ Next.js deprecation warning — "proxy" convention not yet migrated
+│   ├── proxy.ts                   # renamed from middleware.ts, Next.js 16 deprecation fix
 │   ├── Dockerfile
 │   └── package.json
 ├── scripts/                      # Ops/migration scripts
@@ -173,9 +202,11 @@ nerd/
 │   ├── crawler.py / scraper.py
 │   ├── ingest_candidates.py / ingest_k12_urls.py
 │   ├── ingest_ai_studio_draft.py   # see §7
+│   ├── scrape_vendors.py           # builds vendors.json, see §3.F
+│   ├── dedupe_vendor_resources.py  # see §3.F
+│   ├── fix_appsheet_candidate_vendor.py
 │   ├── rerun_redirect_candidates.py
 │   ├── migrate_archive_to_products.py / migrate_candidates.py
-│   ├── migrate_to_firestore.py     # RETIRED, see §7
 │   ├── refresh_candidates.py / regenerate_candidates.py
 │   ├── reprocess_redirects.py      # prefer rerun_redirect_candidates.py
 │   ├── validate_migration.py / verify_gdocs.py / verify_production.py
@@ -186,16 +217,17 @@ nerd/
 │   ├── integration/                 # admin_api, ingest_draft_api, job_lifecycle, sse_api, worker_idempotency
 │   ├── integrity/                   # inventory_candidates, candidate_files
 │   ├── smoke/
-│   └── e2e_live_validation.py, system_test.py, parser_robustness_test.py, service_robustness_test.py, test_sse.py, test_link_validator.py   # some contain stale references, see §4
+│   └── e2e_live_validation.py, system_test.py, parser_robustness_test.py, service_robustness_test.py, test_sse.py, test_link_validator.py   # some contain stale references, see §4 — test_link_validator.py's import target no longer exists at all
 ├── templates/                    # Jinja2 (preview only, not a publishing artifact)
 │   ├── ncademi_listing.html
 │   ├── ncademi_wp_fragment.html
 │   ├── batch_report.html
-│   ├── link_validator.html
+│   ├── link_validator.html       # orphaned — its only consumer, link_validator_engine.py, was deleted (§2.D); not yet removed
 │   └── nerd.css
 ├── prompts/
 │   ├── system_prompt.j2 / delta_system_prompt.j2
 │   ├── research_schema_prompt.txt   # AI Studio sandbox mirror, see §7
+│   ├── GEM-instructions.txt         # Gemini Gem researcher persona, see §7
 │   └── optimized_instructions.json / optimized_instructions_diff.txt
 ├── eval/                         # promptfoo-based eval harness
 │   ├── assertions.py / provider.py / optimize.py
@@ -213,8 +245,10 @@ nerd/
 │   ├── SECTION_EDITOR_RESEARCH.md
 │   ├── appsheet-export/           # raw AppSheet JSON recovery data, provenance for /tables
 │   ├── appsheet-source-html/      # hand-built HTML the /tables fragments were extracted from
-│   └── superseded/                # historical docs, spent dispatch prompts, and reports that no
-│                                    # longer reflect the codebase — not `docs/archive/`, see Decision #33
+│   └── superseded/                # historical docs, spent dispatch prompts, reports, and retired code
+│                                    # (e.g. ncademi-viewer/, legacy_root_page.tsx, legacy_published_json_page.tsx,
+│                                    # migrate_to_firestore.py, vendor_schema_proposal.ts) that no longer reflect
+│                                    # the codebase — not `docs/archive/`, see Decision #33
 ├── constraints.txt
 ├── requirements.txt / requirements-worker.txt / requirements-eval.txt
 ├── Dockerfile.api / Dockerfile.worker
@@ -226,4 +260,4 @@ Directories present locally but not reflected above (gitignored, not part of the
 
 ---
 
-*N.E.R.D. System Architecture — Version 3.1*
+*N.E.R.D. System Architecture — Version 4.0*
