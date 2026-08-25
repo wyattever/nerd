@@ -71,7 +71,7 @@ export interface VendorRecord {
 
 /**
  * Top-level file shape, mirroring the $schema_version/$meta/products
- * envelope already used by frontend/lib/published-tables.json (see
+ * envelope already used by frontend/lib/published.json (see
  * PublishedProductRecord's file in published-tables.ts) rather than
  * inventing a new envelope convention for this one file.
  */

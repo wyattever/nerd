@@ -1,6 +1,6 @@
 // frontend/lib/published-validate.ts
 /**
- * Structural validation for published-tables.json records.
+ * Structural validation for published.json records.
  *
  * Hand-written rather than Zod/Ajv on purpose:
  *   - Ajv JIT-compiles schemas with the Function constructor, which needs

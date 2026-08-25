@@ -2,7 +2,7 @@
 "use client";
 
 /**
- * Visual editor for published-tables.json -- a lightweight parallel to the
+ * Visual editor for published.json -- a lightweight parallel to the
  * legacy AppSheet-candidate main page (app/page.tsx), scoped to editing the
  * live published-site snapshot instead. Deliberately NOT a duplicate of
  * that 1000+ line page or its AppSheet-specific pieces: no ResearcherTable,
@@ -13,8 +13,8 @@
  * fetched client-side on mount -- this page has no Server Component data
  * loader, so "fresh from disk" is the only read path, not a fallback.
  *
- * Three documents, one page: published-tables.json, added-tables.json, and
- * candidate-tables.json are fetched concurrently on mount via
+ * Three documents, one page: published.json, added.json, and
+ * candidate.json are fetched concurrently on mount via
  * Promise.allSettled -- each settles independently, so a rejected
  * added/candidate fetch degrades that one tab to an empty list rather than
  * blocking the page or the published tab. fileMeta tracks each document's
@@ -54,7 +54,7 @@
  * setActiveProducts's update is async (React batches/schedules state
  * updates), so if handleSaveToServer read activeProducts from its own
  * closure instead, it could POST the pre-delete array and briefly resurrect
- * the "deleted" record in candidate-tables.json on the next save. Passing
+ * the "deleted" record in candidate.json on the next save. Passing
  * newArray explicitly is what makes the disk write and the UI update
  * consistent in the same tick. handleSaveToServer therefore accepts an
  * optional recordsToSave override, falling back to activeProducts when
@@ -262,7 +262,7 @@ export default function EditorPage() {
       } else {
         setLoadState("unavailable");
         setStatusMessage(
-          "Could not load published-tables.json from the local write API. This page only works in local development."
+          "Could not load published.json from the local write API. This page only works in local development."
         );
       }
 
@@ -275,7 +275,7 @@ export default function EditorPage() {
         }));
       }
       // A rejected added fetch leaves addedProducts/fileMeta.added at their
-      // empty defaults -- expected until added-tables.json exists.
+      // empty defaults -- expected until added.json exists.
 
       if (candidateResult.status === "fulfilled") {
         const doc = candidateResult.value;
@@ -285,12 +285,12 @@ export default function EditorPage() {
           candidate: { schemaVersion: doc.schemaVersion, meta: doc.meta, etag: doc.etag },
         }));
       }
-      // Same as added: expected to stay empty until candidate-tables.json exists.
+      // Same as added: expected to stay empty until candidate.json exists.
 
       // Candidate is the default tab (see activeTab's initial state above),
       // so the initial selection prefers the candidate list's first record.
       // Falls back to published's first record when candidate is empty
-      // (still expected today, since candidate-tables.json is new) rather
+      // (still expected today, since candidate.json is new) rather
       // than leaving the preview with nothing selected.
       const candidateDoc = candidateResult.status === "fulfilled" ? candidateResult.value : null;
       const publishedDoc = publishedResult.status === "fulfilled" ? publishedResult.value : null;
@@ -516,7 +516,7 @@ export default function EditorPage() {
       if (!currentMeta.etag) {
         setStatusMessage("");
         setSaveError(
-          `Cannot save: no ETag from the server for the ${tab} list. The local write API may be unavailable, or ${tab}-tables.json does not exist yet (this feature only works in local development).`
+          `Cannot save: no ETag from the server for the ${tab} list. The local write API may be unavailable, or ${tab}.json does not exist yet (this feature only works in local development).`
         );
         return false;
       }
@@ -648,7 +648,7 @@ export default function EditorPage() {
 
   // Permanently removes the selected Candidate record: updates the
   // in-memory list, resets the selection, and immediately saves the
-  // filtered array to candidate-tables.json -- see the file header for why
+  // filtered array to candidate.json -- see the file header for why
   // newArray is passed to handleSaveToServer directly rather than left for
   // it to read from (still-stale) activeProducts.
   const handleDeleteConfirm = useCallback(() => {

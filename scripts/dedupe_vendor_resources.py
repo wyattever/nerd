@@ -20,7 +20,7 @@ product, even if the URL happens to match (not expected in practice, but
 the vendor_name key keeps a same-URL-different-vendor coincidence from
 being misattributed).
 
-This mutates candidate-tables.json / added-tables.json / published-tables.json
+This mutates candidate.json / added.json / published.json
 in place. All three are tracked in git, so any change made here is a
 `git diff` / `git checkout -- <file>` away from being reverted.
 
@@ -36,9 +36,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VENDORS_FILE = REPO_ROOT / "frontend" / "lib" / "vendors.json"
 PRODUCT_FILES = [
-    REPO_ROOT / "frontend" / "lib" / "candidate-tables.json",
-    REPO_ROOT / "frontend" / "lib" / "added-tables.json",
-    REPO_ROOT / "frontend" / "lib" / "published-tables.json",
+    REPO_ROOT / "frontend" / "lib" / "candidate.json",
+    REPO_ROOT / "frontend" / "lib" / "added.json",
+    REPO_ROOT / "frontend" / "lib" / "published.json",
 ]
 
 

@@ -1,6 +1,6 @@
 // frontend/app/api/local/added/route.ts
 /**
- * Local-only server-side write path for added-tables.json.
+ * Local-only server-side write path for added.json.
  *
  * Mirrors app/api/local/published/route.ts exactly, differing only in the
  * DataKind ("added") passed to readPublishedRaw/writePublishedAtomic. See

@@ -1,6 +1,6 @@
 // frontend/app/api/local/migrate-appsheet/route.ts
 /**
- * One-off migration: bootstraps added-tables.json and candidate-tables.json
+ * One-off migration: bootstraps added.json and candidate.json
  * from the legacy AppSheet global table, so the /editor visual editor's
  * "added" and "candidate" tabs have real records instead of staying
  * permanently empty (see EditorSidebar.tsx / EditorPage's file headers).

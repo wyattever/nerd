@@ -1,19 +1,27 @@
 // frontend/scripts/verify-json-position.mjs
 /**
- * Verification harness for lib/json-position.ts.
+ * Verification harness for json-position.ts.
+ *
+ * json-position.ts was archived to docs/superseded/legacy_json_position.ts
+ * (Decision #41 in docs/DECISION_LOG.md -- its only consumer, RawJsonEditor.tsx,
+ * had no live callers left). This harness still exercises it directly from
+ * that frozen location: the module itself is unchanged, pure logic with no
+ * dependency on being "live" to be worth verifying if it's ever revived.
+ * docs/superseded/ is outside frontend/'s tsconfig include, so the old
+ * `npx tsc --noEmit lib/json-position.ts` type-check line no longer applies --
+ * this script's own Section A-B fixture checks are the only verification left.
  *
  * The frontend has no unit-test runner (Playwright e2e only), and adding one
  * for a single pure module is not worth a dependency. This runs under plain
  * node with zero installs:
  *
- *   cd frontend && npx tsc --noEmit lib/json-position.ts   # types
  *   cd frontend && node scripts/verify-json-position.mjs   # behavior
  *
  * The scanner is imported from the real .ts source via Node type stripping,
- * so this tests the shipped file rather than a copy that can drift.
+ * so this tests the actual archived file rather than a copy that can drift.
  *
  * Section D is the important one: 4000 single-character mutations of the real
- * published-tables.json, with JSON.parse as the oracle. Any disagreement
+ * published.json, with JSON.parse as the oracle. Any disagreement
  * between JSON.parse and the scanner is a scanner bug.
  */
 
@@ -23,6 +31,7 @@ import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontendRoot = join(here, "..");
+const repoRoot = join(frontendRoot, "..");
 
 // --- load the TS module ---------------------------------------------------
 // json-position.ts has no imports and uses no TypeScript feature that survives
@@ -30,9 +39,9 @@ const frontendRoot = join(here, "..");
 // in Node 23.6+; on Node 22.6-23.5 pass --experimental-strip-types.
 let mod;
 try {
-  mod = await import(join(frontendRoot, "lib", "json-position.ts"));
+  mod = await import(join(repoRoot, "docs", "superseded", "legacy_json_position.ts"));
 } catch (error) {
-  console.error("Could not import lib/json-position.ts directly.");
+  console.error("Could not import docs/superseded/legacy_json_position.ts directly.");
   console.error(String(error && error.message ? error.message : error));
   console.error("\nOn Node 22.6-23.5, run:");
   console.error("  node --experimental-strip-types scripts/verify-json-position.mjs");
@@ -110,11 +119,11 @@ for (const text of valid) {
 }
 
 console.log("\n=== C. The real snapshot file ===");
-const realPath = join(frontendRoot, "lib", "published-tables.json");
+const realPath = join(frontendRoot, "lib", "published.json");
 const real = readFileSync(realPath, "utf8");
 const started = Date.now();
-check("published-tables.json parses", parseJsonWithPosition(real).ok === true);
-check("published-tables.json scans clean", scanJson(real) === null);
+check("published.json parses", parseJsonWithPosition(real).ok === true);
+check("published.json scans clean", scanJson(real) === null);
 console.log(
   `  ${(real.length / 1024).toFixed(1)} KB, parse + scan in ${Date.now() - started}ms`
 );

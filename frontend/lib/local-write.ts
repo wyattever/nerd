@@ -11,7 +11,7 @@
  *     take a `kind: DataKind` parameter, not a filename, so there is no
  *     string to sanitize in the first place.
  *   - readPublishedRaw() reads fresh from disk on every call rather than
- *     relying on the static `import data from "./published-tables.json"`
+ *     relying on the static `import data from "./published.json"`
  *     used elsewhere in the app. That static import is frozen in process
  *     memory at build/first-load time; writing new bytes to disk does not
  *     mutate it, so the editor's read path cannot use it.
@@ -35,9 +35,9 @@ import path from "node:path";
 export type DataKind = "published" | "added" | "candidate" | "vendors";
 
 const FILE_NAMES: Record<DataKind, string> = {
-  published: "published-tables.json",
-  added: "added-tables.json",
-  candidate: "candidate-tables.json",
+  published: "published.json",
+  added: "added.json",
+  candidate: "candidate.json",
   vendors: "vendors.json",
 };
 

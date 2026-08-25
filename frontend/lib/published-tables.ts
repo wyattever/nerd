@@ -9,11 +9,11 @@
  * unlike appsheet-tables.json, no cross-table name-matching is needed here.
  *
  * This is a static snapshot, NOT a live fetch. Regenerate by re-running the
- * scraper (see published-tables.json's $meta.generated_from for status -- a
+ * scraper (see published.json's $meta.generated_from for status -- a
  * dedicated scraper script to automate regeneration is still TODO).
  */
 
-import data from "./published-tables.json";
+import data from "./published.json";
 import { ProductHeaderData } from "@/lib/appsheet-tables";
 
 export interface PublishedResourceLink {

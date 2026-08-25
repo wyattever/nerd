@@ -80,14 +80,14 @@ A distinct workstream from Import Data / Generate Listing, previously tracked in
 
 Introduced to replace three separate, inconsistent surfaces — the 1000+ line legacy `/` page (Generate Listing/Import Data editor mixed with AppSheet-recovery browsing), the raw-JSON `/tables/published` editor, and the abandoned `ncademi-viewer/` prototype (§3.E) — with one consistent visual-editing pattern. See [Decision #37](DECISION_LOG.md#37-editor-consolidation--vendor-registry).
 
-* **`/editor`** (`frontend/app/editor/page.tsx`): visual editor over three parallel documents — `published-tables.json`, `added-tables.json`, and `candidate-tables.json` — fetched concurrently client-side via `Promise.allSettled` so one document's fetch failure degrades only that tab. A single `activeTab` value (shared type with `EditorSidebar.tsx`) drives which `/api/local/*` endpoint, in-memory array, and ETag a save targets.
+* **`/editor`** (`frontend/app/editor/page.tsx`): visual editor over three parallel documents — `published.json`, `added.json`, and `candidate.json` — fetched concurrently client-side via `Promise.allSettled` so one document's fetch failure degrades only that tab. A single `activeTab` value (shared type with `EditorSidebar.tsx`) drives which `/api/local/*` endpoint, in-memory array, and ETag a save targets.
 * **`/vendors`** (`frontend/app/vendors/page.tsx`): visual editor over the single global vendor registry document, `frontend/lib/vendors.json`. Structurally simpler than `/editor` (one document, no tab routing). As of this pass, "Save vendor" and "Delete vendor" are fully implemented; the four structured field-editor stubs (Header, Global Resources, Product/s, Support) are not yet built — vendor records are still edited as raw fields, not through `PublishedProductRecord`-style per-section editors.
 * **Local-write API** (`frontend/app/api/local/{published,added,candidate,vendors}/route.ts`, backed by `frontend/lib/local-write.ts`): the server-side persistence layer both pages share.
   * **Gated to local development only** — `assertLocalOnly()` requires `NODE_ENV !== "production"` AND `NEXT_PUBLIC_DISABLE_AUTH === "true"`, both must hold. Returns a bare 404 (not 403) when blocked, so the route is indistinguishable from nonexistent in any environment where it shouldn't run.
   * **ETag concurrency pattern**: `GET` reads the target JSON file fresh from disk on every call (never the frozen static import used elsewhere in the app) and returns it with a strong ETag — the SHA-256 hash of the exact bytes on disk. `POST` requires an `If-Match` header equal to that ETag; a mismatch (the file changed on disk since the client's last read — an IDE edit, a git checkout, a concurrent save) is rejected with `412 Precondition Failed` rather than silently overwriting. A successful `POST` returns the new ETag so the client can continue editing without a re-fetch.
   * **Atomic, durable writes**: `writePublishedAtomic()` writes to a sibling temp file, `fsync`s it, `rename()`s it over the target (atomic on the same filesystem), then `fsync`s the parent directory too — so a crash mid-write can never leave a truncated file, and a crash between rename and directory-flush can't resurrect the old file on an unclean reboot.
   * **No path-traversal surface by construction**: every handler takes a closed-union `DataKind` (`"published" | "added" | "candidate" | "vendors"`) mapped to a fixed filename, never a filename built from request input — there is no string to sanitize because no request-controlled string ever reaches the filesystem path.
-  * A fifth route, `/api/local/migrate-appsheet`, is a one-off bootstrap (POST-only, no ETag check by design — it's a deliberate overwrite, not the concurrent-edit path) that seeds `added-tables.json`/`candidate-tables.json` from the legacy AppSheet global table.
+  * A fifth route, `/api/local/migrate-appsheet`, is a one-off bootstrap (POST-only, no ETag check by design — it's a deliberate overwrite, not the concurrent-edit path) that seeds `added.json`/`candidate.json` from the legacy AppSheet global table.
 * **`vendors.json`** (`frontend/lib/vendors.json`): the global vendor registry, schema defined in `frontend/lib/vendor-schema.ts` (`VendorRecord`/`VendorResource`/`VendorsFile`). Populated by `scripts/scrape_vendors.py`, which crawls each vendor's own NCADEMI directory page starting from the deduplicated `vendor_directory_url`s in a products JSON file. `scripts/dedupe_vendor_resources.py` then strips a product's own `vendor_resources` entries that exactly duplicate a URL already captured under that same vendor in `vendors.json` (matched by `(vendor_name, url)`), so the frontend doesn't have to de-duplicate at render time.
 
 ## 4. Multi-Layer Testing Strategy
@@ -175,17 +175,16 @@ nerd/
 │   │   ├── SectionEditor.tsx
 │   │   ├── EditorSidebar.tsx          # /editor tab routing, see §3.F
 │   │   ├── VendorSidebar.tsx / VendorPreview.tsx   # /vendors, see §3.F
-│   │   ├── RawJsonEditor.tsx / JsonDisclosure.tsx   # raw-JSON view within /editor
 │   │   ├── PublishedHeaderEditor.tsx / PublishedAcrEditor.tsx / PublishedOtherResourcesEditor.tsx / PublishedSupportEditor.tsx / PublishedVendorResourcesEditor.tsx   # per-section field editors, /editor's published tab
 │   │   └── Delete{Added,Candidate,Published}Modal.tsx
 │   ├── hooks/useResearch.ts
 │   ├── lib/
 │   │   ├── appsheet-tables.json / appsheet-tables.ts   # /tables data layer
-│   │   ├── published-tables.json / published-tables.ts / added-tables.json / candidate-tables.json   # /editor's three documents, see §3.F
+│   │   ├── published.json / published-tables.ts / added.json / candidate.json   # /editor's three documents, see §3.F
 │   │   ├── vendors.json / vendor-schema.ts             # /vendors registry + schema, see §3.F
 │   │   ├── local-write.ts             # ETag/atomic-write local persistence layer, see §3.F
 │   │   ├── published-validate.ts      # field-by-field validation for the published tab's save path
-│   │   ├── editor-preview.ts / json-position.ts
+│   │   ├── editor-preview.ts
 │   │   ├── debugLog.ts
 │   │   ├── firebase.ts
 │   │   ├── ncademiPreview.ts

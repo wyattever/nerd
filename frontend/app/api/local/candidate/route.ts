@@ -1,6 +1,6 @@
 // frontend/app/api/local/candidate/route.ts
 /**
- * Local-only server-side write path for candidate-tables.json.
+ * Local-only server-side write path for candidate.json.
  *
  * Mirrors app/api/local/published/route.ts exactly, differing only in the
  * DataKind ("candidate") passed to readPublishedRaw/writePublishedAtomic.

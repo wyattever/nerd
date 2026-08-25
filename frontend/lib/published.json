@@ -16,18 +16,8 @@
       "vendor_directory_url": null,
       "product_website_url": "https://99math.com/",
       "product_description": "99math is an online mathematics practice platform that provides multiplayer games and formative assessment activities aligned with K–12 math standards.",
-      "vendor_resources": [
-        {
-          "text": "New",
-          "url": "https://example.com"
-        }
-      ],
-      "other_resources": [
-        {
-          "text": "Another One",
-          "url": "https://example.com"
-        }
-      ],
+      "vendor_resources": [],
+      "other_resources": [],
       "support_contacts": [
         {
           "type": "url",

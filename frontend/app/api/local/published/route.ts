@@ -1,6 +1,6 @@
 // frontend/app/api/local/published/route.ts
 /**
- * Local-only server-side write path for published-tables.json.
+ * Local-only server-side write path for published.json.
  *
  * Gated to development (see assertLocalOnly in lib/local-write.ts). GET
  * reads fresh from disk on every request -- never the frozen static import

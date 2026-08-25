@@ -12,7 +12,7 @@ Requires `frontend/.env.local` with `NEXT_PUBLIC_DISABLE_AUTH=true` for local-mo
 
 ## Routes
 
-* **`/editor`** — canonical visual editor for `published-tables.json`, `added-tables.json`, and `candidate-tables.json`.
+* **`/editor`** — canonical visual editor for `published.json`, `added.json`, and `candidate.json`.
 * **`/vendors`** — visual editor for the global vendor registry (`lib/vendors.json`).
 * **`/researcher`** — seeded product-tracking table.
 * **`/tables`** — read-only AppSheet recovery tables.
