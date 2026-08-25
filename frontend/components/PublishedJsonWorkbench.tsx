@@ -12,7 +12,7 @@
  * NODE_ENV!=='production'), Save to disk POSTs the whole document to
  * /api/local/published, which validates again server-side, then atomically
  * overwrites frontend/lib/published-tables.json on disk (see
- * lib/local-write.ts and JSON-Editor-validation.md). That write is NOT
+ * lib/local-write.ts and docs/NERD_System_Architecture.md). That write is NOT
  * itself a git commit -- the change still needs review and `git commit` like
  * any other edit. In a production build the API is gated to 404; the editor
  * still works against the server-rendered snapshot, and Save to disk fails
@@ -163,7 +163,7 @@ export function PublishedJsonWorkbench({
   // Replaces the old client-side Blob download. POSTs the whole document to
   // the local-only write API, which validates again server-side and
   // atomically overwrites published-tables.json on disk. See
-  // lib/local-write.ts and JSON-Editor-validation.md for the write path.
+  // lib/local-write.ts and docs/NERD_System_Architecture.md for the write path.
   const handleSaveToServer = useCallback(() => {
     const blocking = draft.filter((p) => hasBlockingError(validateProductRecord(p)));
     if (blocking.length > 0) {

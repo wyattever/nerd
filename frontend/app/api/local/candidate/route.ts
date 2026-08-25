@@ -4,7 +4,7 @@
  *
  * Mirrors app/api/local/published/route.ts exactly, differing only in the
  * DataKind ("candidate") passed to readPublishedRaw/writePublishedAtomic.
- * See that file's header comment and JSON-Editor-validation.md for the
+ * See that file's header comment and docs/NERD_System_Architecture.md for the
  * full rationale (gating, ETag concurrency, atomic writes).
  *
  * Node runtime is the default for App Router route handlers, but it is

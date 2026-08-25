@@ -5,7 +5,7 @@
  *
  * Modeled exactly after app/api/local/published/route.ts, differing only in
  * the DataKind ("vendors") and the shape validated on POST -- see that
- * file's header comment and JSON-Editor-validation.md for the full
+ * file's header comment and docs/NERD_System_Architecture.md for the full
  * rationale (gating, ETag concurrency, atomic writes).
  *
  * POST validation here is deliberately lightweight (top-level

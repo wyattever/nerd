@@ -9,7 +9,7 @@
  * no ImportDataModal, no AppSheet fetching.
  *
  * Data comes from the same local-only write API the /tables/published JSON
- * editor uses (see lib/local-write.ts and JSON-Editor-validation.md),
+ * editor uses (see lib/local-write.ts and docs/NERD_System_Architecture.md),
  * fetched client-side on mount -- this page has no Server Component data
  * loader, so "fresh from disk" is the only read path, not a fallback.
  *

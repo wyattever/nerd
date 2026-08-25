@@ -8,7 +8,7 @@
  * immediately without depending on Turbopack watcher/HMR behavior. POST
  * validates before writing and uses a whole-file SHA-256 ETag with
  * If-Match/412 to catch a save racing an out-of-band edit (IDE, git
- * checkout) of the same file. See JSON-Editor-validation.md.
+ * checkout) of the same file. See docs/NERD_System_Architecture.md.
  *
  * Node runtime is the default for App Router route handlers, but it is
  * declared explicitly here: fs is unavailable on Edge, and this guards

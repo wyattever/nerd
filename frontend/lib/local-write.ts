@@ -1,7 +1,7 @@
 // frontend/lib/local-write.ts
 /**
  * Local-only filesystem access for the raw JSON editor's server-side save
- * path. See JSON-Editor-validation.md for the full architecture rationale.
+ * path. See docs/NERD_System_Architecture.md for the full architecture rationale.
  *
  * This module is deliberately narrow:
  *   - Every path this module ever touches comes from the FILE_NAMES lookup
