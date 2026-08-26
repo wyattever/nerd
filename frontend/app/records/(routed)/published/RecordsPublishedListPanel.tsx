@@ -14,21 +14,31 @@
  * since this section is read-only and the scrape/live-data status
  * originates here already.
  *
- * The Stored/Live toggle is still local `useState`, not a URL query param
- * -- Phase 5 (not yet built) is what's meant to make it a server-side
- * concern. Known gap from that: `RecordsPublishedDetailPage` ([slug]/
- * page.tsx) always looks up the requested slug against the STORED document
- * server-side, with no way to know this client-side toggle is on "Live" --
- * so clicking a row that only exists in live-scraped data (not yet present
- * in the stored snapshot) will render "Record not found" instead of that
- * record. Bounded to that one edge case (this section is read-only, so
- * there's no data-loss risk), not fixed here -- doing so cleanly needs
- * Phase 5's URL-based source anyway.
+ * The Stored/Live source itself now lives in the URL (`?source=live`), via
+ * SourceToggle.tsx -- see that file's header for why it's split out and
+ * Suspense-wrapped here rather than in this file's parent page.tsx (the
+ * component that actually calls useSearchParams() is what needs the
+ * boundary, and that's the toggle, not this list). `dataSource` here is
+ * still `useState`, but now driven by SourceToggle's onSourceChange rather
+ * than by a click handler owned here -- both a click AND a direct deep
+ * link to ?source=live end up going through the same path (SourceToggle
+ * resolves the URL on mount too, not only after a click), which is what
+ * makes `/records/published?source=live` work as a deep link.
+ *
+ * Known gap, unchanged from before this phase: `RecordsPublishedDetailPage`
+ * ([slug]/page.tsx) always looks up the requested slug against the STORED
+ * document server-side -- it has no access to this client-only fetched
+ * liveProducts array. A row that only exists in live-scraped data (not yet
+ * present in the stored snapshot) still renders "Record not found" when
+ * clicked. Read-only section, so no data-loss risk; a real fix would need
+ * the *record* lookup to also become source-aware, which is a separate
+ * change from this phase's URL-state migration for the toggle itself.
  */
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { SourceToggle } from "./SourceToggle";
 import type { PublishedProductRecord } from "@/lib/published-tables";
 
 type LogEntry = { id: string; text: string };
@@ -54,15 +64,22 @@ export function RecordsPublishedListPanel({ initialProducts, base, children }: R
   const pathname = usePathname();
   const [dataSource, setDataSource] = useState<"stored" | "live">("stored");
   const [liveProducts, setLiveProducts] = useState<PublishedProductRecord[] | null>(null);
-  const [isLoadingLive, setIsLoadingLive] = useState(false);
+  // Derived, not separate state: liveProducts is null exactly while a
+  // "live" fetch is in flight (the catch branch below resolves it to `[]`
+  // on failure, never leaves it null), so there's nothing to synchronize
+  // via an effect -- see the fetch effect below for why that matters here
+  // (this repo's eslint-plugin-react-hooks config errors on a synchronous
+  // setState call directly in an effect body).
+  const isLoadingLive = dataSource === "live" && liveProducts === null;
   const [hasLiveScrapeData, setHasLiveScrapeData] = useState(false);
   const [isRetrievingLive, setIsRetrievingLive] = useState(false);
 
   const [filter, setFilter] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [messagesLog, setMessagesLog] = useState<LogEntry[]>([
-    { id: "load", text: `Displaying ${initialProducts.length} published product records.` },
-  ]);
+  // Scrape progress/error entries only -- the record count is a derived
+  // render value (see the footer below), not state, for the same reason
+  // isLoadingLive is derived above.
+  const [messagesLog, setMessagesLog] = useState<LogEntry[]>([]);
   const messagesLogRef = useRef<HTMLDivElement>(null);
 
   const products = useMemo(
@@ -97,28 +114,31 @@ export function RecordsPublishedListPanel({ initialProducts, base, children }: R
     };
   }, []);
 
-  const handleSelectDataSource = useCallback(
-    (next: "stored" | "live") => {
-      setDataSource(next);
-      if (next === "stored") {
-        upsertLogEntry("load", `Displaying ${initialProducts.length} published product records.`);
-        return;
-      }
-      setIsLoadingLive(true);
-      fetchLiveProducts()
-        .then((fetched) => {
-          setLiveProducts(fetched);
-          upsertLogEntry("load", `Displaying ${fetched.length} published product records.`);
-          upsertLogEntry("load-error", null);
-        })
-        .catch(() => {
-          setLiveProducts([]);
-          upsertLogEntry("load-error", "Could not load live published data.");
-        })
-        .finally(() => setIsLoadingLive(false));
-    },
-    [initialProducts, upsertLogEntry]
-  );
+  // Fires whenever the resolved source (from SourceToggle, itself driven by
+  // the URL) becomes "live" and nothing's been fetched yet -- covers BOTH a
+  // click on the "Live Data" button and a direct deep-link/refresh landing
+  // on ?source=live, since SourceToggle reports its resolved value on
+  // mount too, not only after a click. Every setState call here is inside
+  // a .then()/.catch() callback, never directly in the effect body --
+  // see isLoadingLive's own comment above for why that's load-bearing.
+  useEffect(() => {
+    if (dataSource !== "live" || liveProducts !== null) return;
+    let cancelled = false;
+    fetchLiveProducts()
+      .then((fetched) => {
+        if (cancelled) return;
+        setLiveProducts(fetched);
+        upsertLogEntry("load-error", null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLiveProducts([]);
+        upsertLogEntry("load-error", "Could not load live published data.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dataSource, liveProducts, upsertLogEntry]);
 
   const handleRetrieveLiveData = useCallback(async () => {
     setIsRetrievingLive(true);
@@ -228,8 +248,17 @@ export function RecordsPublishedListPanel({ initialProducts, base, children }: R
 
         <ul className="flex flex-1 flex-col gap-1 overflow-y-scroll">
           {sorted.map((p) => {
-            const href = `${base}/${p.slug}`;
-            const isActive = pathname === href;
+            // Carries the live source forward into record-to-record
+            // navigation -- otherwise selecting a different row while
+            // viewing Live Data would silently drop back to Stored for the
+            // new record, since [slug]/page.tsx has no other way to know
+            // which source was active. Reuses `dataSource` (already local
+            // state, kept in sync by SourceToggle's onSourceChange) rather
+            // than calling useSearchParams() here directly, which would
+            // pull this whole list panel into the CSR-bailout Suspense
+            // requirement -- see this file's header.
+            const href = dataSource === "live" ? `${base}/${p.slug}?source=live` : `${base}/${p.slug}`;
+            const isActive = pathname === `${base}/${p.slug}`;
             return (
               <li key={p.slug}>
                 <Link
@@ -251,27 +280,15 @@ export function RecordsPublishedListPanel({ initialProducts, base, children }: R
         <div className="w-full rounded-md border border-gray-300 bg-white mb-2">
           <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Site Data</div>
           <div className="flex flex-wrap items-center gap-3 p-4">
-            <button
-              type="button"
-              onClick={() => handleSelectDataSource("stored")}
-              className={`rounded border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${dataSource === "stored" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"}`}
-            >
-              Stored Data
-            </button>
+            <Suspense fallback={<div className="h-10 w-32 animate-pulse rounded bg-gray-200" />}>
+              <SourceToggle hasLiveScrapeData={hasLiveScrapeData} isLoadingLive={isLoadingLive} onSourceChange={setDataSource} />
+            </Suspense>
             <button
               type="button"
               onClick={() => alert("Stubbed")}
               className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Update Stored Data
-            </button>
-            <button
-              type="button"
-              disabled={!hasLiveScrapeData || isLoadingLive}
-              onClick={() => handleSelectDataSource("live")}
-              className={`rounded border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${dataSource === "live" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"}`}
-            >
-              {isLoadingLive ? "Loading…" : "Live Data"}
             </button>
             <button
               type="button"
@@ -289,6 +306,7 @@ export function RecordsPublishedListPanel({ initialProducts, base, children }: R
         <footer className="mt-auto">
           <div className="w-full rounded-md border border-gray-300 bg-white">
             <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Messages</div>
+            <p className="px-4 pt-4 text-sm text-gray-600">Displaying {products.length} published product records.</p>
             <div
               ref={messagesLogRef}
               role="log"
