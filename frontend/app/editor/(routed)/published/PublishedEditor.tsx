@@ -22,6 +22,7 @@ import { DeletePublishedModal } from "@/components/DeletePublishedModal";
 import { toListingData } from "@/lib/editor-preview";
 import vendorsData from "@/lib/vendors.json";
 import { useMessages } from "./PublishedListPanel";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { SnapshotMeta } from "@/lib/local-data";
 import type {
   PublishedAcrReport,
@@ -51,6 +52,17 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
   const [schemaVersion] = useState(initialSchemaVersion);
   const [meta] = useState(initialMeta);
   const [etag, setEtag] = useState<string | null>(initialEtag);
+
+  // See CandidateEditor.tsx's own comment on this pattern (plain state,
+  // not a ref read during render -- forbidden by this repo's
+  // eslint-plugin-react-hooks config).
+  const [isDirty, setIsDirty] = useState(false);
+  useUnsavedChangesGuard(isDirty);
+
+  const updateProducts = useCallback((updater: (prev: PublishedProductRecord[]) => PublishedProductRecord[]) => {
+    setProducts(updater);
+    setIsDirty(true);
+  }, []);
 
   const { setStatusMessage, setSaveError } = useMessages();
   const [isSaving, startSaveTransition] = useTransition();
@@ -83,10 +95,10 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
 
   const handleHeaderSave = useCallback(
     (fields: HeaderFields) => {
-      setProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, ...fields } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, ...fields } : p)));
       setStatusMessage(`Updated header for ${fields.product_name} (not yet saved to disk).`);
     },
-    [slug, setStatusMessage]
+    [slug, setStatusMessage, updateProducts]
   );
   const handleHeaderEditorClosed = useCallback(() => {
     setIsHeaderEditorOpen(false);
@@ -95,12 +107,12 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
 
   const handleVendorResourcesSave = useCallback(
     (resources: PublishedResourceLink[]) => {
-      setProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, vendor_resources: resources } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, vendor_resources: resources } : p)));
       setStatusMessage(
         `Updated vendor resources (${resources.length}) for ${selected?.product_name ?? "this record"} (not yet saved to disk).`
       );
     },
-    [slug, selected?.product_name, setStatusMessage]
+    [slug, selected?.product_name, setStatusMessage, updateProducts]
   );
   const handleVendorResourcesEditorClosed = useCallback(() => {
     setIsVendorResourcesEditorOpen(false);
@@ -109,12 +121,12 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
 
   const handleOtherResourcesSave = useCallback(
     (resources: PublishedResourceLink[]) => {
-      setProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, other_resources: resources } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, other_resources: resources } : p)));
       setStatusMessage(
         `Updated other resources (${resources.length}) for ${selected?.product_name ?? "this record"} (not yet saved to disk).`
       );
     },
-    [slug, selected?.product_name, setStatusMessage]
+    [slug, selected?.product_name, setStatusMessage, updateProducts]
   );
   const handleOtherResourcesEditorClosed = useCallback(() => {
     setIsOtherResourcesEditorOpen(false);
@@ -123,12 +135,12 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
 
   const handleSupportSave = useCallback(
     (contacts: PublishedSupportContact[]) => {
-      setProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, support_contacts: contacts } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, support_contacts: contacts } : p)));
       setStatusMessage(
         `Updated support contacts (${contacts.length}) for ${selected?.product_name ?? "this record"} (not yet saved to disk).`
       );
     },
-    [slug, selected?.product_name, setStatusMessage]
+    [slug, selected?.product_name, setStatusMessage, updateProducts]
   );
   const handleSupportEditorClosed = useCallback(() => {
     setIsSupportEditorOpen(false);
@@ -137,12 +149,12 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
 
   const handleAcrSave = useCallback(
     (reports: PublishedAcrReport[]) => {
-      setProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, acr_reports: reports } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, acr_reports: reports } : p)));
       setStatusMessage(
         `Updated ACR reports (${reports.length}) for ${selected?.product_name ?? "this record"} (not yet saved to disk).`
       );
     },
-    [slug, selected?.product_name, setStatusMessage]
+    [slug, selected?.product_name, setStatusMessage, updateProducts]
   );
   const handleAcrEditorClosed = useCallback(() => {
     setIsAcrEditorOpen(false);
@@ -185,11 +197,13 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
         }
         const result = (await res.json()) as { etag?: string };
         setEtag(res.headers.get("ETag") ?? result.etag ?? null);
+        setIsDirty(false);
         setSaveError("");
         setStatusMessage(`Saved ${productsToSave.length} published records to disk.`);
+        router.refresh();
       });
     },
-    [products, etag, schemaVersion, meta, setSaveError, setStatusMessage]
+    [products, etag, schemaVersion, meta, router, setSaveError, setStatusMessage]
   );
 
   const handleDeletePublishedConfirm = useCallback(() => {
@@ -203,8 +217,13 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
         headers: { "Content-Type": "application/json", "If-Match": etag },
         body: JSON.stringify({ $schema_version: schemaVersion, $meta: meta, products: newArray }),
       });
-      if (res.ok) router.push("/editor/published");
-      else setSaveError(`Save failed: unexpected server response (${res.status}).`);
+      if (res.ok) {
+        setIsDirty(false);
+        router.refresh();
+        router.push("/editor/published");
+      } else {
+        setSaveError(`Save failed: unexpected server response (${res.status}).`);
+      }
     });
   }, [selected, products, etag, schemaVersion, meta, router, setSaveError, setStatusMessage]);
 
@@ -223,7 +242,7 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
             Priority
             <select
               value={selected.tracking_priority ?? ""}
-              onChange={(e) => setProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, tracking_priority: e.target.value || null } : p)))}
+              onChange={(e) => updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, tracking_priority: e.target.value || null } : p)))}
               className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">set priority</option>
