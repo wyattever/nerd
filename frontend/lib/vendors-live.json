@@ -1,0 +1,129 @@
+{
+  "$meta": {
+    "last_scraped": "2026-08-26T00:25:38.647120+00:00",
+    "total_records": 24,
+    "generated_by": "scrape_ncademi_live.py"
+  },
+  "vendors": [
+    {
+      "vendor_name": "Adobe",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/adobe/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "A+E Global Media",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/ae-global-media/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Amplify",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/amplify/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Barnes Noble",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/barnes-noble/",
+      "is_protected": true
+    },
+    {
+      "vendor_name": "BrainPOP",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/brainpop/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Capstone",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/capstone/",
+      "is_protected": true
+    },
+    {
+      "vendor_name": "Chegg",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/chegg/",
+      "is_protected": true
+    },
+    {
+      "vendor_name": "Ck 12 Foundation",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/ck-12-foundation/",
+      "is_protected": true
+    },
+    {
+      "vendor_name": "CommonLit",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/commonlit/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Curriculum Associates",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/curriculum-associates/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "edclub",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/edclub/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Explorelearning",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/explorelearning/",
+      "is_protected": true
+    },
+    {
+      "vendor_name": "Google",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/google/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Instructure",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/instructure/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "IXL Learning",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/ixl-learning/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Kami",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/kami/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Lexia",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/lexia/",
+      "is_protected": true
+    },
+    {
+      "vendor_name": "McGraw Hill",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/mcgraw-hill/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Microsoft",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/microsoft/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Newsela",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/newsela/",
+      "is_protected": true
+    },
+    {
+      "vendor_name": "PowerSchool",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/powerschool/",
+      "is_protected": false
+    },
+    {
+      "vendor_name": "Renaissance",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/renaissance/",
+      "is_protected": true
+    },
+    {
+      "vendor_name": "Seesaw",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/seesaw/",
+      "is_protected": true
+    },
+    {
+      "vendor_name": "Teaching.com",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/teaching-com/",
+      "is_protected": false
+    }
+  ]
+}

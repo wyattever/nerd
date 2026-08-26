@@ -1,16 +1,12 @@
 {
-  "$schema_version": 1,
   "$meta": {
-    "purpose": "Snapshot of what is actually rendered on the live NCADEMI directory (ncademi.org/provide/directory/products/), denormalized one object per product -- resources, support contacts, and ACR reports already embedded, no AppSheet-style cross-table name-matching required. Used by the Viewer's AppSheet/Published data-source toggle to show what's actually live, independent of AppSheet's internal Status field. This is a static snapshot, not a live fetch -- regenerate by re-running the scraper, do not fetch ncademi.org at Viewer load time.",
-    "source_listing_url": "https://ncademi.org/provide/directory/products/",
-    "snapshot_taken_at": "2026-08-21T19:07:55.185420+00:00",
-    "total_products": 60,
-    "generated_from": "Built from ncademi_live_all_products_2026-08-21.json (a one-off scrape output, not yet produced by a checked-in script). scripts/scraper.py and scripts/scrape_ncademi_directory.py exist but serve narrower purposes (eval golden-dataset ground-truth URLs, and directory URL categorization, respectively) -- neither produces this full per-product shape today. A dedicated scraper script to regenerate this file on a cadence is still TODO; see Session_Handoff for status."
+    "last_scraped": "2026-08-26T00:25:38.647120+00:00",
+    "total_records": 79,
+    "generated_by": "scrape_ncademi_live.py"
   },
   "products": [
     {
-      "slug": "99math",
-      "product_name": "99math Stored",
+      "product_name": "99math",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/99math/",
       "vendor_name": null,
       "vendor_directory_url": null,
@@ -36,10 +32,13 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "abcya",
       "product_name": "ABCya!",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/abcya/",
       "vendor_name": "IXL Learning",
@@ -71,10 +70,13 @@
         }
       ],
       "last_updated": "May 13, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "adobe-acrobat",
       "product_name": "Adobe Acrobat",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/adobe-acrobat/",
       "vendor_name": "Adobe",
@@ -148,10 +150,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "adobe-express",
       "product_name": "Adobe Express",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/adobe-express/",
       "vendor_name": "Adobe",
@@ -204,10 +209,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "aleks",
       "product_name": "ALEKS",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/aleks/",
       "vendor_name": "McGraw Hill",
@@ -247,10 +255,18 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "amplify-core-knowledge-language-arts-ckla",
+      "product_name": "Amplify Classroom",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-classroom/",
+      "is_protected": true
+    },
+    {
       "product_name": "Amplify Core Knowledge Language Arts (CKLA)",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-core-knowledge-language-arts-ckla/",
       "vendor_name": "Amplify",
@@ -282,10 +298,13 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "amplify-desmos-math",
       "product_name": "Amplify Desmos Math",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-desmos-math/",
       "vendor_name": "Amplify",
@@ -322,10 +341,13 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "amplify-ela",
       "product_name": "Amplify ELA",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-ela/",
       "vendor_name": "Amplify",
@@ -370,10 +392,13 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "blooket",
       "product_name": "Blooket",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/blooket/",
       "vendor_name": null,
@@ -405,10 +430,13 @@
         }
       ],
       "last_updated": "April 10, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "book-creator",
       "product_name": "Book Creator",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/book-creator/",
       "vendor_name": "Kami",
@@ -461,10 +489,13 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "bookflix",
       "product_name": "BookFlix ®",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/bookflix/",
       "vendor_name": null,
@@ -501,10 +532,13 @@
         }
       ],
       "last_updated": "June 23, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "brainingcamp",
       "product_name": "Brainingcamp",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainingcamp/",
       "vendor_name": null,
@@ -531,10 +565,13 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "brainly",
       "product_name": "Brainly",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainly/",
       "vendor_name": null,
@@ -561,10 +598,137 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "brainpop",
+      "product_name": "BrainPOP ELL",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop-ell/",
+      "vendor_name": "BrainPOP",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/brainpop/",
+      "product_website_url": "https://www.brainpop.com/classroom-solutions/products/brainpop-ell",
+      "product_description": "BrainPOP ELL is an interactive language learning platform that provides English language learners with engaging content, including animated movies, games, quizzes, and interactive features, to develop their listening, speaking, reading, and writing skills. The platform supports skill development through conversational English modeled by characters and integrates vocabulary, language, and content lessons.",
+      "vendor_resources": [
+        {
+          "text": "Accessible Ways for Students to Show Their Learning",
+          "url": "https://www.brainpop.com/discover/post/accessible-ways-for-students-to-show-their-learning"
+        }
+      ],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "email",
+          "value": "accessibility@brainpop.com",
+          "label": null
+        },
+        {
+          "type": "email",
+          "value": "accessibility@brainpop.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "BrainPOP ELL VPAT 2026 (DOCX)",
+          "url": "https://learn.brainpop.com/BrainPOP-ELL-VPAT-2026",
+          "version": "2.5",
+          "date": null,
+          "auditor_name": "Deque Systems",
+          "auditor_url": "https://www.deque.com/"
+        }
+      ],
+      "last_updated": "August 18, 2026",
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "BrainPOP Jr.",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop-jr/",
+      "vendor_name": "BrainPOP",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/brainpop/",
+      "product_website_url": "https://www.brainpop.com/classroom-solutions/products/brainpop-jr",
+      "product_description": "BrainPOP Jr. is an educational platform offering animated movies, interactive quizzes, games, and activities across various subjects for students in kindergarten through third grade. It aims to make learning engaging and accessible by providing content through multiple modalities, fostering curiosity, and supporting diverse learning styles.",
+      "vendor_resources": [
+        {
+          "text": "Spotlight on Accessibility: New on BrainPOP and BrainPOP Jr.",
+          "url": "https://www.brainpop.com/discover/post/spotlight-on-accessibility-new-on-brainpop-and-brainpop-jr"
+        }
+      ],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "email",
+          "value": "accessibility@brainpop.com",
+          "label": null
+        },
+        {
+          "type": "email",
+          "value": "accessibility@brainpop.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "BrainPOP Jr. VPAT 2026 (DOCX)",
+          "url": "https://learn.brainpop.com/BrainPOP-Jr-VPAT-2026",
+          "version": "2.5",
+          "date": null,
+          "auditor_name": "Deque Systems",
+          "auditor_url": "https://www.deque.com/"
+        }
+      ],
+      "last_updated": "August 18, 2026",
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "BrainPOP Science",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop-science/",
+      "vendor_name": "BrainPOP",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/brainpop/",
+      "product_website_url": "https://www.brainpop.com/science-solutions/brainpop-science",
+      "product_description": "BrainPOP Science is a middle school science curriculum platform built around scaffolded, standards-aligned investigations that use real-world phenomena, simulations, data manipulatives, and an embedded Claim-Evidence-Reasoning process. It is designed for students in grades 6-8.",
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "email",
+          "value": "accessibility@brainpop.com",
+          "label": null
+        },
+        {
+          "type": "email",
+          "value": "accessibility@brainpop.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "BrainPOP Science VPAT 2026 (DOCX)",
+          "url": "https://learn.brainpop.com/BrainPOP-Science-VPAT-2026",
+          "version": "2.5",
+          "date": null,
+          "auditor_name": "Deque Systems",
+          "auditor_url": "https://www.deque.com/"
+        }
+      ],
+      "last_updated": "August 18, 2026",
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
       "product_name": "BrainPOP",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop/",
       "vendor_name": "BrainPOP",
@@ -606,125 +770,13 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "brainpop-ell",
-      "product_name": "BrainPOP ELL",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop-ell/",
-      "vendor_name": "BrainPOP",
-      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/brainpop/",
-      "product_website_url": "https://www.brainpop.com/classroom-solutions/products/brainpop-ell",
-      "product_description": "BrainPOP ELL is an interactive language learning platform that provides English language learners with engaging content, including animated movies, games, quizzes, and interactive features, to develop their listening, speaking, reading, and writing skills. The platform supports skill development through conversational English modeled by characters and integrates vocabulary, language, and content lessons.",
-      "vendor_resources": [
-        {
-          "text": "Accessible Ways for Students to Show Their Learning",
-          "url": "https://www.brainpop.com/discover/post/accessible-ways-for-students-to-show-their-learning"
-        }
-      ],
-      "other_resources": [],
-      "support_contacts": [
-        {
-          "type": "email",
-          "value": "accessibility@brainpop.com",
-          "label": null
-        },
-        {
-          "type": "email",
-          "value": "accessibility@brainpop.com",
-          "label": null
-        }
-      ],
-      "acr_reports": [
-        {
-          "title": "BrainPOP ELL VPAT 2026 (DOCX)",
-          "url": "https://learn.brainpop.com/BrainPOP-ELL-VPAT-2026",
-          "version": "2.5",
-          "date": null,
-          "auditor_name": "Deque Systems",
-          "auditor_url": "https://www.deque.com/"
-        }
-      ],
-      "last_updated": "August 18, 2026",
-      "ai_insights": null
-    },
-    {
-      "slug": "brainpop-jr",
-      "product_name": "BrainPOP Jr.",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop-jr/",
-      "vendor_name": "BrainPOP",
-      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/brainpop/",
-      "product_website_url": "https://www.brainpop.com/classroom-solutions/products/brainpop-jr",
-      "product_description": "BrainPOP Jr. is an educational platform offering animated movies, interactive quizzes, games, and activities across various subjects for students in kindergarten through third grade. It aims to make learning engaging and accessible by providing content through multiple modalities, fostering curiosity, and supporting diverse learning styles.",
-      "vendor_resources": [
-        {
-          "text": "Spotlight on Accessibility: New on BrainPOP and BrainPOP Jr.",
-          "url": "https://www.brainpop.com/discover/post/spotlight-on-accessibility-new-on-brainpop-and-brainpop-jr"
-        }
-      ],
-      "other_resources": [],
-      "support_contacts": [
-        {
-          "type": "email",
-          "value": "accessibility@brainpop.com",
-          "label": null
-        },
-        {
-          "type": "email",
-          "value": "accessibility@brainpop.com",
-          "label": null
-        }
-      ],
-      "acr_reports": [
-        {
-          "title": "BrainPOP Jr. VPAT 2026 (DOCX)",
-          "url": "https://learn.brainpop.com/BrainPOP-Jr-VPAT-2026",
-          "version": "2.5",
-          "date": null,
-          "auditor_name": "Deque Systems",
-          "auditor_url": "https://www.deque.com/"
-        }
-      ],
-      "last_updated": "August 18, 2026",
-      "ai_insights": null
-    },
-    {
-      "slug": "brainpop-science",
-      "product_name": "BrainPOP Science",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop-science/",
-      "vendor_name": "BrainPOP",
-      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/brainpop/",
-      "product_website_url": "https://www.brainpop.com/science-solutions/brainpop-science",
-      "product_description": "BrainPOP Science is a middle school science curriculum platform built around scaffolded, standards-aligned investigations that use real-world phenomena, simulations, data manipulatives, and an embedded Claim-Evidence-Reasoning process. It is designed for students in grades 6-8.",
-      "vendor_resources": [],
-      "other_resources": [],
-      "support_contacts": [
-        {
-          "type": "email",
-          "value": "accessibility@brainpop.com",
-          "label": null
-        },
-        {
-          "type": "email",
-          "value": "accessibility@brainpop.com",
-          "label": null
-        }
-      ],
-      "acr_reports": [
-        {
-          "title": "BrainPOP Science VPAT 2026 (DOCX)",
-          "url": "https://learn.brainpop.com/BrainPOP-Science-VPAT-2026",
-          "version": "2.5",
-          "date": null,
-          "auditor_name": "Deque Systems",
-          "auditor_url": "https://www.deque.com/"
-        }
-      ],
-      "last_updated": "August 18, 2026",
-      "ai_insights": null
-    },
-    {
-      "slug": "canva",
       "product_name": "Canva",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/canva/",
       "vendor_name": null,
@@ -765,10 +817,13 @@
         }
       ],
       "last_updated": "April 10, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "canvas-lms",
       "product_name": "Canvas LMS",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/canvas-lms/",
       "vendor_name": "Instructure",
@@ -825,10 +880,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "canvas-studio",
       "product_name": "Canvas Studio",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/canvas-studio/",
       "vendor_name": "Instructure",
@@ -877,10 +935,13 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "chatgpt",
       "product_name": "ChatGPT",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/chatgpt/",
       "vendor_name": null,
@@ -912,10 +973,18 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "code-org",
+      "product_name": "Ck 12",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/ck-12/",
+      "is_protected": true
+    },
+    {
       "product_name": "Code.org",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/code-org/",
       "vendor_name": null,
@@ -942,10 +1011,18 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "coolmathgames",
+      "product_name": "Commonlit 360",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/commonlit-360/",
+      "is_protected": true
+    },
+    {
       "product_name": "CoolMathGames",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/coolmathgames/",
       "vendor_name": null,
@@ -972,10 +1049,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "desmos",
       "product_name": "Desmos",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/desmos/",
       "vendor_name": null,
@@ -1035,10 +1115,13 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "edpuzzle",
       "product_name": "EdPuzzle",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/edpuzzle/",
       "vendor_name": null,
@@ -1065,10 +1148,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "encyclopedia-britannica",
       "product_name": "Encyclopedia Britannica",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/encyclopedia-britannica/",
       "vendor_name": null,
@@ -1100,10 +1186,13 @@
         }
       ],
       "last_updated": "April 10, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "epic",
       "product_name": "Epic!",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/epic/",
       "vendor_name": null,
@@ -1130,10 +1219,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "excel",
       "product_name": "Excel",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/excel/",
       "vendor_name": "Microsoft",
@@ -1218,10 +1310,23 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "gimkit",
+      "product_name": "Formative",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/formative/",
+      "is_protected": true
+    },
+    {
+      "product_name": "Frax",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/frax/",
+      "is_protected": true
+    },
+    {
       "product_name": "Gimkit",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/gimkit/",
       "vendor_name": null,
@@ -1248,10 +1353,18 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "google-classroom",
+      "product_name": "Gizmos",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/gizmos/",
+      "is_protected": true
+    },
+    {
       "product_name": "Google Classroom",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-classroom/",
       "vendor_name": "Google",
@@ -1296,10 +1409,13 @@
         }
       ],
       "last_updated": "April 7, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "google-docs",
       "product_name": "Google Docs",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-docs/",
       "vendor_name": "Google",
@@ -1357,10 +1473,13 @@
         }
       ],
       "last_updated": "April 7, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "google-forms",
       "product_name": "Google Forms",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-forms/",
       "vendor_name": "Google",
@@ -1414,10 +1533,13 @@
         }
       ],
       "last_updated": "July 23, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "google-sheets",
       "product_name": "Google Sheets",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-sheets/",
       "vendor_name": "Google",
@@ -1467,10 +1589,13 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "google-slides",
       "product_name": "Google Slides",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-slides/",
       "vendor_name": "Google",
@@ -1516,10 +1641,18 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "history-com",
+      "product_name": "Grammarly",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/grammarly/",
+      "is_protected": true
+    },
+    {
       "product_name": "History.com",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/history-com/",
       "vendor_name": "A+E Global Media",
@@ -1551,10 +1684,68 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "i-ready",
+      "product_name": "i-Ready Classroom Mathematics",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready-classroom-mathematics/",
+      "vendor_name": "Curriculum Associates",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/curriculum-associates/",
+      "product_website_url": "https://www.curriculumassociates.com/programs/i-ready-learning/i-ready-classroom-mathematics-2024",
+      "product_description": "i-Ready Classroom Mathematics is a K–8 mathematics curriculum from Curriculum Associates that provides teacher-led lessons, digital activities, and assessments to support standards-aligned math instruction and help students develop conceptual understanding and problem-solving skills.",
+      "vendor_resources": [
+        {
+          "text": "i-Ready Classroom Mathematics: Accessibility and Accommodations Update (PDF)",
+          "url": "https://cdn.bfldr.com/LS6J0F7/at/7wjj4vcgj55sgt6qw93x3/2960284-iready-classroom-mathematics-accessibility-and-accommodations-update_1.pdf"
+        },
+        {
+          "text": "What Accessibility Features are Available in i-Ready Classroom Mathematics? (PDF)",
+          "url": "https://cdn.bfldr.com/LS6J0F7/at/85p56nx6784htnxf3np3cb/ircl-accessibility-faq.pdf"
+        },
+        {
+          "text": "Comprehension Checks Accessibility Guidance (PDF)",
+          "url": "https://cdn.bfldr.com/LS6J0F7/at/3769s45jk9bmjk9k6x9hc/ircl-comprehension-checks-universal-accessibilityaccommodations-guidance.pdf"
+        },
+        {
+          "text": "Digital Practice Accessibility Guidance (PDF)",
+          "url": "https://cdn.bfldr.com/LS6J0F7/at/9jqqbx3srrgpgfks2vjbvf/ircl-digital-practice-universal-accessibility-and-accommodations-guidance.pdf"
+        }
+      ],
+      "other_resources": [
+        {
+          "text": "i-Ready TrustEd Apps Profile - Accessibility Rubric",
+          "url": "https://site.imsglobal.org/accessibility-rubric/app-vetting-profile-for-i-ready/626602"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://www.curriculumassociates.com/support/contact-rep/rep-finder",
+          "label": "Contact your local Curriculum Associates representative"
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "Available on Request",
+          "url": null,
+          "version": null,
+          "date": null,
+          "auditor_name": null,
+          "auditor_url": null
+        }
+      ],
+      "last_updated": "May 20, 2026",
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
       "product_name": "i-Ready",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready/",
       "vendor_name": "Curriculum Associates",
@@ -1639,62 +1830,13 @@
         }
       ],
       "last_updated": "May 27, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "i-ready-classroom-mathematics",
-      "product_name": "i-Ready Classroom Mathematics",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready-classroom-mathematics/",
-      "vendor_name": "Curriculum Associates",
-      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/curriculum-associates/",
-      "product_website_url": "https://www.curriculumassociates.com/programs/i-ready-learning/i-ready-classroom-mathematics-2024",
-      "product_description": "i-Ready Classroom Mathematics is a K–8 mathematics curriculum from Curriculum Associates that provides teacher-led lessons, digital activities, and assessments to support standards-aligned math instruction and help students develop conceptual understanding and problem-solving skills.",
-      "vendor_resources": [
-        {
-          "text": "i-Ready Classroom Mathematics: Accessibility and Accommodations Update (PDF)",
-          "url": "https://cdn.bfldr.com/LS6J0F7/at/7wjj4vcgj55sgt6qw93x3/2960284-iready-classroom-mathematics-accessibility-and-accommodations-update_1.pdf"
-        },
-        {
-          "text": "What Accessibility Features are Available in i-Ready Classroom Mathematics? (PDF)",
-          "url": "https://cdn.bfldr.com/LS6J0F7/at/85p56nx6784htnxf3np3cb/ircl-accessibility-faq.pdf"
-        },
-        {
-          "text": "Comprehension Checks Accessibility Guidance (PDF)",
-          "url": "https://cdn.bfldr.com/LS6J0F7/at/3769s45jk9bmjk9k6x9hc/ircl-comprehension-checks-universal-accessibilityaccommodations-guidance.pdf"
-        },
-        {
-          "text": "Digital Practice Accessibility Guidance (PDF)",
-          "url": "https://cdn.bfldr.com/LS6J0F7/at/9jqqbx3srrgpgfks2vjbvf/ircl-digital-practice-universal-accessibility-and-accommodations-guidance.pdf"
-        }
-      ],
-      "other_resources": [
-        {
-          "text": "i-Ready TrustEd Apps Profile - Accessibility Rubric",
-          "url": "https://site.imsglobal.org/accessibility-rubric/app-vetting-profile-for-i-ready/626602"
-        }
-      ],
-      "support_contacts": [
-        {
-          "type": "url",
-          "value": "https://www.curriculumassociates.com/support/contact-rep/rep-finder",
-          "label": "Contact your local Curriculum Associates representative"
-        }
-      ],
-      "acr_reports": [
-        {
-          "title": "Available on Request",
-          "url": null,
-          "version": null,
-          "date": null,
-          "auditor_name": null,
-          "auditor_url": null
-        }
-      ],
-      "last_updated": "May 20, 2026",
-      "ai_insights": null
-    },
-    {
-      "slug": "ixl",
       "product_name": "IXL",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/ixl/",
       "vendor_name": "IXL Learning",
@@ -1748,10 +1890,13 @@
         }
       ],
       "last_updated": "March 27, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "kahoot",
       "product_name": "Kahoot!",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/kahoot/",
       "vendor_name": null,
@@ -1778,10 +1923,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "kami",
       "product_name": "Kami",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/kami/",
       "vendor_name": null,
@@ -1813,10 +1961,13 @@
         }
       ],
       "last_updated": "March 10, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "khan-academy",
       "product_name": "Khan Academy",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/khan-academy/",
       "vendor_name": null,
@@ -1848,10 +1999,28 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "mastery-connect",
+      "product_name": "Lexia Core5 Reading",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/lexia-core5-reading/",
+      "is_protected": true
+    },
+    {
+      "product_name": "Lexia English Language Development",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/lexia-english-language-development/",
+      "is_protected": true
+    },
+    {
+      "product_name": "Lexia Powerup Literacy",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/lexia-powerup-literacy/",
+      "is_protected": true
+    },
+    {
       "product_name": "Mastery Connect",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/mastery-connect/",
       "vendor_name": "Instructure",
@@ -1895,10 +2064,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "math-playground",
       "product_name": "Math Playground",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/math-playground/",
       "vendor_name": null,
@@ -1925,10 +2097,18 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "mclass",
+      "product_name": "Mathway",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/mathway/",
+      "is_protected": true
+    },
+    {
       "product_name": "mCLASS",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/mclass/",
       "vendor_name": "Amplify",
@@ -1960,10 +2140,23 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "nitro-type",
+      "product_name": "Nearpod",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/nearpod/",
+      "is_protected": true
+    },
+    {
+      "product_name": "Newsela Student Platform",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/newsela-student-platform/",
+      "is_protected": true
+    },
+    {
       "product_name": "Nitro Type",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/nitro-type/",
       "vendor_name": "Teaching.com",
@@ -1984,10 +2177,18 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "notebook-lm",
+      "product_name": "Noredink",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/noredink/",
+      "is_protected": true
+    },
+    {
       "product_name": "Notebook LM",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/notebook-lm/",
       "vendor_name": "Google",
@@ -2033,10 +2234,13 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "pbs",
       "product_name": "PBS",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/pbs/",
       "vendor_name": null,
@@ -2076,10 +2280,23 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "phet-interactive",
+      "product_name": "Pear Deck",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/pear-deck/",
+      "is_protected": true
+    },
+    {
+      "product_name": "Pebblego",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/pebblego/",
+      "is_protected": true
+    },
+    {
       "product_name": "PhET Interactive Simulations",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/phet-interactive/",
       "vendor_name": null,
@@ -2111,10 +2328,13 @@
         }
       ],
       "last_updated": "March 10, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "powerpoint",
       "product_name": "PowerPoint",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/powerpoint/",
       "vendor_name": "Microsoft",
@@ -2187,10 +2407,13 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "prodigy",
       "product_name": "Prodigy",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/prodigy/",
       "vendor_name": null,
@@ -2217,10 +2440,13 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "quizlet",
       "product_name": "Quizlet",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/quizlet/",
       "vendor_name": null,
@@ -2257,10 +2483,18 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "schoology",
+      "product_name": "Readworks",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/readworks/",
+      "is_protected": true
+    },
+    {
       "product_name": "Schoology",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/schoology/",
       "vendor_name": "PowerSchool",
@@ -2301,10 +2535,13 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "scratch",
       "product_name": "Scratch",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/scratch/",
       "vendor_name": null,
@@ -2331,10 +2568,23 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "study-com",
+      "product_name": "Seesaw Elementary Lms",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/seesaw-elementary-lms/",
+      "is_protected": true
+    },
+    {
+      "product_name": "Sparknotes",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/sparknotes/",
+      "is_protected": true
+    },
+    {
       "product_name": "Study.com",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/study-com/",
       "vendor_name": null,
@@ -2366,10 +2616,13 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "typing-com",
       "product_name": "Typing.Com",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/typing-com/",
       "vendor_name": "Teaching.com",
@@ -2409,10 +2662,13 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "typingclub",
       "product_name": "TypingClub",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/typingclub/",
       "vendor_name": "edclub",
@@ -2449,10 +2705,13 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "wayground",
       "product_name": "Wayground",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/wayground/",
       "vendor_name": null,
@@ -2479,10 +2738,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "weebly",
       "product_name": "Weebly",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/weebly/",
       "vendor_name": null,
@@ -2509,10 +2771,13 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "word",
       "product_name": "Word",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/word/",
       "vendor_name": "Microsoft",
@@ -2589,10 +2854,13 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     },
     {
-      "slug": "youtube",
       "product_name": "YouTube",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/youtube/",
       "vendor_name": "Google",
@@ -2646,7 +2914,11 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "ai_insights": null
+      "is_protected": false,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
     }
   ]
 }
