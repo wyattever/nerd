@@ -2,32 +2,32 @@
 "use client";
 
 /**
- * Structured products editor for the /vendors visual editor. Edits
- * VendorRecord's `products` array (VendorProductLink[]: { product_name,
- * ncademi_product_url }) as a dynamic list of add/edit/remove rows, rather
- * than raw JSON.
+ * Structured products editor for the vendor Directory editor. Edits
+ * DirectoryRecord's `products` array (DirectoryProductLink[]: {
+ * product_name, ncademi_product_url }) as a dynamic list of add/edit/remove
+ * rows, rather than raw JSON.
  *
  * Follows PublishedOtherResourcesEditor.tsx / PublishedVendorResourcesEditor.tsx
  * for the dialog and dynamic-list architecture (native <dialog> +
  * showModal(), no aria-modal, no cleanup-time dialog.close(), per-row focus
  * targeting via a pendingFocusId ref) -- see those files for the full
  * rationale. Field shape differs (product_name/ncademi_product_url instead
- * of text/url), and per vendor-schema.ts, VendorProductLink has no
+ * of text/url), and per directory-schema.ts, DirectoryProductLink has no
  * description field or per-product resources -- this editor only manages
  * the name/URL pair.
  *
- * Row identity: VendorProductLink has no id field, so each row gets a
+ * Row identity: DirectoryProductLink has no id field, so each row gets a
  * client-only id (crypto.randomUUID()) used purely for React keys and
  * focus-targeting -- it is never persisted; onSave strips it back down to
  * { product_name, ncademi_product_url }.
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import type { VendorProductLink, VendorRecord } from "@/lib/vendor-schema";
+import type { DirectoryProductLink, DirectoryRecord } from "@/lib/directory-schema";
 
 interface VendorProductsEditorProps {
-  record: VendorRecord;
-  onSave: (products: VendorProductLink[]) => void;
+  record: DirectoryRecord;
+  onSave: (products: DirectoryProductLink[]) => void;
   onClose: () => void;
 }
 
@@ -196,7 +196,7 @@ export function VendorProductsEditor({ record, onSave, onClose }: VendorProducts
       className="w-full max-w-2xl rounded-lg border border-gray-200 bg-white p-6 shadow-xl backdrop:bg-gray-900/50"
     >
       <h2 id={titleId} className="mb-4 text-lg font-bold text-gray-900">
-        Edit: Product/s — {record.vendor_name}
+        Edit: Product/s — {record.product_name}
       </h2>
 
       <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1">

@@ -27,6 +27,7 @@ import { notFound } from "next/navigation";
 import { isLocalOnlyAllowed } from "./local-only";
 import { readPublishedRaw, type DataKind } from "./local-write";
 import type { PublishedProductRecord } from "./published-tables";
+import type { DirectoryRecord, DirectoryFile } from "./directory-schema";
 
 export interface SnapshotMeta {
   purpose: string;
@@ -71,6 +72,49 @@ export function getAddedProducts(): Promise<LocalDocument> {
 
 export function getPublishedProducts(): Promise<LocalDocument> {
   return readLocalDocument("published");
+}
+
+export interface VendorsDocument {
+  vendors: DirectoryRecord[];
+  schemaVersion: number | null;
+  meta: DirectoryFile["$meta"] | null;
+  etag: string;
+}
+
+/**
+ * Reads vendors.json -- same isLocalOnlyAllowed()/readPublishedRaw()
+ * guarded pattern as readLocalDocument() above, kept as its own function
+ * rather than a DataKind-generic version of that one: the file's top-level
+ * array key is `vendors`, not `products`, and its `$meta` shape
+ * (DirectoryFile["$meta"], e.g. `total_vendors`) doesn't match
+ * SnapshotMeta's product-oriented fields (`total_products`), so the two
+ * response shapes can't be unified without either lying about the type or
+ * adding a generic parameter for one caller.
+ *
+ * Callers only ever need the resolved array by the time they save (see
+ * VendorEditor.tsx's own GET-then-POST at save time, which re-fetches
+ * schemaVersion/meta/etag fresh rather than trusting what this function
+ * returned at page-load time) -- schemaVersion/meta/etag are returned here
+ * anyway for parity with the other readers and for [slug]/page.tsx's
+ * initial render, not because the write path depends on them staying
+ * fresh.
+ */
+export async function getVendors(): Promise<VendorsDocument> {
+  if (!isLocalOnlyAllowed()) notFound();
+
+  const { data, etag } = await readPublishedRaw("vendors");
+  const body = JSON.parse(data) as {
+    $schema_version?: unknown;
+    $meta?: unknown;
+    vendors?: unknown;
+  };
+
+  return {
+    vendors: Array.isArray(body.vendors) ? (body.vendors as DirectoryRecord[]) : [],
+    schemaVersion: typeof body.$schema_version === "number" ? body.$schema_version : null,
+    meta: body.$meta ? (body.$meta as DirectoryFile["$meta"]) : null,
+    etag,
+  };
 }
 
 const PUBLISHED_LIVE_PATH = path.join(process.cwd(), "lib", "published-live.json");

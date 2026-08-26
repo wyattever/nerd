@@ -2,60 +2,62 @@
 "use client";
 
 /**
- * Unified "Add Vendor" modal for the /vendors visual editor. Unlike the
- * four field-group editors (VendorHeaderEditor, VendorGlobalResourcesEditor,
- * VendorProductsEditor, VendorSupportEditor), which each edit one section of
- * an EXISTING VendorRecord, this modal authors a brand-new VendorRecord from
+ * Unified "Add Vendor" modal for the vendor Directory editor. Unlike the
+ * three field-group editors (VendorGlobalResourcesEditor, VendorProductsEditor,
+ * VendorSupportEditor), which each edit one section of an EXISTING
+ * DirectoryRecord, this modal authors a brand-new DirectoryRecord from
  * scratch in one scrollable form -- there is no record to key off of yet, so
  * every field starts empty/default rather than seeded from a prop.
  *
  * Dialog architecture matches the other vendor editors: native <dialog> +
  * showModal(), no aria-modal, and the effect cleanup does NOT call
- * dialog.close() -- see VendorHeaderEditor.tsx / PublishedHeaderEditor.tsx
+ * dialog.close() -- see DirectoryHeaderEditor.tsx / PublishedHeaderEditor.tsx
  * for why (React 19 Strict Mode's dev-only double-invoke can turn a
  * cleanup-time close() into a phantom close event landing on a freshly
  * re-attached listener).
  *
- * Mount/unmount, not the `isOpen` prop, is what resets the draft: /vendors/
- * page.tsx only renders this component while isCreateModalOpen is true (see
- * that file), so a fresh mount always starts from makeEmptyDraft() via
- * useState's lazy initializer. `isOpen` is kept as an explicit prop (rather
- * than assuming "mounted implies open") so the showModal() effect has a
- * real guard instead of an implicit one -- but resetting draft state
- * whenever `isOpen` flips true would mean calling setState synchronously
- * inside an effect body (the exact react-hooks/set-state-in-effect pattern
- * SectionEditor.tsx already trips on), so this component deliberately does
- * NOT watch `isOpen` to reset state; a full remount is the reset mechanism.
+ * Mount/unmount, not the `isOpen` prop, is what resets the draft: the
+ * vendor editor only renders this component while isCreateModalOpen is
+ * true (see VendorEditor.tsx), so a fresh mount always starts from
+ * makeEmptyDraft() via useState's lazy initializer. `isOpen` is kept as an
+ * explicit prop (rather than assuming "mounted implies open") so the
+ * showModal() effect has a real guard instead of an implicit one -- but
+ * resetting draft state whenever `isOpen` flips true would mean calling
+ * setState synchronously inside an effect body (the exact
+ * react-hooks/set-state-in-effect pattern SectionEditor.tsx already trips
+ * on), so this component deliberately does NOT watch `isOpen` to reset
+ * state; a full remount is the reset mechanism.
  *
- * Row identity: like the individual editors, VendorResource/VendorProductLink/
- * PublishedSupportContact rows get a client-only id (crypto.randomUUID())
- * for React keys and focus-targeting -- never persisted; onAdd strips it
- * back down to each type's real shape (VendorResource keeps `id` since that
- * field is part of its persisted shape, unlike the other two row types).
+ * Row identity: like the individual editors, resource/product/contact rows
+ * get a client-only id (crypto.randomUUID()) for React keys and
+ * focus-targeting -- never persisted; onAdd strips it back down to each
+ * type's real DirectoryRecord shape. Global resources are drafted as a
+ * single list with a Section selector (vendor_resources vs
+ * other_resources), split into the two arrays on submit -- same pattern as
+ * VendorGlobalResourcesEditor.tsx, see that file for why the unified schema
+ * needs this split instead of a single array with a source enum.
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PublishedSupportContact } from "@/lib/published-tables";
-import type { VendorProductLink, VendorRecord, VendorResource } from "@/lib/vendor-schema";
+import type { DirectoryProductLink, DirectoryRecord, DirectoryResourceLink } from "@/lib/directory-schema";
+import { slugify } from "@/lib/directory-schema";
 
 interface VendorCreateModalProps {
   isOpen: boolean;
   existingVendorNames: string[];
-  onAdd: (record: VendorRecord) => void;
+  onAdd: (record: DirectoryRecord) => void;
   onClose: () => void;
 }
 
-type ResourceSource = "Internal" | "External";
+type ResourceSection = "vendor" | "other";
 type ContactType = "email" | "url";
 
 interface DraftResourceRow {
   id: string;
   text: string;
   url: string;
-  source: ResourceSource;
-  label: string;
-  date: string;
-  addedToSite: boolean;
+  section: ResourceSection;
 }
 
 interface DraftProductRow {
@@ -72,11 +74,10 @@ interface DraftContactRow {
 }
 
 interface Draft {
-  vendor_name: string;
-  vendor_website_url: string;
+  product_name: string;
+  product_website_url: string;
   vendor_directory_url: string;
-  notes: string;
-  added_to_site: boolean;
+  product_description: string;
   resources: DraftResourceRow[];
   products: DraftProductRow[];
   support_contacts: DraftContactRow[];
@@ -84,11 +85,10 @@ interface Draft {
 
 function makeEmptyDraft(): Draft {
   return {
-    vendor_name: "",
-    vendor_website_url: "",
+    product_name: "",
+    product_website_url: "",
     vendor_directory_url: "",
-    notes: "",
-    added_to_site: false,
+    product_description: "",
     resources: [],
     products: [],
     support_contacts: [],
@@ -99,9 +99,9 @@ function makeRowId(): string {
   return crypto.randomUUID();
 }
 
-/** Empty input maps to null, matching VendorRecord's nullable string fields
- *  -- an empty string is not the "no value" signal the rest of the schema
- *  uses (see PublishedHeaderEditor's toRecordValue). */
+/** Empty input maps to null, matching DirectoryRecord's nullable string
+ *  fields -- an empty string is not the "no value" signal the rest of the
+ *  schema uses (see PublishedHeaderEditor's toRecordValue). */
 function toRecordValue(v: string): string | null {
   const trimmed = v.trim();
   return trimmed === "" ? null : trimmed;
@@ -143,11 +143,10 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
   const isDirtyRef = useRef(false);
   useEffect(() => {
     isDirtyRef.current =
-      draft.vendor_name !== "" ||
-      draft.vendor_website_url !== "" ||
+      draft.product_name !== "" ||
+      draft.product_website_url !== "" ||
       draft.vendor_directory_url !== "" ||
-      draft.notes !== "" ||
-      draft.added_to_site !== false ||
+      draft.product_description !== "" ||
       draft.resources.length > 0 ||
       draft.products.length > 0 ||
       draft.support_contacts.length > 0;
@@ -160,8 +159,7 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
   const websiteId = `${baseId}-website`;
   const websiteHintId = `${baseId}-website-hint`;
   const directoryId = `${baseId}-directory`;
-  const notesId = `${baseId}-notes`;
-  const addedId = `${baseId}-added`;
+  const descriptionId = `${baseId}-description`;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -230,24 +228,20 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
 
   // ---- Header field handlers ----
 
-  const handleVendorNameChange = useCallback((value: string) => {
-    setDraft((prev) => ({ ...prev, vendor_name: value }));
+  const handleHeaderNameChange = useCallback((value: string) => {
+    setDraft((prev) => ({ ...prev, product_name: value }));
   }, []);
 
   const handleWebsiteUrlChange = useCallback((value: string) => {
-    setDraft((prev) => ({ ...prev, vendor_website_url: value }));
+    setDraft((prev) => ({ ...prev, product_website_url: value }));
   }, []);
 
   const handleDirectoryUrlChange = useCallback((value: string) => {
     setDraft((prev) => ({ ...prev, vendor_directory_url: value }));
   }, []);
 
-  const handleNotesChange = useCallback((value: string) => {
-    setDraft((prev) => ({ ...prev, notes: value }));
-  }, []);
-
-  const handleAddedToSiteChange = useCallback((value: boolean) => {
-    setDraft((prev) => ({ ...prev, added_to_site: value }));
+  const handleDescriptionChange = useCallback((value: string) => {
+    setDraft((prev) => ({ ...prev, product_description: value }));
   }, []);
 
   // ---- Global resources handlers ----
@@ -257,10 +251,7 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
     pendingResourceFocusIdRef.current = id;
     setDraft((prev) => ({
       ...prev,
-      resources: [
-        ...prev.resources,
-        { id, text: "", url: "", source: "Internal", label: "", date: "", addedToSite: false },
-      ],
+      resources: [...prev.resources, { id, text: "", url: "", section: "vendor" }],
     }));
   }, []);
 
@@ -292,31 +283,10 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
     }));
   }, []);
 
-  const handleResourceSourceChange = useCallback((id: string, value: ResourceSource) => {
+  const handleResourceSectionChange = useCallback((id: string, value: ResourceSection) => {
     setDraft((prev) => ({
       ...prev,
-      resources: prev.resources.map((r) => (r.id === id ? { ...r, source: value } : r)),
-    }));
-  }, []);
-
-  const handleResourceLabelChange = useCallback((id: string, value: string) => {
-    setDraft((prev) => ({
-      ...prev,
-      resources: prev.resources.map((r) => (r.id === id ? { ...r, label: value } : r)),
-    }));
-  }, []);
-
-  const handleResourceDateChange = useCallback((id: string, value: string) => {
-    setDraft((prev) => ({
-      ...prev,
-      resources: prev.resources.map((r) => (r.id === id ? { ...r, date: value } : r)),
-    }));
-  }, []);
-
-  const handleResourceAddedToSiteChange = useCallback((id: string, value: boolean) => {
-    setDraft((prev) => ({
-      ...prev,
-      resources: prev.resources.map((r) => (r.id === id ? { ...r, addedToSite: value } : r)),
+      resources: prev.resources.map((r) => (r.id === id ? { ...r, section: value } : r)),
     }));
   }, []);
 
@@ -408,11 +378,11 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
 
   // ---- Submit ----
 
-  const trimmedName = draft.vendor_name.trim();
+  const trimmedName = draft.product_name.trim();
   const isNameEmpty = trimmedName === "";
-  // Exact match against the trimmed name, matching vendor_name's use as an
-  // exact-string join key everywhere else in vendors.json (see
-  // vendor-schema.ts) -- not a case-insensitive comparison.
+  // Exact match against the trimmed name, matching product_name's use as
+  // this registry's display-name join key everywhere else (see
+  // directory-schema.ts) -- not a case-insensitive comparison.
   const isDuplicateName = !isNameEmpty && existingVendorNames.includes(trimmedName);
   const isAddDisabled = isNameEmpty || isDuplicateName;
 
@@ -422,21 +392,14 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
   const handleAdd = useCallback(() => {
     if (isAddDisabled) return;
 
-    const resources: VendorResource[] = draft.resources
-      // Drop rows the user added but never filled in -- an all-blank row
-      // carries no information worth persisting.
-      .filter((r) => r.text.trim() !== "" || r.url.trim() !== "")
-      .map((r) => ({
-        id: r.id,
-        text: r.text.trim(),
-        url: r.url.trim(),
-        source: r.source,
-        label: toRecordValue(r.label),
-        date: toRecordValue(r.date),
-        added_to_site: r.addedToSite,
-      }));
+    // Drop rows the user added but never filled in -- an all-blank row
+    // carries no information worth persisting.
+    const nonBlankResources = draft.resources.filter((r) => r.text.trim() !== "" || r.url.trim() !== "");
+    const toLink = (r: DraftResourceRow): DirectoryResourceLink => ({ text: r.text.trim(), url: r.url.trim() });
+    const vendor_resources = nonBlankResources.filter((r) => r.section === "vendor").map(toLink);
+    const other_resources = nonBlankResources.filter((r) => r.section === "other").map(toLink);
 
-    const products: VendorProductLink[] = draft.products
+    const products: DirectoryProductLink[] = draft.products
       .filter((p) => p.product_name.trim() !== "" || p.ncademi_product_url.trim() !== "")
       .map((p) => ({
         product_name: p.product_name.trim(),
@@ -451,20 +414,30 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
         label: toRecordValue(c.label),
       }));
 
-    const record: VendorRecord = {
+    const record: DirectoryRecord = {
+      kind: "vendor",
+      slug: slugify(trimmedName),
+      product_name: trimmedName,
+      // Populated with the vendor's own name, matching every existing
+      // vendor-kind record in vendors.json (see
+      // scripts/migrate_vendors_to_unified.py) -- not left null, so a
+      // freshly created record isn't the only one that looks different.
       vendor_name: trimmedName,
-      vendor_website_url: toRecordValue(draft.vendor_website_url),
       vendor_directory_url: toRecordValue(draft.vendor_directory_url),
-      // Free-text AppSheet export timestamp elsewhere in this schema (see
-      // vendor-schema.ts) -- null here since this record has no AppSheet
-      // provenance, same reasoning as support_contacts defaulting to
-      // unpopulated for scraped vendors.
-      last_updated: null,
-      added_to_site: draft.added_to_site,
-      notes: toRecordValue(draft.notes),
-      resources,
-      products,
+      product_website_url: toRecordValue(draft.product_website_url),
+      product_description: toRecordValue(draft.product_description),
+      vendor_resources,
+      other_resources,
       support_contacts,
+      acr_reports: [],
+      products,
+      // Free-text AppSheet export timestamp elsewhere in this schema (see
+      // directory-schema.ts) -- null here since this record has no
+      // AppSheet provenance, same reasoning as support_contacts defaulting
+      // to unpopulated for scraped vendors.
+      last_updated: null,
+      ai_insights: null,
+      tracking_status: null,
     };
 
     onAdd(record);
@@ -500,16 +473,15 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
               type="text"
               required
               aria-required="true"
-              value={draft.vendor_name}
-              onChange={(e) => handleVendorNameChange(e.target.value)}
+              value={draft.product_name}
+              onChange={(e) => handleHeaderNameChange(e.target.value)}
               aria-describedby={nameDescribedBy}
               aria-invalid={isDuplicateName ? true : undefined}
               autoFocus
               className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <p id={nameHintId} className="mt-1 text-xs text-gray-500">
-              Required. Also the join key used to match this vendor&apos;s resources elsewhere in
-              vendors.json.
+              Required. Stored as product_name -- also this registry&apos;s display-name join key.
             </p>
             {/* Rendered unconditionally, aria-live so the duplicate-name
                 warning is announced as the user types -- not just on a
@@ -528,7 +500,7 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
               id={websiteId}
               type="url"
               inputMode="url"
-              value={draft.vendor_website_url}
+              value={draft.product_website_url}
               onChange={(e) => handleWebsiteUrlChange(e.target.value)}
               aria-describedby={websiteHintId}
               placeholder="https://example.com"
@@ -555,29 +527,16 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
           </div>
 
           <div>
-            <label htmlFor={notesId} className="mb-1 block text-sm font-medium text-gray-700">
-              Notes
+            <label htmlFor={descriptionId} className="mb-1 block text-sm font-medium text-gray-700">
+              Description
             </label>
             <textarea
-              id={notesId}
-              value={draft.notes}
-              onChange={(e) => handleNotesChange(e.target.value)}
+              id={descriptionId}
+              value={draft.product_description}
+              onChange={(e) => handleDescriptionChange(e.target.value)}
               rows={4}
               className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              id={addedId}
-              type="checkbox"
-              checked={draft.added_to_site}
-              onChange={(e) => handleAddedToSiteChange(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <label htmlFor={addedId} className="text-sm font-medium text-gray-700">
-              Added to site
-            </label>
           </div>
         </section>
 
@@ -596,10 +555,7 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
             draft.resources.map((row, index) => {
               const textId = `${baseId}-resource-text-${row.id}`;
               const urlId = `${baseId}-resource-url-${row.id}`;
-              const sourceId = `${baseId}-resource-source-${row.id}`;
-              const labelId = `${baseId}-resource-label-${row.id}`;
-              const dateId = `${baseId}-resource-date-${row.id}`;
-              const rowAddedId = `${baseId}-resource-added-${row.id}`;
+              const sectionId = `${baseId}-resource-section-${row.id}`;
               return (
                 <fieldset key={row.id} className="rounded border border-gray-200 p-3">
                   <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -636,66 +592,26 @@ export function VendorCreateModal({ isOpen, existingVendorNames, onAdd, onClose 
                         className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <label htmlFor={sourceId} className="mb-1 block text-sm font-medium text-gray-700">
-                          Source
+                        <label htmlFor={sectionId} className="mb-1 block text-sm font-medium text-gray-700">
+                          Section
                         </label>
                         <select
-                          id={sourceId}
-                          value={row.source}
-                          onChange={(e) => handleResourceSourceChange(row.id, e.target.value as ResourceSource)}
+                          id={sectionId}
+                          value={row.section}
+                          onChange={(e) => handleResourceSectionChange(row.id, e.target.value as ResourceSection)}
                           className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="Internal">Internal</option>
-                          <option value="External">External</option>
+                          <option value="vendor">From this vendor</option>
+                          <option value="other">From Other Sources</option>
                         </select>
-                      </div>
-                      <div>
-                        <label htmlFor={labelId} className="mb-1 block text-sm font-medium text-gray-700">
-                          Label <span className="font-normal text-gray-400">(optional)</span>
-                        </label>
-                        <input
-                          id={labelId}
-                          type="text"
-                          value={row.label}
-                          onChange={(e) => handleResourceLabelChange(row.id, e.target.value)}
-                          placeholder="e.g. Statement/Policy"
-                          className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label htmlFor={dateId} className="mb-1 block text-sm font-medium text-gray-700">
-                        Date <span className="font-normal text-gray-400">(optional, free text)</span>
-                      </label>
-                      <input
-                        id={dateId}
-                        type="text"
-                        value={row.date}
-                        onChange={(e) => handleResourceDateChange(row.id, e.target.value)}
-                        placeholder="2/17/2026 9:35:34 AM"
-                        className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <input
-                          id={rowAddedId}
-                          type="checkbox"
-                          checked={row.addedToSite}
-                          onChange={(e) => handleResourceAddedToSiteChange(row.id, e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <label htmlFor={rowAddedId} className="text-sm font-medium text-gray-700">
-                          Added to site
-                        </label>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveResourceRow(row.id)}
                         aria-label={`Remove resource ${index + 1}${row.text ? `: ${row.text}` : ""}`}
-                        className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        className="self-end rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
                       >
                         Remove
                       </button>

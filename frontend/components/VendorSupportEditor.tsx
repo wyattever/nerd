@@ -2,26 +2,25 @@
 "use client";
 
 /**
- * Structured support-contacts editor for the /vendors visual editor. Edits
- * VendorRecord's `support_contacts` array as a dynamic list of add/edit/
- * remove rows, rather than raw JSON. VendorRecord.support_contacts reuses
- * PublishedSupportContact's shape directly (see vendor-schema.ts's header
- * comment on why), so this component is otherwise line-for-line
- * PublishedSupportEditor.tsx retargeted at VendorRecord -- see that file for
- * the full dialog/dynamic-list/field-shape rationale.
+ * Structured support-contacts editor for the vendor Directory editor. Edits
+ * DirectoryRecord's `support_contacts` array as a dynamic list of add/edit/
+ * remove rows, rather than raw JSON. DirectoryRecord.support_contacts
+ * reuses PublishedSupportContact's shape directly (see directory-schema.ts's
+ * header comment on why), so this component is otherwise line-for-line
+ * PublishedSupportEditor.tsx retargeted at DirectoryRecord -- see that file
+ * for the full dialog/dynamic-list/field-shape rationale.
  *
- * support_contacts is optional/nullable on VendorRecord (no vendor in the
- * current scrape has it populated -- see vendor-schema.ts), so the initial
- * rows and dirty-check both fall back to an empty array rather than
- * assuming the field is present.
+ * support_contacts is a required (possibly empty) array on DirectoryRecord,
+ * unlike the legacy VendorRecord where it was optional/nullable -- no
+ * fallback needed for the initial rows or dirty-check below.
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PublishedSupportContact } from "@/lib/published-tables";
-import type { VendorRecord } from "@/lib/vendor-schema";
+import type { DirectoryRecord } from "@/lib/directory-schema";
 
 interface VendorSupportEditorProps {
-  record: VendorRecord;
+  record: DirectoryRecord;
   onSave: (contacts: PublishedSupportContact[]) => void;
   onClose: () => void;
 }
@@ -59,7 +58,7 @@ export function VendorSupportEditor({ record, onSave, onClose }: VendorSupportEd
   // Lazy initializer: runs exactly once on mount, so generating ids here
   // has no render-time side-effect concerns.
   const [rows, setRows] = useState<DraftRow[]>(() =>
-    (record.support_contacts ?? []).map((c) => ({
+    record.support_contacts.map((c) => ({
       id: makeRowId(),
       type: c.type,
       value: c.value,
@@ -72,7 +71,7 @@ export function VendorSupportEditor({ record, onSave, onClose }: VendorSupportEd
   // record.support_contacts is a plain prop read (no side effect), so
   // re-evaluating it on every render before useRef discards all but the
   // first result is harmless -- unlike mutating .current during render.
-  const initialContactsRef = useRef(record.support_contacts ?? []);
+  const initialContactsRef = useRef(record.support_contacts);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
@@ -210,7 +209,7 @@ export function VendorSupportEditor({ record, onSave, onClose }: VendorSupportEd
       className="w-full max-w-2xl rounded-lg border border-gray-200 bg-white p-6 shadow-xl backdrop:bg-gray-900/50"
     >
       <h2 id={titleId} className="mb-4 text-lg font-bold text-gray-900">
-        Edit: Support — {record.vendor_name}
+        Edit: Support — {record.product_name}
       </h2>
 
       <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1">

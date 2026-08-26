@@ -4,6 +4,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorSidebar, type SourceTab } from "@/components/EditorSidebar";
 import { USERS, fullName } from "@/lib/users";
+import type { PublishedProductRecord } from "@/lib/published-tables";
 
 /** One row in the Messages log. `id` is a stable key -- upsertLogEntry
  *  below replaces the row with a matching id in place (used for the
@@ -12,29 +13,15 @@ import { USERS, fullName } from "@/lib/users";
  *  (every other milestone, plus the general page-load status). */
 type LogEntry = { id: string; text: string };
 
-// Types based on the extracted JSON schema
-type Resource = { text: string; url: string };
-type ACR = { title: string; url: string | null; version: string | null; date: string | null };
-type Contact = { type: string; value: string; label: string | null };
-
-type ProductRecord = {
-  slug?: string;
-  product_name: string;
-  ncademi_product_url: string;
-  vendor_name: string | null;
-  product_website_url: string | null;
-  product_description: string | null;
-  vendor_resources: Resource[];
-  other_resources: Resource[];
-  support_contacts: Contact[];
-  acr_reports: ACR[];
-  last_updated: string | null;
-  is_protected: boolean;
-  tracking_priority?: string | null;
-  tracking_status?: string | null;
-  tracking_gatherer?: string | null;
-  tracking_reviewer?: string | null;
-};
+// PublishedProductRecord (published-tables.ts) is the real schema for
+// published.json/added.json/candidate.json's `products` rows -- this page
+// used to hand-roll its own approximation (missing vendor_directory_url,
+// a looser support_contacts.type, etc.), which is why EditorSidebar's
+// props needed `as any` below. `is_protected` has no schema field (it's
+// never actually present on any of the three JSON files -- reads as
+// `undefined` today at line ~522) but is kept optional here since a caller
+// already relies on being able to read it.
+type ProductRecord = PublishedProductRecord & { is_protected?: boolean };
 
 const ENDPOINT_FOR_TAB: Record<SourceTab, string> = {
   published: "/api/local/published",
@@ -346,9 +333,9 @@ export default function RecordsPage() {
       
       {/* 3. Side panel exact visual layout via EditorSidebar */}
       <EditorSidebar
-        publishedProducts={products as any}
-        addedProducts={addedProducts as any}
-        candidateProducts={candidateProducts as any}
+        publishedProducts={products}
+        addedProducts={addedProducts}
+        candidateProducts={candidateProducts}
         activeTab={activeTab}
         onActiveTabChange={handleActiveTabChange}
         selectedSlug={selectedSlug}

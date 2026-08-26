@@ -2,44 +2,50 @@
 "use client";
 
 /**
- * Structured global-resources editor for the /vendors visual editor. Edits
- * VendorRecord's `resources` array (VendorResource[]) as a dynamic list of
- * add/edit/remove rows, rather than raw JSON.
+ * Structured resources editor for the vendor Directory editor. Edits
+ * DirectoryRecord's vendor_resources / other_resources arrays
+ * (DirectoryResourceLink[]: { text, url }) as a single dynamic list of
+ * add/edit/remove rows with a Section selector, splitting back into the
+ * two arrays on save -- the unified schema keeps these as two separate
+ * arrays rather than one array with a per-row source enum (the legacy
+ * VendorResource shape this editor used to edit), so the split happens
+ * here instead of in a bridge adapter.
  *
- * Follows PublishedVendorResourcesEditor.tsx for the dialog and dynamic-list
- * architecture (native <dialog> + showModal(), no aria-modal, no
- * cleanup-time dialog.close(), per-row focus targeting via a pendingFocusId
- * ref) -- see that file for the full rationale. Field shape differs:
- * VendorResource has source/label/date/added_to_site in addition to
- * text/url, since it is a joined "vendor-resources" table row rather than
- * PublishedResourceLink's minimal { text, url }.
+ * DirectoryResourceLink carries no id/label/date/added_to_site (unlike the
+ * legacy VendorResource) -- those fields have no home in the unified
+ * schema and are dropped from this editor entirely, not faked. Row ids
+ * here are client-only (crypto.randomUUID()), same pattern
+ * VendorProductsEditor.tsx already uses for its id-less rows.
  *
- * Row identity: unlike PublishedResourceLink, VendorResource DOES carry a
- * real `id` (the AppSheet row id -- see vendor-schema.ts). Existing rows
- * keep that id; a row added in this dialog gets a client-generated
- * crypto.randomUUID() placeholder id, since no AppSheet row exists for it
- * yet -- onSave passes it straight through either way.
+ * Follows PublishedVendorResourcesEditor.tsx for the dialog and
+ * dynamic-list architecture (native <dialog> + showModal(), no aria-modal,
+ * no cleanup-time dialog.close(), per-row focus targeting via a
+ * pendingFocusId ref) -- see that file for the full rationale.
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import type { VendorRecord, VendorResource } from "@/lib/vendor-schema";
+import type { DirectoryRecord, DirectoryResourceLink } from "@/lib/directory-schema";
+
+export interface DirectoryResourcesUpdate {
+  vendor_resources: DirectoryResourceLink[];
+  other_resources: DirectoryResourceLink[];
+}
 
 interface VendorGlobalResourcesEditorProps {
-  record: VendorRecord;
-  onSave: (resources: VendorResource[]) => void;
+  record: DirectoryRecord;
+  onSave: (resources: DirectoryResourcesUpdate) => void;
   onClose: () => void;
 }
 
-type ResourceSource = "Internal" | "External";
+/** "vendor" -> DirectoryRecord.vendor_resources, "other" ->
+ *  DirectoryRecord.other_resources. */
+type ResourceSection = "vendor" | "other";
 
 interface DraftRow {
   id: string;
   text: string;
   url: string;
-  source: ResourceSource;
-  label: string;
-  date: string;
-  addedToSite: boolean;
+  section: ResourceSection;
 }
 
 /** Sentinel pendingFocusId meaning "focus the Add resource button", distinct
@@ -50,16 +56,11 @@ function makeRowId(): string {
   return crypto.randomUUID();
 }
 
-function toFormValue(v: string | null): string {
-  return v ?? "";
-}
-
-/** Empty input maps to null, matching VendorResource's nullable label/date
- *  fields -- an empty string is not the "no value" signal the rest of the
- *  schema uses. */
-function toRecordValue(v: string): string | null {
-  const trimmed = v.trim();
-  return trimmed === "" ? null : trimmed;
+function toInitialRows(record: DirectoryRecord): DraftRow[] {
+  return [
+    ...record.vendor_resources.map((r) => ({ id: makeRowId(), text: r.text, url: r.url, section: "vendor" as const })),
+    ...record.other_resources.map((r) => ({ id: makeRowId(), text: r.text, url: r.url, section: "other" as const })),
+  ];
 }
 
 export function VendorGlobalResourcesEditor({
@@ -69,24 +70,15 @@ export function VendorGlobalResourcesEditor({
 }: VendorGlobalResourcesEditorProps) {
   // Lazy initializer: runs exactly once on mount, so generating ids here
   // has no render-time side-effect concerns.
-  const [rows, setRows] = useState<DraftRow[]>(() =>
-    record.resources.map((r) => ({
-      id: r.id,
-      text: r.text,
-      url: r.url,
-      source: r.source,
-      label: toFormValue(r.label),
-      date: toFormValue(r.date),
-      addedToSite: r.added_to_site,
-    }))
-  );
+  const [rows, setRows] = useState<DraftRow[]>(() => toInitialRows(record));
   const [issues, setIssues] = useState<string[]>([]);
   const [saveAttempted, setSaveAttempted] = useState(false);
 
-  // record.resources is a plain prop read (no side effect), so re-evaluating
-  // it on every render before useRef discards all but the first result is
-  // harmless -- unlike mutating .current during render.
-  const initialResourcesRef = useRef(record.resources);
+  // The initial rows (already-tagged with a client-only id), not the raw
+  // record arrays -- comparing against those directly would require
+  // re-deriving the same vendor_resources/other_resources -> rows mapping
+  // a second time just for the dirty-check.
+  const initialRowsRef = useRef(rows);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
@@ -102,32 +94,12 @@ export function VendorGlobalResourcesEditor({
   // isDirtyRef pattern.
   const isDirtyRef = useRef(false);
   useEffect(() => {
-    const current = rows.map((r) => ({
-      text: r.text,
-      url: r.url,
-      source: r.source,
-      label: toRecordValue(r.label),
-      date: toRecordValue(r.date),
-      added_to_site: r.addedToSite,
-    }));
-    const initial = initialResourcesRef.current.map((r) => ({
-      text: r.text,
-      url: r.url,
-      source: r.source,
-      label: r.label,
-      date: r.date,
-      added_to_site: r.added_to_site,
-    }));
+    const current = rows.map((r) => ({ text: r.text, url: r.url, section: r.section }));
+    const initial = initialRowsRef.current.map((r) => ({ text: r.text, url: r.url, section: r.section }));
     isDirtyRef.current =
       current.length !== initial.length ||
       current.some(
-        (r, i) =>
-          r.text !== initial[i]?.text ||
-          r.url !== initial[i]?.url ||
-          r.source !== initial[i]?.source ||
-          r.label !== initial[i]?.label ||
-          r.date !== initial[i]?.date ||
-          r.added_to_site !== initial[i]?.added_to_site
+        (r, i) => r.text !== initial[i]?.text || r.url !== initial[i]?.url || r.section !== initial[i]?.section
       );
   });
 
@@ -181,10 +153,7 @@ export function VendorGlobalResourcesEditor({
   const handleAddRow = useCallback(() => {
     const id = makeRowId();
     pendingFocusIdRef.current = id;
-    setRows((prev) => [
-      ...prev,
-      { id, text: "", url: "", source: "Internal", label: "", date: "", addedToSite: false },
-    ]);
+    setRows((prev) => [...prev, { id, text: "", url: "", section: "vendor" }]);
   }, []);
 
   const handleRemoveRow = useCallback(
@@ -208,20 +177,8 @@ export function VendorGlobalResourcesEditor({
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, url: value } : r)));
   }, []);
 
-  const handleSourceChange = useCallback((id: string, value: ResourceSource) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, source: value } : r)));
-  }, []);
-
-  const handleLabelChange = useCallback((id: string, value: string) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, label: value } : r)));
-  }, []);
-
-  const handleDateChange = useCallback((id: string, value: string) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, date: value } : r)));
-  }, []);
-
-  const handleAddedToSiteChange = useCallback((id: string, value: boolean) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, addedToSite: value } : r)));
+  const handleSectionChange = useCallback((id: string, value: ResourceSection) => {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, section: value } : r)));
   }, []);
 
   const handleSave = useCallback(() => {
@@ -236,17 +193,11 @@ export function VendorGlobalResourcesEditor({
       return;
     }
     setIssues([]);
-    onSave(
-      rows.map((r) => ({
-        id: r.id,
-        text: r.text.trim(),
-        url: r.url.trim(),
-        source: r.source,
-        label: toRecordValue(r.label),
-        date: toRecordValue(r.date),
-        added_to_site: r.addedToSite,
-      }))
-    );
+    const toLink = (r: DraftRow): DirectoryResourceLink => ({ text: r.text.trim(), url: r.url.trim() });
+    onSave({
+      vendor_resources: rows.filter((r) => r.section === "vendor").map(toLink),
+      other_resources: rows.filter((r) => r.section === "other").map(toLink),
+    });
     // Closing the dialog fires the native "close" event, which calls
     // onClose() -- the single path that unmounts this component.
     dialogRef.current?.close();
@@ -259,7 +210,7 @@ export function VendorGlobalResourcesEditor({
       className="w-full max-w-2xl rounded-lg border border-gray-200 bg-white p-6 shadow-xl backdrop:bg-gray-900/50"
     >
       <h2 id={titleId} className="mb-4 text-lg font-bold text-gray-900">
-        Edit: Global Resources — {record.vendor_name}
+        Edit: Global Resources — {record.product_name}
       </h2>
 
       <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1">
@@ -271,10 +222,7 @@ export function VendorGlobalResourcesEditor({
             const urlInvalid = saveAttempted && row.url.trim() === "";
             const textId = `${baseId}-text-${row.id}`;
             const urlId = `${baseId}-url-${row.id}`;
-            const sourceId = `${baseId}-source-${row.id}`;
-            const labelId = `${baseId}-label-${row.id}`;
-            const dateId = `${baseId}-date-${row.id}`;
-            const addedId = `${baseId}-added-${row.id}`;
+            const sectionId = `${baseId}-section-${row.id}`;
             return (
               <fieldset key={row.id} className="rounded border border-gray-200 p-3">
                 <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -315,66 +263,26 @@ export function VendorGlobalResourcesEditor({
                       className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <label htmlFor={sourceId} className="mb-1 block text-sm font-medium text-gray-700">
-                        Source
+                      <label htmlFor={sectionId} className="mb-1 block text-sm font-medium text-gray-700">
+                        Section
                       </label>
                       <select
-                        id={sourceId}
-                        value={row.source}
-                        onChange={(e) => handleSourceChange(row.id, e.target.value as ResourceSource)}
+                        id={sectionId}
+                        value={row.section}
+                        onChange={(e) => handleSectionChange(row.id, e.target.value as ResourceSection)}
                         className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="Internal">Internal</option>
-                        <option value="External">External</option>
+                        <option value="vendor">From {record.product_name}</option>
+                        <option value="other">From Other Sources</option>
                       </select>
-                    </div>
-                    <div>
-                      <label htmlFor={labelId} className="mb-1 block text-sm font-medium text-gray-700">
-                        Label <span className="font-normal text-gray-400">(optional)</span>
-                      </label>
-                      <input
-                        id={labelId}
-                        type="text"
-                        value={row.label}
-                        onChange={(e) => handleLabelChange(row.id, e.target.value)}
-                        placeholder="e.g. Statement/Policy"
-                        className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor={dateId} className="mb-1 block text-sm font-medium text-gray-700">
-                      Date <span className="font-normal text-gray-400">(optional, free text)</span>
-                    </label>
-                    <input
-                      id={dateId}
-                      type="text"
-                      value={row.date}
-                      onChange={(e) => handleDateChange(row.id, e.target.value)}
-                      placeholder="2/17/2026 9:35:34 AM"
-                      className="w-full rounded border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <input
-                        id={addedId}
-                        type="checkbox"
-                        checked={row.addedToSite}
-                        onChange={(e) => handleAddedToSiteChange(row.id, e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <label htmlFor={addedId} className="text-sm font-medium text-gray-700">
-                        Added to site
-                      </label>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveRow(row.id)}
                       aria-label={`Remove resource ${index + 1}${row.text ? `: ${row.text}` : ""}`}
-                      className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="self-end rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
                       Remove
                     </button>
