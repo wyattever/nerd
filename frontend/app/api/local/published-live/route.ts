@@ -18,16 +18,28 @@
  *
  * GET reads frontend/lib/published-live.json fresh from disk on every
  * request (same "never a frozen static import" reasoning as the sibling
- * routes) and returns it verbatim with 200 if present. If the file does not
- * exist yet (the expected case today), returns 404 with an
- * `{ exists: false }` body rather than throwing -- /records' mount-time
- * existence check (see app/records/page.tsx) depends on this NOT crashing,
- * since "no live data yet" is the normal, unsurprising state, not an error.
+ * routes). If the file does not exist yet (the expected case today),
+ * returns 404 with an `{ exists: false }` body rather than throwing --
+ * /records' mount-time existence check depends on this NOT crashing, since
+ * "no live data yet" is the normal, unsurprising state, not an error.
+ *
+ * Unlike the sibling published/added/candidate routes, this no longer
+ * returns the file's bytes verbatim: published-live.json's records carry
+ * no `slug` field, and this route's client-side caller (Records
+ * Published's live-data fetch) needs one to build record links/lookups the
+ * same way the server-side reader does. Parses the file and injects a
+ * synthesized slug per product via lib/local-data.ts's
+ * deriveLiveProductSlug() -- the SAME function getPublishedLiveProducts()
+ * uses -- rather than a second, independently-maintained copy of that
+ * derivation, so a given live record can't end up with two different
+ * slugs depending on which of the two read paths served it.
  */
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { NextResponse } from "next/server";
 import { assertLocalOnly } from "@/lib/local-write";
+import { deriveLiveProductSlug } from "@/lib/local-data";
 
 export const runtime = "nodejs";
 
@@ -52,8 +64,12 @@ export async function GET(): Promise<Response> {
     });
   }
 
-  return new Response(data, {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+  const body = JSON.parse(data) as { products?: unknown; [key: string]: unknown };
+  const rawProducts = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
+  const products = rawProducts.map((p) => ({
+    ...p,
+    slug: deriveLiveProductSlug(p.ncademi_product_url as string),
+  }));
+
+  return NextResponse.json({ ...body, products });
 }

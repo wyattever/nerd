@@ -21,6 +21,8 @@
  */
 
 import "server-only";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { notFound } from "next/navigation";
 import { isLocalOnlyAllowed } from "./local-only";
 import { readPublishedRaw, type DataKind } from "./local-write";
@@ -69,4 +71,61 @@ export function getAddedProducts(): Promise<LocalDocument> {
 
 export function getPublishedProducts(): Promise<LocalDocument> {
   return readLocalDocument("published");
+}
+
+const PUBLISHED_LIVE_PATH = path.join(process.cwd(), "lib", "published-live.json");
+
+/**
+ * published-live.json's records carry no `slug` field at all (unlike the
+ * curated candidate/added/published snapshots) -- derived here from the
+ * last non-empty path segment of ncademi_product_url (e.g.
+ * ".../products/99math/" -> "99math"), not the URL itself. A raw URL
+ * contains slashes, which [slug]/page.tsx's single dynamic segment can't
+ * hold -- using the whole URL as originally tried here produced an href
+ * Next would parse as several nested route segments, not a working link.
+ *
+ * Exported so app/api/local/published-live/route.ts can apply the exact
+ * same derivation -- the client-side fetch (that route) and this
+ * server-side reader must agree on what a live record's slug is, or the
+ * SAME record would resolve to two different URLs depending on which path
+ * loaded it.
+ */
+export function deriveLiveProductSlug(ncademiProductUrl: string): string {
+  const segments = ncademiProductUrl.split("/").filter(Boolean);
+  return segments[segments.length - 1] ?? ncademiProductUrl;
+}
+
+/**
+ * Reads published-live.json -- deliberately NOT routed through
+ * readLocalDocument()/DataKind above: that pair's whole design is "closed
+ * set of documents this app can WRITE" (see local-write.ts's header), and
+ * there is no write path for the live scrape snapshot (see
+ * app/api/local/published-live/route.ts's own header for the full
+ * rationale, which this mirrors). Same isLocalOnlyAllowed() + notFound()
+ * guard as readLocalDocument(), applied directly here instead.
+ *
+ * Returns `{ products: [] }` rather than throwing when the file doesn't
+ * exist yet -- matches the sibling Route Handler's "no live data yet is
+ * the expected, common case, not an error" stance, and lets the one caller
+ * ([slug]/page.tsx) fall through to its existing "Record not found" state
+ * without a separate empty-snapshot code path.
+ */
+export async function getPublishedLiveProducts(): Promise<{ products: PublishedProductRecord[] }> {
+  if (!isLocalOnlyAllowed()) notFound();
+
+  let raw: string;
+  try {
+    raw = await fs.readFile(PUBLISHED_LIVE_PATH, "utf8");
+  } catch {
+    return { products: [] };
+  }
+
+  const body = JSON.parse(raw) as { products?: unknown };
+  const rawProducts = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
+  const products = rawProducts.map((p) => ({
+    ...p,
+    slug: deriveLiveProductSlug(p.ncademi_product_url as string),
+  })) as PublishedProductRecord[];
+
+  return { products };
 }
