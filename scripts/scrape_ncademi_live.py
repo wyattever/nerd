@@ -441,6 +441,17 @@ def write_output(path: Path, key: str, records: list[dict], last_scraped: str) -
         key: records,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
+    # open(path, "w") already truncates-and-rewrites, so this unlink is
+    # belt-and-suspenders, not load-bearing -- explicit per request, to
+    # guarantee no lingering file artifact survives an overwrite. Worth
+    # noting the tradeoff: this creates a brief window where `path` does
+    # not exist at all (between the unlink and the new file being written),
+    # unlike a plain truncating write, which never leaves the path missing.
+    # Fine for this local, single-writer dev script; would NOT be the right
+    # call for something like lib/local-write.ts's atomic temp-file+rename
+    # writes, which exist specifically to avoid ever exposing a missing or
+    # partial file to a concurrent reader.
+    path.unlink(missing_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
         f.write("\n")
