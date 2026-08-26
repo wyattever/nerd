@@ -1,9 +1,9 @@
 // frontend/app/editor/(routed)/vendors/[slug]/VendorEditor.tsx
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useMessages } from "../VendorsListPanel";
+import { useMessages } from "@/components/IntegratedListPanel";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import { DirectoryPreview } from "@/components/DirectoryPreview";
 import { DirectoryHeaderEditor, type DirectoryHeaderFields } from "@/components/DirectoryHeaderEditor";
@@ -21,7 +21,7 @@ interface VendorEditorProps {
 
 export function VendorEditor({ record: initialRecord, existingVendorNames = [] }: VendorEditorProps) {
   const router = useRouter();
-  const { setStatusMessage, setSaveError } = useMessages();
+  const { setStatusMessage, setSaveError, setCreateAction } = useMessages();
 
   const [record, setRecord] = useState<DirectoryRecord>(initialRecord);
   const [isDirty, setIsDirty] = useState(false);
@@ -35,6 +35,17 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
   const [isProductsEditorOpen, setIsProductsEditorOpen] = useState(false);
   const [isSupportEditorOpen, setIsSupportEditorOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // "Add Vendor" now renders in IntegratedListPanel.tsx's sidebar footer
+  // (Phase 4.15) -- see CandidateEditor.tsx's identical pattern for
+  // "Import Candidate". This component still owns the modal and its
+  // handlers, so it registers a trigger callback into the shared
+  // MessagesContext for the footer button to call, and unregisters it on
+  // unmount so a stale handler from a previous record can't linger.
+  useEffect(() => {
+    setCreateAction(() => () => setIsCreateModalOpen(true));
+    return () => setCreateAction(null);
+  }, [setCreateAction]);
 
   const handleHeaderSave = useCallback((fields: DirectoryHeaderFields) => {
     setRecord((prev) => ({ ...prev, ...fields }));
@@ -219,81 +230,67 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
   }, [router, setSaveError, setStatusMessage]);
 
   return (
-    <main className="flex-1 overflow-y-auto p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <header>
-          <h1 className="text-2xl font-bold text-gray-900">Vendors Editor</h1>
-        </header>
+    <div className="flex flex-col gap-6">
+      <header className="flex items-end justify-between">
+        <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap shrink-0">Vendors Editor</h1>
+      </header>
 
-        {/* TRACKING SECTION */}
-        <div className="rounded-md border border-gray-300 bg-white">
-          <div className="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-500">
-            Tracking
-          </div>
-          <div className="p-4">
-            <div className="flex flex-col items-start gap-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</label>
-              <select
-                value={record.tracking_status ?? ""}
-                onChange={(e) => handleStatusChange((e.target.value as "ready for site" | "published to site") || null)}
-                className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">set status</option>
-                <option value="ready for site">ready for site</option>
-                <option value="published to site">published to site</option>
-              </select>
-            </div>
+      {/* TRACKING SECTION */}
+      <div className="w-full rounded-md border border-gray-300 bg-white mb-2">
+        <div className="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-500">
+          Tracking
+        </div>
+        <div className="p-4">
+          <div className="flex flex-col items-start gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</label>
+            <select
+              value={record.tracking_status ?? ""}
+              onChange={(e) => handleStatusChange((e.target.value as "ready for site" | "published to site") || null)}
+              className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">set status</option>
+              <option value="ready for site">ready for site</option>
+              <option value="published to site">published to site</option>
+            </select>
           </div>
         </div>
+      </div>
 
-        {/* EDIT SECTION */}
-        <div className="rounded-md border border-gray-300 bg-white">
-          <div className="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-500">
-            Edit
-          </div>
-          <div className="flex flex-wrap items-center gap-2 p-4">
-            <button
-              type="button"
-              onClick={() => setIsHeaderEditorOpen(true)}
-              className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Header
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsGlobalResourcesEditorOpen(true)}
-              className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Global Resources
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsProductsEditorOpen(true)}
-              className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Product/s
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsSupportEditorOpen(true)}
-              className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Support
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsCreateModalOpen(true)}
-              disabled={isSaving}
-              className="ml-2 rounded border border-transparent bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Add Vendor
-            </button>
-          </div>
+      {/* EDIT SECTION */}
+      <div className="w-full rounded-md border border-gray-300 bg-white mb-2">
+        <div className="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-500">
+          Edit
         </div>
-
-        {/* PREVIEW & ACTIONS SECTION */}
-        <section>
-          <div className="mb-4 flex items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-2 p-4">
+          <button
+            type="button"
+            onClick={() => setIsHeaderEditorOpen(true)}
+            className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Header
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsGlobalResourcesEditorOpen(true)}
+            className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Global Resources
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsProductsEditorOpen(true)}
+            className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Product/s
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsSupportEditorOpen(true)}
+            className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Support
+          </button>
+          <div className="ml-auto flex gap-3">
             <button
               type="button"
               onClick={() => startSaveTransition(() => saveToServer(record))}
@@ -311,11 +308,14 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
               Delete vendor
             </button>
           </div>
-          <div className="rounded-md border border-gray-200 bg-white p-6 shadow-sm">
-            <DirectoryPreview record={record} />
-          </div>
-        </section>
+        </div>
       </div>
+
+      <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4">
+        <div className="rounded-md border border-gray-200 bg-white p-6 shadow-sm">
+          <DirectoryPreview record={record} />
+        </div>
+      </section>
 
       {/* Editors */}
       {isHeaderEditorOpen && (
@@ -354,6 +354,6 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
           onClose={() => setIsCreateModalOpen(false)}
         />
       )}
-    </main>
+    </div>
   );
 }

@@ -6,15 +6,21 @@
 
 import type { ReactNode } from "react";
 import { getPublishedProducts } from "@/lib/local-data";
-import { PublishedListPanel } from "./PublishedListPanel";
+import { IntegratedListPanel } from "@/components/IntegratedListPanel";
+import type { DirectoryRecord } from "@/lib/directory-schema";
 
 export const dynamic = "force-dynamic";
 
 export default async function PublishedLayout({ children }: { children: ReactNode }) {
   const { products } = await getPublishedProducts();
   return (
-    <PublishedListPanel products={products} base="/editor/published">
+    <IntegratedListPanel
+      items={products as unknown as DirectoryRecord[]}
+      baseRoute="/editor/published"
+      activeMode="editor"
+      activeCategory="published"
+    >
       {children}
-    </PublishedListPanel>
+    </IntegratedListPanel>
   );
 }

@@ -21,7 +21,7 @@ import { PublishedAcrEditor } from "@/components/PublishedAcrEditor";
 import { DeletePublishedModal } from "@/components/DeletePublishedModal";
 import { toListingData } from "@/lib/editor-preview";
 import vendorsData from "@/lib/vendors.json";
-import { useMessages } from "./PublishedListPanel";
+import { useMessages } from "@/components/IntegratedListPanel";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { SnapshotMeta } from "@/lib/local-data";
 import type {
@@ -230,7 +230,7 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
   if (!selected) return null;
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6">
       <header className="flex items-end justify-between">
         <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap shrink-0">Published Products Editor</h1>
       </header>
@@ -272,19 +272,18 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
           <button type="button" ref={editAcrButtonRef} onClick={() => setIsAcrEditorOpen(true)} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
             ACR
           </button>
+          <div className="ml-auto flex gap-3">
+            <button type="button" onClick={() => handleSaveToServer()} disabled={isSaving} className="rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              {isSaving ? "Saving…" : "Save published"}
+            </button>
+            <button type="button" ref={deletePublishedButtonRef} onClick={() => setIsDeleteModalOpen(true)} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              Delete published
+            </button>
+          </div>
         </div>
       </div>
 
       <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4">
-        <div className="flex justify-end gap-3 pb-[10px]">
-          <button type="button" onClick={() => handleSaveToServer()} disabled={isSaving} className="rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            {isSaving ? "Saving…" : "Save published"}
-          </button>
-          <button type="button" ref={deletePublishedButtonRef} onClick={() => setIsDeleteModalOpen(true)} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            Delete published
-          </button>
-        </div>
-
         {listing ? (
           <div className="w-full bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
             <ListingCard listing={listing} />

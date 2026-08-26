@@ -26,7 +26,7 @@
  * in the routing guide) not to fight back/forward navigation.
  */
 
-import { useCallback, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ListingCard } from "@/components/ListingCard";
 import { PublishedHeaderEditor, type HeaderFields } from "@/components/PublishedHeaderEditor";
@@ -39,7 +39,7 @@ import { DeleteCandidateModal } from "@/components/DeleteCandidateModal";
 import { toListingData } from "@/lib/editor-preview";
 import { USERS, fullName } from "@/lib/users";
 import vendorsData from "@/lib/vendors.json";
-import { useMessages } from "./CandidatesListPanel";
+import { useMessages } from "@/components/IntegratedListPanel";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import type { SnapshotMeta } from "@/lib/local-data";
 import type {
@@ -110,7 +110,7 @@ export function CandidateEditor({
     setIsDirty(true);
   }, []);
 
-  const { setStatusMessage, setSaveError } = useMessages();
+  const { setStatusMessage, setSaveError, setCreateAction } = useMessages();
   const [isSaving, startSaveTransition] = useTransition();
 
   const [isHeaderEditorOpen, setIsHeaderEditorOpen] = useState(false);
@@ -126,8 +126,18 @@ export function CandidateEditor({
   const editOtherResourcesButtonRef = useRef<HTMLButtonElement>(null);
   const editSupportButtonRef = useRef<HTMLButtonElement>(null);
   const editAcrButtonRef = useRef<HTMLButtonElement>(null);
-  const importCandidateButtonRef = useRef<HTMLButtonElement>(null);
   const deleteCandidateButtonRef = useRef<HTMLButtonElement>(null);
+
+  // "Import Candidate" now renders in IntegratedListPanel.tsx's sidebar
+  // footer (Phase 4.14) -- this component still owns the modal and its
+  // handlers (the import target array/slug are local state here), so it
+  // registers a trigger callback into the shared MessagesContext for the
+  // footer button to call, and unregisters it on unmount/record change so
+  // a stale handler from a previous record can't linger.
+  useEffect(() => {
+    setCreateAction(() => () => setIsImportModalOpen(true));
+    return () => setCreateAction(null);
+  }, [setCreateAction]);
 
   const selected = useMemo(() => products.find((p) => p.slug === slug) ?? null, [products, slug]);
 
@@ -222,7 +232,9 @@ export function CandidateEditor({
   );
   const handleImportModalClosed = useCallback(() => {
     setIsImportModalOpen(false);
-    importCandidateButtonRef.current?.focus();
+    // No local button to refocus anymore -- the trigger now lives in
+    // IntegratedListPanel.tsx's sidebar footer (Phase 4.14). Browser
+    // default focus-on-close applies instead.
   }, []);
   const handleDeleteModalClosed = useCallback(() => {
     setIsDeleteModalOpen(false);
@@ -339,7 +351,7 @@ export function CandidateEditor({
   if (!selected) return null;
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6">
       <header className="flex items-end justify-between">
         <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap shrink-0">Candidate Products Editor</h1>
       </header>
@@ -403,6 +415,17 @@ export function CandidateEditor({
               ))}
             </select>
           </label>
+
+          <div className="ml-auto">
+            <button
+              type="button"
+              onClick={handlePromoteToAdded}
+              disabled={isSaving}
+              className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Added to Site
+            </button>
+          </div>
         </div>
       </div>
 
@@ -424,25 +447,18 @@ export function CandidateEditor({
           <button type="button" ref={editAcrButtonRef} onClick={() => setIsAcrEditorOpen(true)} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
             ACR
           </button>
-          <button type="button" ref={importCandidateButtonRef} onClick={() => setIsImportModalOpen(true)} className="ml-3.5 rounded border border-transparent bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            Import Candidate
-          </button>
+          <div className="ml-auto flex gap-3">
+            <button type="button" onClick={() => handleSaveToServer()} disabled={isSaving} className="rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              {isSaving ? "Saving…" : "Save candidate"}
+            </button>
+            <button type="button" ref={deleteCandidateButtonRef} onClick={() => setIsDeleteModalOpen(true)} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              Delete Candidate
+            </button>
+          </div>
         </div>
       </div>
 
       <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4">
-        <div className="flex justify-end gap-3 pb-[10px]">
-          <button type="button" onClick={handlePromoteToAdded} disabled={isSaving} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            Added to Site
-          </button>
-          <button type="button" onClick={() => handleSaveToServer()} disabled={isSaving} className="rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            {isSaving ? "Saving…" : "Save candidate"}
-          </button>
-          <button type="button" ref={deleteCandidateButtonRef} onClick={() => setIsDeleteModalOpen(true)} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            Delete Candidate
-          </button>
-        </div>
-
         {listing ? (
           <div className="w-full bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
             <ListingCard listing={listing} />

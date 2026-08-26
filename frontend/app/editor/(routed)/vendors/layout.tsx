@@ -5,20 +5,20 @@
 // "force-dynamic"` is required). vendors.json instead of candidate.json.
 //
 // getVendors() (lib/local-data.ts) returns DirectoryRecord[] directly --
-// no boundary cast needed here, unlike the pre-unification version of this
-// file.
+// no boundary cast needed here, unlike candidates/added/published's
+// layouts (still backed by PublishedProductRecord[]).
 
 import type { ReactNode } from "react";
 import { getVendors } from "@/lib/local-data";
-import { VendorsListPanel } from "./VendorsListPanel";
+import { IntegratedListPanel } from "@/components/IntegratedListPanel";
 
 export const dynamic = "force-dynamic";
 
 export default async function VendorsLayout({ children }: { children: ReactNode }) {
   const { vendors } = await getVendors();
   return (
-    <VendorsListPanel vendors={vendors} base="/editor/vendors">
+    <IntegratedListPanel items={vendors} baseRoute="/editor/vendors" activeMode="editor" activeCategory="vendors">
       {children}
-    </VendorsListPanel>
+    </IntegratedListPanel>
   );
 }
