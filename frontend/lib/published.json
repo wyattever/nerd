@@ -10,7 +10,7 @@
   "products": [
     {
       "slug": "99math",
-      "product_name": "99math Stored 2",
+      "product_name": "99math Stored",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/99math/",
       "vendor_name": null,
       "vendor_directory_url": null,
@@ -36,7 +36,8 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_priority": "Medium"
     },
     {
       "slug": "abcya",
