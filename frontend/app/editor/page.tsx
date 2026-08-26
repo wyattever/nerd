@@ -252,16 +252,10 @@ export default function EditorPage() {
           ...prev,
           published: { schemaVersion: doc.schemaVersion, meta: doc.meta, etag: doc.etag },
         }));
-        if (doc.products.length > 0) {
-          setLoadState("ready");
-          setStatusMessage(`Loaded ${doc.products.length} published records from disk.`);
-        } else {
-          setLoadState("unavailable");
-          setStatusMessage("The published snapshot contains no products.");
-        }
+        setLoadState(doc.products.length > 0 ? "ready" : "unavailable");
       } else {
         setLoadState("unavailable");
-        setStatusMessage(
+        setSaveError(
           "Could not load published.json from the local write API. This page only works in local development."
         );
       }
@@ -299,6 +293,10 @@ export default function EditorPage() {
       } else if (publishedDoc && publishedDoc.products.length > 0) {
         setSelectedSlug(publishedDoc.products[0].slug);
       }
+
+      // activeTab's own initial state is "candidate" (see above), so the
+      // very first status message reflects the candidate list's count.
+      setStatusMessage(`Displaying ${candidateDoc?.products.length ?? 0} candidate product records.`);
     })();
     return () => {
       cancelled = true;
@@ -349,6 +347,7 @@ export default function EditorPage() {
       setActiveTab(tab);
       const nextArray = tab === "published" ? products : tab === "added" ? addedProducts : candidateProducts;
       setSelectedSlug(nextArray[0]?.slug ?? "");
+      setStatusMessage(`Displaying ${nextArray.length} ${tab} product records.`);
     },
     [products, addedProducts, candidateProducts]
   );

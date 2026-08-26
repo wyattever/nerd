@@ -72,14 +72,37 @@ export default function RecordsPage() {
   const [messagesLog, setMessagesLog] = useState<LogEntry[]>([]);
   const messagesLogRef = useRef<HTMLDivElement>(null);
 
+  // Mirrors of activeTab/selectedSlug, read (not written) inside the
+  // data-fetch effect below so it can preserve the current selection across
+  // a Stored Data <-> Live Data toggle. Refs rather than reading
+  // activeTab/selectedSlug directly: that effect's dependency array is
+  // deliberately just [dataSource, upsertLogEntry] -- switching tabs or
+  // selecting a different record must NOT itself re-trigger a full
+  // three-document refetch, only a dataSource change (or mount) should.
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  const selectedSlugRef = useRef(selectedSlug);
+  useEffect(() => {
+    selectedSlugRef.current = selectedSlug;
+  }, [selectedSlug]);
+
   // Replaces the row with this id in place if one exists (a live counter
   // like the "products"/"vendors" scrape milestones), otherwise appends a
   // new row -- see LogEntry's own comment. A no-op when the text hasn't
   // actually changed, so a redundant call (e.g. two identical counter
-  // updates) doesn't cause an extra render.
-  const upsertLogEntry = useCallback((id: string, text: string) => {
+  // updates) doesn't cause an extra render. text === null removes the row
+  // instead (a no-op if it isn't present) -- used to clear a stale
+  // "load-error" row once a later dataSource toggle succeeds.
+  const upsertLogEntry = useCallback((id: string, text: string | null) => {
     setMessagesLog((prev) => {
       const idx = prev.findIndex((entry) => entry.id === id);
+      if (text === null) {
+        if (idx === -1) return prev;
+        return prev.filter((entry) => entry.id !== id);
+      }
       if (idx === -1) return [...prev, { id, text }];
       if (prev[idx].text === text) return prev;
       const next = [...prev];
@@ -106,46 +129,90 @@ export default function RecordsPage() {
       
       if (cancelled) return;
 
+      let nextProducts: ProductRecord[] = [];
+      let nextAddedProducts: ProductRecord[] = [];
+      let nextCandidateProducts: ProductRecord[] = [];
+
       if (publishedResult.status === "fulfilled") {
         const doc = publishedResult.value;
         // Normalize ncademi_product_url to slug to make EditorSidebar happy
-        const normalizedProducts = doc.products.map(p => ({
+        nextProducts = doc.products.map(p => ({
           ...p,
           slug: p.slug || p.ncademi_product_url
         }));
-        setProducts(normalizedProducts);
-        
-        if (normalizedProducts.length > 0) {
-          setLoadState("ready");
-          upsertLogEntry("load", `Loaded ${normalizedProducts.length} ${dataSource} published records.`);
-        } else {
-          setLoadState("unavailable");
-          upsertLogEntry("load", `The ${dataSource} published snapshot contains no products.`);
-        }
+        setProducts(nextProducts);
+
+        setLoadState(nextProducts.length > 0 ? "ready" : "unavailable");
+        upsertLogEntry("load-error", null);
       } else {
         setLoadState("unavailable");
-        upsertLogEntry("load", "Could not load published data.");
+        upsertLogEntry("load-error", "Could not load published data.");
       }
 
       if (addedResult.status === "fulfilled") {
-        const doc = addedResult.value;
-        setAddedProducts(doc.products.map(p => ({ ...p, slug: p.slug || p.ncademi_product_url })));
+        nextAddedProducts = addedResult.value.products.map(p => ({ ...p, slug: p.slug || p.ncademi_product_url }));
+        setAddedProducts(nextAddedProducts);
       }
 
       if (candidateResult.status === "fulfilled") {
-        const doc = candidateResult.value;
-        setCandidateProducts(doc.products.map(p => ({ ...p, slug: p.slug || p.ncademi_product_url })));
+        nextCandidateProducts = candidateResult.value.products.map(p => ({ ...p, slug: p.slug || p.ncademi_product_url }));
+        setCandidateProducts(nextCandidateProducts);
       }
 
-      // Initial selection logic
-      const candidateDoc = candidateResult.status === "fulfilled" ? candidateResult.value : null;
-      const publishedDoc = publishedResult.status === "fulfilled" ? publishedResult.value : null;
-      
-      if (candidateDoc && candidateDoc.products.length > 0) {
-        setSelectedSlug(candidateDoc.products[0].slug || candidateDoc.products[0].ncademi_product_url);
-      } else if (publishedDoc && publishedDoc.products.length > 0) {
-        setSelectedSlug(publishedDoc.products[0].slug || publishedDoc.products[0].ncademi_product_url);
+      // Selection logic. Two cases:
+      const previousSlug = selectedSlugRef.current;
+
+      if (!previousSlug) {
+        // 1. No previous selection at all -- this is the initial mount, not
+        // a dataSource toggle. Same cross-tab fallback chain as before this
+        // change: prefer candidate's first record, then published's first
+        // record (matching activeTab's own "candidate" default).
+        if (nextCandidateProducts.length > 0) {
+          const first = nextCandidateProducts[0];
+          setSelectedSlug(first.slug || first.ncademi_product_url);
+        } else if (nextProducts.length > 0) {
+          const first = nextProducts[0];
+          setSelectedSlug(first.slug || first.ncademi_product_url);
+        }
+      } else {
+        // 2. A record was already selected -- this is a Stored Data <->
+        // Live Data toggle (the only thing that re-triggers this effect
+        // after mount; added/candidate never change with dataSource, only
+        // the published endpoint does). Try to keep that same record
+        // selected in whichever tab is CURRENTLY active, matching by slug
+        // OR ncademi_product_url (same lookup selectedRecord itself uses
+        // below). Falls back to that tab's first record only if the
+        // previously selected one doesn't exist in the freshly loaded
+        // array -- e.g. it was only ever in the stored snapshot, not the
+        // live one, or vice versa.
+        const nextArrayForActiveTab =
+          activeTabRef.current === "published"
+            ? nextProducts
+            : activeTabRef.current === "added"
+              ? nextAddedProducts
+              : nextCandidateProducts;
+
+        const stillSelected = nextArrayForActiveTab.some(
+          (p) => p.slug === previousSlug || p.ncademi_product_url === previousSlug
+        );
+
+        if (!stillSelected) {
+          setSelectedSlug(nextArrayForActiveTab[0]?.slug || nextArrayForActiveTab[0]?.ncademi_product_url || "");
+        }
       }
+
+      // Displays a count for whichever tab is CURRENTLY active (not
+      // necessarily "published", even though this fetch always re-reads all
+      // three documents) -- matches activeTab's own "candidate" default on
+      // the initial mount, and reflects a dataSource toggle's fresh count on
+      // whichever tab the user was already looking at.
+      const activeArray =
+        activeTabRef.current === "published"
+          ? nextProducts
+          : activeTabRef.current === "added"
+            ? nextAddedProducts
+            : nextCandidateProducts;
+      upsertLogEntry("load", `Displaying ${activeArray.length} ${activeTabRef.current} product records.`);
     })();
     return () => {
       cancelled = true;
@@ -269,8 +336,9 @@ export default function RecordsPage() {
       setActiveTab(tab);
       const nextArray = tab === "published" ? products : tab === "added" ? addedProducts : candidateProducts;
       setSelectedSlug(nextArray[0]?.slug || nextArray[0]?.ncademi_product_url || "");
+      upsertLogEntry("load", `Displaying ${nextArray.length} ${tab} product records.`);
     },
-    [products, addedProducts, candidateProducts]
+    [products, addedProducts, candidateProducts, upsertLogEntry]
   );
 
   return (

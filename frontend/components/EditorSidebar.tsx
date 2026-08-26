@@ -124,9 +124,11 @@ export function EditorSidebar({
     );
   }, [sourceList, filter]);
 
-  // Sorted separately from filtered rather than folded into it: the "N of M
-  // shown" count above reads off filtered.length/sourceList.length, neither
-  // of which sorting should touch.
+  // Sorted separately from filtered rather than folded into it, even though
+  // nothing currently reads filtered.length/sourceList.length directly --
+  // keeping the two independent means a future consumer of either count
+  // (e.g. if the "N of M shown" text this file used to render comes back)
+  // doesn't have to first untangle sorting from filtering to get it.
   const sorted = useMemo(() => {
     const copy = [...filtered];
     copy.sort((a, b) =>
@@ -203,11 +205,7 @@ export function EditorSidebar({
         />
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-600">
-          {filtered.length} of {sourceList.length} shown
-        </p>
-
+      <div className="flex items-center justify-end">
         <div role="group" aria-label="Sort products by name" className="flex gap-1">
           <button
             type="button"
