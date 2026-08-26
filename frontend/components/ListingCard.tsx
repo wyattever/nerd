@@ -82,11 +82,18 @@ ${NCADEMI_STYLESHEETS.map(href => `<link rel="stylesheet" href="${href}" />`).jo
 
   const handleLoad = () => {
     const doc = iframeRef.current?.contentDocument;
-    if (!doc?.body) return;
+    const body = doc?.body;
+    if (!body) return;
     // Small delay lets the external stylesheets finish applying before we
     // measure -- avoids sizing the iframe against unstyled content.
     setTimeout(() => {
-      if (doc.body) setHeight(doc.body.scrollHeight);
+      // Only ever grows from the 400px default within this mount (a fresh
+      // record is a fresh mount, so `prev` never carries a stale height
+      // over from a differently-sized record). Treating the default as a
+      // floor instead of a value that can also jump down avoids a visible
+      // shrink-flash for short listings; the transition below smooths any
+      // remaining growth for long ones.
+      setHeight((prev) => Math.max(prev, body.scrollHeight));
     }, 100);
   };
 
@@ -96,7 +103,7 @@ ${NCADEMI_STYLESHEETS.map(href => `<link rel="stylesheet" href="${href}" />`).jo
       title={`${listing.product_name || "Product"} NCADEMI preview`}
       srcDoc={srcDoc}
       onLoad={handleLoad}
-      style={{ width: "100%", height: `${height}px`, border: "none" }}
+      style={{ width: "100%", height: `${height}px`, border: "none", transition: "height 150ms ease-out" }}
       sandbox="allow-same-origin"
     />
   );

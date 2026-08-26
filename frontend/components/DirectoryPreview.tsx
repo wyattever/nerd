@@ -202,9 +202,17 @@ ${NCADEMI_STYLESHEETS.map((href) => `<link rel="stylesheet" href="${href}" />`).
 
   const handleLoad = () => {
     const doc = iframeRef.current?.contentDocument;
-    if (!doc?.body) return;
+    const body = doc?.body;
+    if (!body) return;
     setTimeout(() => {
-      if (doc.body) setHeight(doc.body.scrollHeight);
+      // Only ever grows from the 600px default within this mount (a fresh
+      // record is a fresh mount -- see VendorEditor.tsx's remount-per-slug
+      // note -- so `prev` never carries a stale height over from a
+      // differently-sized record). Treating the default as a floor instead
+      // of a value that can also jump down avoids a visible shrink-flash
+      // for short records; the transition below smooths any remaining
+      // growth for long ones.
+      setHeight((prev) => Math.max(prev, body.scrollHeight));
     }, 100);
   };
 
@@ -214,7 +222,7 @@ ${NCADEMI_STYLESHEETS.map((href) => `<link rel="stylesheet" href="${href}" />`).
       title={`${record.product_name || "Directory record"} preview`}
       srcDoc={srcDoc}
       onLoad={handleLoad}
-      style={{ width: "100%", height: `${height}px`, border: "none" }}
+      style={{ width: "100%", height: `${height}px`, border: "none", transition: "height 150ms ease-out" }}
       sandbox="allow-same-origin"
     />
   );
