@@ -26,6 +26,7 @@
 import { promises as fs } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { isLocalOnlyAllowed } from "./local-only";
 
 /**
  * The JSON documents the /editor and /vendors pages' local write APIs can
@@ -57,10 +58,13 @@ function pathFor(kind: DataKind): string {
  * blocks the request -- defense in depth, not either-or.
  *
  * Returns the 404 Response to send when blocked, or null when the request
- * may proceed.
+ * may proceed. Delegates the actual condition to isLocalOnlyAllowed() --
+ * see that module's header -- so Route Handlers and the Server Component
+ * readers in local-data.ts enforce the exact same boundary rather than two
+ * independently maintained copies of it.
  */
 export function assertLocalOnly(): Response | null {
-  if (process.env.NODE_ENV === "production" || process.env.NEXT_PUBLIC_DISABLE_AUTH !== "true") {
+  if (!isLocalOnlyAllowed()) {
     return new Response(null, { status: 404 });
   }
   return null;
