@@ -10,7 +10,7 @@
   "products": [
     {
       "slug": "99math",
-      "product_name": "99math Stored",
+      "product_name": "99math Stored 2",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/99math/",
       "vendor_name": null,
       "vendor_directory_url": null,
@@ -40,7 +40,7 @@
     },
     {
       "slug": "abcya",
-      "product_name": "ABCya!",
+      "product_name": "ABCya! Stored",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/abcya/",
       "vendor_name": "IXL Learning",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/ixl-learning/",

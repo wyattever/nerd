@@ -42,7 +42,8 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:30:42 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     },
     {
       "slug": "clearfluency",
@@ -74,7 +75,8 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:31:46 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     },
     {
       "slug": "geogebra",
@@ -89,7 +91,8 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:15:23 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     },
     {
       "slug": "intuit-for-education",
@@ -104,7 +107,8 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:20:08 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     },
     {
       "slug": "myigdis",
@@ -119,7 +123,8 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:33:00 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     },
     {
       "slug": "next-gen-personal-finance",
@@ -134,7 +139,8 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:36:39 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     },
     {
       "slug": "number-corner",
@@ -149,7 +155,8 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:30:09 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     },
     {
       "slug": "number-rack-explorations",
@@ -164,7 +171,8 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:29:07 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     },
     {
       "slug": "pblworks-teach",
@@ -179,7 +187,8 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:40:20 PM",
-      "ai_insights": null
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     }
   ]
 }
