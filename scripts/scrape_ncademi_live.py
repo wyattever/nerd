@@ -26,9 +26,36 @@ Usage:
     python3 scripts/scrape_ncademi_live.py
 
 Output:
-    frontend/lib/live-products.json
-    frontend/lib/live-vendors.json
+    frontend/lib/published-live.json -- full product detail (same shape as
+        published.json's records) plus tracking_priority/tracking_status/
+        tracking_gatherer/tracking_reviewer initialized to null on every
+        non-protected record, so the file matches PublishedProductRecord
+        (frontend/lib/published-tables.ts) even though nothing here has
+        ever set a real tracking value -- that only happens in /editor.
+    frontend/lib/vendors-live.json -- deliberately NOT full vendor detail:
+        just vendor_name/vendor_directory_url/is_protected. The full
+        resources/products detail is still scraped internally (see
+        parse_public_vendor) and used for the product-vendor_resources
+        dedup step below -- simplify_vendor_for_output() trims it only at
+        the write step, so this file stays a lightweight name+URL list
+        without breaking that dedup.
 Both overwritten unconditionally on a successful run.
+
+Progress streaming: alongside the existing human-readable prints (unchanged,
+still meant for a person running this directly from a terminal), main()
+also calls emit_progress() at five milestones -- "start", "products",
+"vendors", "vendors_missing", "complete" -- each printing ONE line of the
+form `PROGRESS_JSON:{...}`. frontend/app/api/local/scrape/route.ts spawns
+this script (not execFile -- spawn's stdout is a live stream, execFile only
+returns output after the process exits) and forwards each such line to the
+browser as an SSE event, which is what makes /records' Messages log update
+live instead of only after the whole ~1-2 minute run finishes. The
+PYTHONUNBUFFERED=1 that route.ts sets when spawning is load-bearing here:
+Python fully block-buffers stdout when it isn't a TTY, so without it every
+print() -- progress lines included -- would sit in a buffer and only reach
+Node in one lump at process exit, silently defeating the whole point of
+streaming. emit_progress() also flushes explicitly, as defense in depth for
+anyone invoking this script under a runner that doesn't set that env var.
 """
 
 from __future__ import annotations
@@ -50,9 +77,15 @@ REST_PAGE_DELAY_SECONDS = 0.1
 PAGE_FETCH_DELAY_SECONDS = 0.3
 REQUEST_TIMEOUT_SECONDS = 15
 
+# Must match PROGRESS_PREFIX in frontend/app/api/local/scrape/route.ts --
+# the one thing that ties this script's stdout protocol to that route's
+# parser. Anything printed on a line that doesn't start with this prefix is
+# just the normal human-readable log and is not forwarded as an SSE event.
+PROGRESS_PREFIX = "PROGRESS_JSON:"
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
-OUT_PRODUCTS = REPO_ROOT / "frontend" / "lib" / "live-products.json"
-OUT_VENDORS = REPO_ROOT / "frontend" / "lib" / "live-vendors.json"
+OUT_PRODUCTS = REPO_ROOT / "frontend" / "lib" / "published-live.json"
+OUT_VENDORS = REPO_ROOT / "frontend" / "lib" / "vendors-live.json"
 
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": USER_AGENT})
@@ -128,6 +161,20 @@ def slug_to_name(url: str) -> str:
     path = urlparse(url).path.strip("/")
     slug = path.split("/")[-1]
     return slug.replace("-", " ").title()
+
+
+def emit_progress(stage: str, message: str, **extra) -> None:
+    """One machine-readable progress line for route.ts to parse -- see the
+    module docstring's "Progress streaming" section for the full protocol.
+    `stage` is a stable id ("start"/"products"/"vendors"/"vendors_missing"/
+    "complete"); the frontend uses it to REPLACE that stage's row in place
+    rather than appending a new one, which is what makes the "products"/
+    "vendors" counters look like they're live-updating in the Messages log
+    instead of spamming one new line per page. flush=True defeats Python's
+    own line-buffering on top of the PYTHONUNBUFFERED env var route.ts
+    already sets -- belt and suspenders, since this line existing at all
+    only matters if it reaches Node promptly."""
+    print(f"{PROGRESS_PREFIX}{json.dumps({'stage': stage, 'message': message, **extra})}", flush=True)
 
 
 def make_protected_product_stub(url: str) -> dict:
@@ -264,6 +311,16 @@ def parse_public_product(html: str, url: str) -> dict:
         "acr_reports": extract_acr_reports(article),
         "last_updated": last_updated,
         "is_protected": False,
+        # Editor-only workflow metadata (see published-tables.ts's
+        # PublishedProductRecord and published-validate.ts's
+        # OPTIONAL_STRING_FIELDS) -- always null here since a scrape has no
+        # opinion on priority/status/gatherer/reviewer, but present (not
+        # omitted) so a freshly-scraped record already matches the schema
+        # /editor expects instead of silently lacking these keys.
+        "tracking_priority": None,
+        "tracking_status": None,
+        "tracking_gatherer": None,
+        "tracking_reviewer": None,
     }
 
 
@@ -358,6 +415,22 @@ def dedupe_vendor_resources(products: list[dict], vendor_url_index: dict[str, se
 
 
 # --- 5. Output ---
+def simplify_vendor_for_output(vendor: dict) -> dict:
+    """Trims a scraped vendor record (parse_public_vendor's full detail, or
+    make_protected_vendor_stub's already-minimal stub) down to just
+    name/URL/protection status for vendors-live.json. The resources/
+    products detail parse_public_vendor also computes is deliberately NOT
+    persisted here -- it only exists to feed build_vendor_url_index/
+    dedupe_vendor_resources below, which must run on the FULL vendor
+    records (vendors_out), before this trim, or the dedup step would
+    silently become a no-op."""
+    return {
+        "vendor_name": vendor.get("vendor_name"),
+        "vendor_directory_url": vendor.get("vendor_directory_url"),
+        "is_protected": vendor.get("is_protected", False),
+    }
+
+
 def write_output(path: Path, key: str, records: list[dict], last_scraped: str) -> None:
     payload = {
         "$meta": {
@@ -374,6 +447,11 @@ def write_output(path: Path, key: str, records: list[dict], last_scraped: str) -
 
 
 def main() -> None:
+    # Milestone A. Fixed text per route.ts/records page's Messages log spec
+    # -- printed before URL discovery even starts, so it's the first thing
+    # a client streaming this process sees.
+    emit_progress("start", "Retrieving data.")
+
     print("--- 1. REST API URL Discovery ---")
     product_urls = sorted(get_rest_urls("product"))
     vendor_urls = sorted(get_rest_urls("vendor"))
@@ -381,32 +459,76 @@ def main() -> None:
 
     print("\n--- 2. Scraping products ---")
     products_out: list[dict] = []
+    # Milestone B counts these two outcomes separately: "published" ==
+    # fully scraped public pages (parse_public_product's full detail),
+    # "added" == protected pages that only got a minimal stub (see
+    # make_protected_product_stub) -- the two outcomes this loop can
+    # actually produce for a product URL, distinct from "missing"/"error"
+    # (skipped entirely, not counted here).
+    published_count = 0
+    added_count = 0
     for i, url in enumerate(product_urls, start=1):
         print(f"[{i}/{len(product_urls)}] {url}")
         status, html = fetch_page(url)
         if status == "protected":
             products_out.append(make_protected_product_stub(url))
+            added_count += 1
         elif status == "public":
             try:
                 products_out.append(parse_public_product(html, url))
+                published_count += 1
             except Exception as e:
                 print(f"    ERROR parsing {url}: {e}")
         # "missing"/"error" -- skip, already logged in fetch_page.
+        emit_progress(
+            "products",
+            f"Retrieved {published_count} published product pages and {added_count} added product pages.",
+            published=published_count,
+            added=added_count,
+        )
         time.sleep(PAGE_FETCH_DELAY_SECONDS)
 
     print("\n--- 3. Scraping vendors ---")
     vendors_out: list[dict] = []
+    missing_vendor_urls: list[str] = []
+    vendor_retrieved_count = 0
     for i, url in enumerate(vendor_urls, start=1):
         print(f"[{i}/{len(vendor_urls)}] {url}")
         status, html = fetch_page(url)
         if status == "protected":
             vendors_out.append(make_protected_vendor_stub(url))
+            vendor_retrieved_count += 1
         elif status == "public":
             try:
                 vendors_out.append(parse_public_vendor(html, url))
+                vendor_retrieved_count += 1
             except Exception as e:
                 print(f"    ERROR parsing {url}: {e}")
+                missing_vendor_urls.append(url)
+        else:
+            # "missing"/"error" from fetch_page itself -- no vendor record
+            # at all for this URL, which is exactly what Milestone D reports.
+            missing_vendor_urls.append(url)
+        # Milestone C -- same "replace this stage's row in place" live-
+        # counter behavior as Milestone B above.
+        emit_progress(
+            "vendors",
+            f"Retrieved {vendor_retrieved_count} vendor pages.",
+            retrieved=vendor_retrieved_count,
+        )
         time.sleep(PAGE_FETCH_DELAY_SECONDS)
+
+    # Milestone D. Skipped entirely when nothing is missing -- a "there is
+    # no record for the following: " message naming zero pages has nothing
+    # useful to tell the user, so this milestone is conditional on the rest
+    # of the fixed A/B/C/E progression, not always emitted.
+    if missing_vendor_urls:
+        missing_vendor_names = [slug_to_name(u) for u in missing_vendor_urls]
+        emit_progress(
+            "vendors_missing",
+            "There is no record for the following vendor pages: " + "; ".join(missing_vendor_names) + ".",
+            missing=missing_vendor_names,
+        )
 
     print("\n--- 4. Deduplicating vendor resources ---")
     vendor_url_index = build_vendor_url_index(vendors_out)
@@ -417,8 +539,16 @@ def main() -> None:
     last_scraped = datetime.now(timezone.utc).isoformat()
     write_output(OUT_PRODUCTS, "products", products_out, last_scraped)
     print(f"Saved {len(products_out)} products to {OUT_PRODUCTS.relative_to(REPO_ROOT)}")
-    write_output(OUT_VENDORS, "vendors", vendors_out, last_scraped)
+    write_output(OUT_VENDORS, "vendors", [simplify_vendor_for_output(v) for v in vendors_out], last_scraped)
     print(f"Saved {len(vendors_out)} vendors to {OUT_VENDORS.relative_to(REPO_ROOT)}")
+
+    # Milestone E. Fixed text, last line of the run.
+    emit_progress(
+        "complete",
+        "Process complete",
+        products=len(products_out),
+        vendors=len(vendors_out),
+    )
 
 
 if __name__ == "__main__":

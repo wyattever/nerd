@@ -1,9 +1,16 @@
 // frontend/app/records/page.tsx
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorSidebar, type SourceTab } from "@/components/EditorSidebar";
 import { USERS, fullName } from "@/lib/users";
+
+/** One row in the Messages log. `id` is a stable key -- upsertLogEntry
+ *  below replaces the row with a matching id in place (used for the
+ *  "products"/"vendors" milestones' live counters) rather than appending a
+ *  new row every time, and adds a new row for any id not already present
+ *  (every other milestone, plus the general page-load status). */
+type LogEntry = { id: string; text: string };
 
 // Types based on the extracted JSON schema
 type Resource = { text: string; url: string };
@@ -54,6 +61,7 @@ export default function RecordsPage() {
   const [activeTab, setActiveTab] = useState<SourceTab>("candidate");
   const [dataSource, setDataSource] = useState<"stored" | "live">("stored");
   const [hasLiveScrapeData, setHasLiveScrapeData] = useState(false);
+  const [isRetrievingLive, setIsRetrievingLive] = useState(false);
 
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [addedProducts, setAddedProducts] = useState<ProductRecord[]>([]);
@@ -61,7 +69,24 @@ export default function RecordsPage() {
   
   const [selectedSlug, setSelectedSlug] = useState("");
   const [loadState, setLoadState] = useState<"loading" | "ready" | "unavailable">("loading");
-  const [statusMessage, setStatusMessage] = useState("");
+  const [messagesLog, setMessagesLog] = useState<LogEntry[]>([]);
+  const messagesLogRef = useRef<HTMLDivElement>(null);
+
+  // Replaces the row with this id in place if one exists (a live counter
+  // like the "products"/"vendors" scrape milestones), otherwise appends a
+  // new row -- see LogEntry's own comment. A no-op when the text hasn't
+  // actually changed, so a redundant call (e.g. two identical counter
+  // updates) doesn't cause an extra render.
+  const upsertLogEntry = useCallback((id: string, text: string) => {
+    setMessagesLog((prev) => {
+      const idx = prev.findIndex((entry) => entry.id === id);
+      if (idx === -1) return [...prev, { id, text }];
+      if (prev[idx].text === text) return prev;
+      const next = [...prev];
+      next[idx] = { id, text };
+      return next;
+    });
+  }, []);
 
   // Concurrent fetch matching /editor/page.tsx
   useEffect(() => {
@@ -69,9 +94,9 @@ export default function RecordsPage() {
     (async () => {
       setLoadState("loading");
       
-      const publishedEndpoint = dataSource === "stored" 
-        ? ENDPOINT_FOR_TAB.published 
-        : "/api/local/live-products";
+      const publishedEndpoint = dataSource === "stored"
+        ? ENDPOINT_FOR_TAB.published
+        : "/api/local/published-live";
 
       const [publishedResult, addedResult, candidateResult] = await Promise.allSettled([
         fetchDocument(publishedEndpoint),
@@ -92,14 +117,14 @@ export default function RecordsPage() {
         
         if (normalizedProducts.length > 0) {
           setLoadState("ready");
-          setStatusMessage(`Loaded ${normalizedProducts.length} ${dataSource} published records.`);
+          upsertLogEntry("load", `Loaded ${normalizedProducts.length} ${dataSource} published records.`);
         } else {
           setLoadState("unavailable");
-          setStatusMessage(`The ${dataSource} published snapshot contains no products.`);
+          upsertLogEntry("load", `The ${dataSource} published snapshot contains no products.`);
         }
       } else {
         setLoadState("unavailable");
-        setStatusMessage("Could not load published data.");
+        upsertLogEntry("load", "Could not load published data.");
       }
 
       if (addedResult.status === "fulfilled") {
@@ -125,7 +150,106 @@ export default function RecordsPage() {
     return () => {
       cancelled = true;
     };
-  }, [dataSource]);
+  }, [dataSource, upsertLogEntry]);
+
+  // Checks once on mount whether frontend/lib/published-live.json exists yet
+  // (it won't until "Retrieve Live Data" -- see handleRetrieveLiveData
+  // below -- has been run at least once). This is what makes the Live Data
+  // toggle correctly disabled/enabled on a fresh page load without the user
+  // touching "Retrieve Live Data" first; that button also flips
+  // hasLiveScrapeData true directly on a successful scrape, same effect,
+  // just without waiting for a remount.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/local/published-live");
+        if (!cancelled && res.ok) {
+          setHasLiveScrapeData(true);
+        }
+      } catch {
+        // Network failure -- leave hasLiveScrapeData at its default false.
+        // Same "missing/unavailable is normal, not an error" stance as the
+        // route itself.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Triggers scripts/scrape_ncademi_live.py via a POST /api/local/scrape
+  // SSE stream (see that route's header comment for the full protocol).
+  // Focus moves to the Messages log synchronously, before the first
+  // `await`, so it happens in the same tick as the click rather than after
+  // the fetch settles. The log is cleared first so a fresh run starts as a
+  // clean A-E progression rather than mixing in whatever the page-load
+  // effect above last wrote to the "load" row.
+  const handleRetrieveLiveData = useCallback(async () => {
+    setIsRetrievingLive(true);
+    setMessagesLog([]);
+    messagesLogRef.current?.focus();
+
+    try {
+      const res = await fetch("/api/local/scrape", { method: "POST" });
+      if (!res.ok || !res.body) {
+        upsertLogEntry(
+          "scrape-error",
+          `Retrieve live data failed: unexpected server response (${res.status}).`
+        );
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      // SSE framing: events are separated by a blank line ("\n\n"); each
+      // event is one or more "field: value" lines. Only `event:`/`data:`
+      // are used here. A chunk from the reader can contain zero, one, or
+      // several complete events, and can also end mid-event -- the while
+      // loop drains every complete event currently in `buffer`, leaving any
+      // trailing partial event for the next chunk to complete.
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let boundary: number;
+        while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+          const rawEvent = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+
+          let eventType = "message";
+          let dataLine: string | null = null;
+          for (const line of rawEvent.split("\n")) {
+            if (line.startsWith("event: ")) eventType = line.slice("event: ".length);
+            else if (line.startsWith("data: ")) dataLine = line.slice("data: ".length);
+          }
+          if (dataLine === null) continue;
+
+          let data: { stage?: string; message?: string; error?: string };
+          try {
+            data = JSON.parse(dataLine);
+          } catch {
+            continue;
+          }
+
+          if (eventType === "progress" && data.stage && data.message) {
+            upsertLogEntry(data.stage, data.message);
+          } else if (eventType === "done") {
+            setHasLiveScrapeData(true);
+          } else if (eventType === "error") {
+            upsertLogEntry("scrape-error", `Retrieve live data failed: ${data.error ?? "unknown error"}.`);
+          }
+        }
+      }
+    } catch {
+      upsertLogEntry("scrape-error", "Retrieve live data failed: could not reach the local write API.");
+    } finally {
+      setIsRetrievingLive(false);
+    }
+  }, [upsertLogEntry]);
 
   const activeProducts = useMemo(() => {
     switch (activeTab) {
@@ -300,13 +424,11 @@ export default function RecordsPage() {
 
               <button
                 type="button"
-                onClick={() => {
-                  alert("Stubbed");
-                  setHasLiveScrapeData(true);
-                }}
-                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isRetrievingLive}
+                onClick={handleRetrieveLiveData}
+                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Retrieve Live Data
+                {isRetrievingLive ? "Retrieving…" : "Retrieve Live Data"}
               </button>
             </div>
           </div>
@@ -453,10 +575,27 @@ export default function RecordsPage() {
             <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">
               Messages
             </div>
-            <div className="flex flex-col gap-1 p-4">
-              <p role="status" aria-live="polite" className="text-sm text-gray-600 min-h-[1.25rem]">
-                {statusMessage}
-              </p>
+            {/* Fixed h-28 comfortably fits ~3 lines of text-sm content at a
+                time given this p-4 padding; overflow-y-scroll (not -auto)
+                keeps the scrollbar gutter permanently visible even with
+                zero/one-line content, rather than only appearing once
+                there's enough to actually scroll. tabIndex={-1} makes this
+                programmatically focusable (see handleRetrieveLiveData's
+                messagesLogRef.current?.focus()) without adding it to the
+                normal Tab order. */}
+            <div
+              ref={messagesLogRef}
+              role="log"
+              aria-live="polite"
+              aria-label="Retrieve data progress and status messages"
+              tabIndex={-1}
+              className="flex h-28 flex-col gap-1 overflow-y-scroll p-4 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            >
+              {messagesLog.length === 0 ? (
+                <p className="text-gray-400">No messages yet.</p>
+              ) : (
+                messagesLog.map((entry) => <p key={entry.id}>{entry.text}</p>)
+              )}
             </div>
           </div>
         </footer>
