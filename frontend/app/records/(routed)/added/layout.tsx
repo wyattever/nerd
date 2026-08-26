@@ -5,15 +5,21 @@
 
 import type { ReactNode } from "react";
 import { getAddedProducts } from "@/lib/local-data";
-import { RecordsAddedListPanel } from "./RecordsAddedListPanel";
+import { IntegratedListPanel } from "@/components/IntegratedListPanel";
+import type { DirectoryRecord } from "@/lib/directory-schema";
 
 export const dynamic = "force-dynamic";
 
 export default async function RecordsAddedLayout({ children }: { children: ReactNode }) {
   const { products } = await getAddedProducts();
   return (
-    <RecordsAddedListPanel products={products} base="/records/added">
+    <IntegratedListPanel
+      items={products as unknown as DirectoryRecord[]}
+      baseRoute="/records/added"
+      activeMode="records"
+      activeCategory="added"
+    >
       {children}
-    </RecordsAddedListPanel>
+    </IntegratedListPanel>
   );
 }

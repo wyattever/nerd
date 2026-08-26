@@ -5,18 +5,32 @@
  * Read-only Tracking fieldset (Priority only) + full-schema article for one
  * published record -- see
  * frontend/app/records/(routed)/candidates/RecordsCandidateDetail.tsx for
- * the shared rationale.
+ * the shared rationale, including the HTML/JSON viewer toggle (Phase 4.6).
+ *
+ * SourceToggle (Phase 4.6): moved in here from [slug]/page.tsx so it can
+ * sit between the Tracking block and the visual-preview section, matching
+ * this phase's placement requirement -- neither achievable from page.tsx
+ * alone since this component's own JSX is what separates those two
+ * regions. `hasLiveScrapeData` is computed server-side in page.tsx (a
+ * getPublishedLiveProducts() read) and passed down as a prop; the
+ * <Suspense> boundary has to wrap the SourceToggle call site itself (its
+ * useSearchParams() call), not some ancestor -- see that file's header.
  */
 
+import { Suspense, useState } from "react";
 import type { PublishedProductRecord } from "@/lib/published-tables";
+import { SourceToggle } from "./SourceToggle";
 
 interface RecordsPublishedDetailProps {
   record: PublishedProductRecord;
+  hasLiveScrapeData: boolean;
 }
 
-export function RecordsPublishedDetail({ record }: RecordsPublishedDetailProps) {
+export function RecordsPublishedDetail({ record, hasLiveScrapeData }: RecordsPublishedDetailProps) {
+  const [viewMode, setViewMode] = useState<"html" | "json">("html");
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 p-6">
       <header className="flex items-end justify-between">
         <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap shrink-0">Published Product Records</h1>
       </header>
@@ -36,7 +50,16 @@ export function RecordsPublishedDetail({ record }: RecordsPublishedDetailProps) 
         </div>
       </div>
 
-      <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4">
+      <Suspense fallback={<div className="h-[74px] w-full animate-pulse rounded-md border border-gray-300 bg-gray-100" />}>
+        <SourceToggle hasLiveScrapeData={hasLiveScrapeData} viewMode={viewMode} onViewModeChange={setViewMode} />
+      </Suspense>
+
+      <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4 w-full min-w-0">
+        {viewMode === "json" ? (
+          <pre className="bg-gray-50 p-4 rounded-md overflow-x-auto text-sm w-full max-w-full whitespace-pre-wrap break-words">
+            <code>{JSON.stringify(record, null, 2)}</code>
+          </pre>
+        ) : (
         <article className="w-full bg-white shadow-sm border border-gray-200 rounded-lg p-8">
           <header className="mb-8 border-b border-gray-200 pb-6">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">{record.product_name || "Unnamed Product"}</h2>
@@ -138,6 +161,7 @@ export function RecordsPublishedDetail({ record }: RecordsPublishedDetailProps) 
             </div>
           </dl>
         </article>
+        )}
       </section>
     </div>
   );

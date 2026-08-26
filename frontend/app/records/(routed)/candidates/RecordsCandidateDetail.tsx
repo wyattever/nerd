@@ -8,18 +8,36 @@
  * CandidateEditor.tsx's split on the editor side. `record` is looked up
  * server-side by [slug]/page.tsx; there's no local state to seed here since
  * nothing on this page is editable.
+ *
+ * HTML/JSON viewer toggle (Phase 4.6): the button row and its active/
+ * inactive styling are copied verbatim from PublishedEditor.tsx's Save/
+ * Delete row (`flex justify-end gap-3`, emerald-700 "primary" classes vs.
+ * the gray "secondary" ones) rather than introduced fresh -- see this
+ * repo's other editor components for the same pair. Here the roles aren't
+ * fixed (Save is always primary); which button gets which class swaps with
+ * `viewMode`. `mb-5` (not the editor row's `pb-[10px]`) enforces a fixed
+ * 20px gap to the viewer below, and sits above the viewMode ternary so the
+ * buttons stay visible in both HTML and JSON mode -- see the render below.
  */
 
+import { useState } from "react";
 import { USERS, fullName } from "@/lib/users";
 import type { PublishedProductRecord } from "@/lib/published-tables";
 
 const RESEARCHER_NAMES = USERS.filter((u) => u.role === "Researcher").map(fullName);
+
+const PRIMARY_BUTTON_CLASSES =
+  "rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500";
+const SECONDARY_BUTTON_CLASSES =
+  "rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 interface RecordsCandidateDetailProps {
   record: PublishedProductRecord;
 }
 
 export function RecordsCandidateDetail({ record }: RecordsCandidateDetailProps) {
+  const [viewMode, setViewMode] = useState<"html" | "json">("html");
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <header className="flex items-end justify-between">
@@ -72,7 +90,34 @@ export function RecordsCandidateDetail({ record }: RecordsCandidateDetailProps) 
         </div>
       </div>
 
-      <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4">
+      <div className="w-full rounded-md border border-gray-300 bg-white mb-6">
+        <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Viewer</div>
+        <div className="flex flex-wrap items-center gap-3 p-4">
+          <div className="ml-auto flex gap-3">
+            <button
+              type="button"
+              onClick={() => setViewMode("html")}
+              className={viewMode === "html" ? PRIMARY_BUTTON_CLASSES : SECONDARY_BUTTON_CLASSES}
+            >
+              HTML
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("json")}
+              className={viewMode === "json" ? PRIMARY_BUTTON_CLASSES : SECONDARY_BUTTON_CLASSES}
+            >
+              JSON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4 w-full min-w-0">
+        {viewMode === "json" ? (
+          <pre className="bg-gray-50 p-4 rounded-md overflow-x-auto text-sm w-full max-w-full whitespace-pre-wrap break-words">
+            <code>{JSON.stringify(record, null, 2)}</code>
+          </pre>
+        ) : (
         <article className="w-full bg-white shadow-sm border border-gray-200 rounded-lg p-8">
           <header className="mb-8 border-b border-gray-200 pb-6">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">{record.product_name || "Unnamed Product"}</h2>
@@ -174,6 +219,7 @@ export function RecordsCandidateDetail({ record }: RecordsCandidateDetailProps) 
             </div>
           </dl>
         </article>
+        )}
       </section>
     </div>
   );

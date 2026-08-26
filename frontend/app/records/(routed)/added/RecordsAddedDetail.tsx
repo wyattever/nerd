@@ -5,16 +5,24 @@
  * Read-only Tracking fieldset (Priority + Status only) + full-schema
  * article for one added record -- see
  * frontend/app/records/(routed)/candidates/RecordsCandidateDetail.tsx for
- * the shared rationale.
+ * the shared rationale, including the HTML/JSON viewer toggle (Phase 4.6).
  */
 
+import { useState } from "react";
 import type { PublishedProductRecord } from "@/lib/published-tables";
+
+const PRIMARY_BUTTON_CLASSES =
+  "rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500";
+const SECONDARY_BUTTON_CLASSES =
+  "rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 interface RecordsAddedDetailProps {
   record: PublishedProductRecord;
 }
 
 export function RecordsAddedDetail({ record }: RecordsAddedDetailProps) {
+  const [viewMode, setViewMode] = useState<"html" | "json">("html");
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <header className="flex items-end justify-between">
@@ -45,7 +53,34 @@ export function RecordsAddedDetail({ record }: RecordsAddedDetailProps) {
         </div>
       </div>
 
-      <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4">
+      <div className="w-full rounded-md border border-gray-300 bg-white mb-6">
+        <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Viewer</div>
+        <div className="flex flex-wrap items-center gap-3 p-4">
+          <div className="ml-auto flex gap-3">
+            <button
+              type="button"
+              onClick={() => setViewMode("html")}
+              className={viewMode === "html" ? PRIMARY_BUTTON_CLASSES : SECONDARY_BUTTON_CLASSES}
+            >
+              HTML
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("json")}
+              className={viewMode === "json" ? PRIMARY_BUTTON_CLASSES : SECONDARY_BUTTON_CLASSES}
+            >
+              JSON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4 w-full min-w-0">
+        {viewMode === "json" ? (
+          <pre className="bg-gray-50 p-4 rounded-md overflow-x-auto text-sm w-full max-w-full whitespace-pre-wrap break-words">
+            <code>{JSON.stringify(record, null, 2)}</code>
+          </pre>
+        ) : (
         <article className="w-full bg-white shadow-sm border border-gray-200 rounded-lg p-8">
           <header className="mb-8 border-b border-gray-200 pb-6">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">{record.product_name || "Unnamed Product"}</h2>
@@ -147,6 +182,7 @@ export function RecordsAddedDetail({ record }: RecordsAddedDetailProps) {
             </div>
           </dl>
         </article>
+        )}
       </section>
     </div>
   );

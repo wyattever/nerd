@@ -2,12 +2,12 @@
 //
 // Same route-group rationale as frontend/app/editor/(routed)/layout.tsx --
 // isolates this shell from the still-live frontend/app/records/page.tsx
-// monolith. Reuses EditorNavSidebar (base="/records") rather than a
-// duplicate component, since the tab bar itself has no /editor-specific
-// behavior.
+// monolith. EditorNavSidebar removed (Phase 2.5 hotfix): IntegratedListPanel
+// (rendered further down the tree, inside each category's own layout.tsx)
+// now owns the mode/category navigation, so this outer shell no longer
+// renders a nav column of its own -- see IntegratedListPanel.tsx's header.
 
 import type { ReactNode } from "react";
-import { EditorNavSidebar } from "@/components/EditorNavSidebar";
 
 export default function RecordsRoutedLayout({
   children,
@@ -16,7 +16,6 @@ export default function RecordsRoutedLayout({
 }) {
   return (
     <div className="flex min-h-screen min-w-[1200px]">
-      <EditorNavSidebar base="/records" />
       <main className="flex-1">{children}</main>
     </div>
   );
