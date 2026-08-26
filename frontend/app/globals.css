@@ -19,6 +19,15 @@
   }
 }
 
+html {
+  /* Reserves the vertical scrollbar's width permanently, whether or not a
+     given page actually needs to scroll. Without this, navigating from a
+     short record (no scrollbar) to a long one (needs a scrollbar) shifts
+     the available content width, reflowing everything horizontally -- the
+     most visible part of the record-to-record "jump". */
+  scrollbar-gutter: stable;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

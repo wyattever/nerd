@@ -168,7 +168,12 @@ interface VendorRegistryEntry {
 // rather than state populated from an effect (which is what tripped the
 // "Calling setState synchronously within an effect" rule this codebase has
 // hit before -- see the effect below's own header comment on that rule).
-const VENDORS_REGISTRY: VendorRegistryEntry[] = vendorsData.vendors;
+// vendors.json's entries aren't uniform -- some are minimal stub records
+// with no `resources` field at all -- so the raw import doesn't structurally
+// satisfy VendorRegistryEntry. Asserted rather than reshaped: this page is
+// deleted wholesale in Phase 6, and the only consumer (globalVendor lookup
+// below) already guards with `globalVendor?.resources || []`.
+const VENDORS_REGISTRY: VendorRegistryEntry[] = vendorsData.vendors as unknown as VendorRegistryEntry[];
 
 interface FetchedDocument {
   products: PublishedProductRecord[];

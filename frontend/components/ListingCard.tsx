@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import DOMPurify from "dompurify";
 import { ListingData } from "@/lib/types";
 import { buildNcademiListingHtml } from "@/lib/ncademiPreview";
@@ -24,18 +24,44 @@ export function ListingCard({
 }: {
   listing: ListingData
 }) {
-  const html = buildNcademiListingHtml(listing);
-  const safeHtml = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
-
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(400);
 
+  // DOMPurify.sanitize needs a real `window`/`document` to build its
+  // internal sanitizer, which isn't available during this "use client"
+  // component's SERVER render pass (Next still SSRs client components for
+  // the initial HTML before hydration) -- calling it directly in the render
+  // body is what threw "DOMPurify.sanitize is not a function".
+  //
+  // `hasMounted` gates the real computation to the client only, via
+  // useSyncExternalStore rather than a useEffect+useState "isMounted" flag
+  // -- that pattern still calls setState directly inside an effect body,
+  // which is exactly what this codebase's "no setState in effect body"
+  // lint rule (react-hooks/set-state-in-effect -- see editor/page.tsx's own
+  // comment on having hit this rule before) flags, even for a trivial
+  // boolean flip. useSyncExternalStore is React's own sanctioned mechanism
+  // for a value that must legitimately differ between the server render and
+  // the client: getServerSnapshot supplies `false` for SSR, getSnapshot
+  // supplies `true` on the client, and React handles the post-hydration
+  // re-render itself -- no explicit effect, no hydration-mismatch warning
+  // (the subscribe callback is a no-op since this value never changes after
+  // that first client render).
+  const hasMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+
   // Mirrors the live page's outer ancestry (body class, #page, main#primary,
   // .container) so Bootscore's descendant selectors resolve the same way
-  // they do on the real site. safeHtml -- already DOMPurify-sanitized --
-  // supplies the per-product content (whatever buildNcademiListingHtml
-  // currently emits, including its own <article> wrapper).
-  const srcDoc = `<!DOCTYPE html>
+  // they do on the real site. safeHtml -- DOMPurify-sanitized -- supplies
+  // the per-product content (whatever buildNcademiListingHtml currently
+  // emits, including its own <article> wrapper).
+  const srcDoc = useMemo(() => {
+    if (!hasMounted) return undefined;
+    const html = buildNcademiListingHtml(listing);
+    const safeHtml = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -52,6 +78,7 @@ ${NCADEMI_STYLESHEETS.map(href => `<link rel="stylesheet" href="${href}" />`).jo
   </div>
 </body>
 </html>`;
+  }, [hasMounted, listing]);
 
   const handleLoad = () => {
     const doc = iframeRef.current?.contentDocument;
