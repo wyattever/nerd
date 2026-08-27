@@ -227,8 +227,13 @@ export function CandidateEditor({
       }
       updateProducts((prev) => [...prev, record].sort((a, b) => a.product_name.localeCompare(b.product_name)));
       setStatusMessage(`Imported "${record.product_name}" into the candidate list (not yet saved to disk).`);
+      // selected/listing (and so the viewer below) are derived from the
+      // route's `slug` param, not from `products` state -- without this,
+      // the import lands in `products` (which is why Save Candidate works)
+      // but the viewer keeps showing whatever record was already selected.
+      router.push(`/editor/candidates/${record.slug}`);
     },
-    [products, setStatusMessage, updateProducts]
+    [products, router, setStatusMessage, updateProducts]
   );
   const handleImportModalClosed = useCallback(() => {
     setIsImportModalOpen(false);
