@@ -90,7 +90,7 @@ function buildSupportSectionHtml(record: DirectoryRecord): string {
             .join("\n")}
         </ul>`;
   return `
-    <section class="card edtech-info-card edtech-info-card--support">
+    <section class="card edtech-info-card edtech-info-card--support mb-3">
       <div class="card-body p-3 p-lg-4">
         <h2 class="h4 mb-3">Support</h2>
         ${items}
