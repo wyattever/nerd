@@ -228,7 +228,17 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
     <div className="flex h-screen w-full overflow-hidden">
       <nav
         aria-label="Directory navigation and records"
-        className="flex h-full w-72 flex-shrink-0 flex-col gap-3 self-start overflow-y-auto border-r border-gray-200 p-4"
+        // w-56 (224px), down from w-72 (288px) -- reclaims 64px of the
+        // ~352px of fixed app chrome (sidebar + main's p-6 padding + the
+        // reserved scrollbar gutter) that was pushing the Visual Preview
+        // iframe near Bootstrap's 992px lg breakpoint at ordinary window
+        // widths, causing the Support/ACR sidebar cards to flip between
+        // stacked and two-column layout on small zoom changes. Doesn't
+        // touch the mirrored NCADEMI markup/CSS itself (DirectoryPreview.tsx,
+        // lib/ncademiPreview.ts) -- that breakpoint is a faithful copy of
+        // the live site's own, confirmed against its page source, so
+        // overriding it directly would be the actual deviation.
+        className="flex h-full w-56 flex-shrink-0 flex-col gap-3 self-start overflow-y-auto border-r border-gray-200 p-4"
       >
         <div role="group" aria-label="Shell" className="flex justify-evenly w-full">
           {MODE_TABS.map(renderModeLink)}
