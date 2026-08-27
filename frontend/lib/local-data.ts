@@ -173,3 +173,51 @@ export async function getPublishedLiveProducts(): Promise<{ products: PublishedP
 
   return { products };
 }
+
+const VENDORS_LIVE_PATH = path.join(process.cwd(), "lib", "vendors-live.json");
+
+/**
+ * Same derivation as deriveLiveProductSlug() above, applied to
+ * vendor_directory_url instead of ncademi_product_url -- vendors-live.json's
+ * records carry no `slug` field either. Exported so
+ * app/api/local/vendors-live/route.ts can apply the exact same derivation
+ * this server-side reader uses.
+ */
+export function deriveLiveVendorSlug(vendorDirectoryUrl: string): string {
+  const segments = vendorDirectoryUrl.split("/").filter(Boolean);
+  return segments[segments.length - 1] ?? vendorDirectoryUrl;
+}
+
+/**
+ * Reads vendors-live.json -- mirrors getPublishedLiveProducts() above:
+ * same isLocalOnlyAllowed() + notFound() guard, same "no live data yet"
+ * -> `{ vendors: [] }` fallback rather than throwing.
+ */
+export async function getLiveVendors(): Promise<{ vendors: DirectoryRecord[] }> {
+  if (!isLocalOnlyAllowed()) notFound();
+
+  let raw: string;
+  try {
+    raw = await fs.readFile(VENDORS_LIVE_PATH, "utf8");
+  } catch {
+    return { vendors: [] };
+  }
+
+  const body = JSON.parse(raw) as { vendors?: unknown };
+  const rawVendors = Array.isArray(body.vendors) ? (body.vendors as Array<Record<string, unknown>>) : [];
+  // map_vendor_to_directory_record() (scrape_ncademi_live.py) already
+  // writes the full DirectoryRecord shape (kind/product_name/
+  // vendor_resources/other_resources/support_contacts/acr_reports/etc.),
+  // so `...v` carries that through untouched here -- only `slug` (which
+  // the script deliberately doesn't write; see deriveLiveVendorSlug's own
+  // docstring) is synthesized. `product_name` keeps a fallback since
+  // DirectoryRecord requires a string and a parse failure (no <h1> found)
+  // can leave the script's vendor_name null.
+  const vendors = rawVendors.map((v) => ({
+    ...v,
+    slug: deriveLiveVendorSlug(v.vendor_directory_url as string),
+    product_name: v.product_name || v.vendor_name || "Unknown",
+  })) as unknown as DirectoryRecord[];
+
+  return { vendors };
+}
