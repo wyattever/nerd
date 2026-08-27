@@ -255,6 +255,43 @@
       "last_updated": "8/7/2026 12:40:20 PM",
       "ai_insights": null,
       "tracking_status": "Gathering"
+    },
+    {
+      "slug": "tynker",
+      "product_name": "Tynker",
+      "vendor_name": "Tynker",
+      "product_description": "Tynker is a creative coding platform and curriculum for K-12 students, offering block-based and text-based programming courses, puzzles, and games to help children learn computer science skills at home and in school.",
+      "product_website_url": "https://www.tynker.com/apcs-school/coding-curriculum/apcs-principles?",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/tynker/",
+      "vendor_resources": [
+        {
+          "text": "Empowering Coding for Kids with Disabilities: A Guide",
+          "url": "https://www.tynker.com/blog/coding-for-kids-with-disabilities/"
+        }
+      ],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://www.tynker.com/contact/",
+          "label": "Tynker Contact Us"
+        },
+        {
+          "type": "email",
+          "value": "support@tynker.com",
+          "label": null
+        },
+        {
+          "type": "email",
+          "value": "schools@tynker.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "vendor_directory_url": null,
+      "last_updated": "2026-08-27T22:17:29.195Z",
+      "ai_insights": null,
+      "tracking_status": "Gathering"
     }
   ]
 }
