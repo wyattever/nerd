@@ -29,17 +29,22 @@ function formatLastUpdated(raw: string): string {
   }).format(d);
 }
 
-function genHeaderHtml(listing: ListingData): string {
+// h1#product-name retained -- used by frontend/tests/e2e/candidate_lifecycle.spec.ts,
+// frontend/tests/e2e/live_run.spec.ts, and frontend/app/nerd-table.css.
+// Matches the live page's outer <header class="mb-4"><h1 class="mb-0"> wrapper.
+function genHeaderTagHtml(listing: ListingData): string {
+  return [
+    '<header class="mb-4">',
+    `<h1 id="product-name" class="mb-0">${escapeHtml(listing.product_name)}</h1>`,
+    '</header>',
+  ].join("\n");
+}
+
+// No target/rel here -- confirmed against live view-source of the Adobe
+// Express/Acrobat product pages, this specific link (unlike the resource
+// list links below) opens in the same tab on the real site.
+function genEntryContentHtml(listing: ListingData): string {
   const parts: string[] = [];
-
-  // h1#product-name retained -- used by frontend/tests/e2e/candidate_lifecycle.spec.ts,
-  // frontend/tests/e2e/live_run.spec.ts, and frontend/app/nerd-table.css.
-  // Restyled to match the live page's outer <header class="mb-4"><h1 class="mb-0">
-  // wrapper instead of the old entry-header/entry-title classes.
-  parts.push('<header class="mb-4">');
-  parts.push(`<h1 id="product-name" class="mb-0">${escapeHtml(listing.product_name)}</h1>`);
-  parts.push('</header>');
-
   parts.push('<div class="entry-content mb-4">');
 
   if (listing.vendor_name) {
@@ -56,7 +61,7 @@ function genHeaderHtml(listing: ListingData): string {
   if (listing.product_website_url && listing.product_website_url !== '#') {
     parts.push(
       '<p class="mb-0 edtech-website-link">' +
-      `<a href="${escapeHtml(listing.product_website_url)}" target="_blank" rel="noopener noreferrer">` +
+      `<a href="${escapeHtml(listing.product_website_url)}">` +
       `<i class="fa-regular fa-globe" aria-hidden="true"></i> ` +
       `<span>${escapeHtml(listing.product_name)} Website</span>` +
       '</a></p>'
@@ -65,6 +70,14 @@ function genHeaderHtml(listing: ListingData): string {
   parts.push('</div>');
 
   return parts.join("\n");
+}
+
+// Combined header+entry-content, kept for getSectionHtml's "header"
+// SectionKey/override contract (see buildNcademiListingHtml below for why
+// the default, non-overridden render path uses genHeaderTagHtml/
+// genEntryContentHtml directly instead of this).
+function genHeaderHtml(listing: ListingData): string {
+  return `${genHeaderTagHtml(listing)}\n${genEntryContentHtml(listing)}`;
 }
 
 function genVendorResourcesHtml(listing: ListingData): string {
@@ -77,7 +90,7 @@ function genVendorResourcesHtml(listing: ListingData): string {
     `<h3 class="h4 mb-3">From ${vendorDisplayName}</h3>`,
     '<ul class="mb-4">',
     ...listing.vendor_resources.map(item =>
-      `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.text)}</a></li>`
+      `<li><a href="${escapeHtml(item.url)}" target="_blank">${escapeHtml(item.text)}</a></li>`
     ),
     '</ul>'
   ];
@@ -93,7 +106,7 @@ function genOtherResourcesHtml(listing: ListingData): string {
     '<h3 class="h4 mb-3">From Other Sources</h3>',
     '<ul class="mb-0">',
     ...listing.other_resources.map(item =>
-      `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.text)}</a></li>`
+      `<li><a href="${escapeHtml(item.url)}" target="_blank">${escapeHtml(item.text)}</a></li>`
     ),
     '</ul>'
   ];
@@ -122,8 +135,10 @@ function genSupportHtml(listing: ListingData): string {
     if (contact.type === "email") {
       parts.push(`<a href="mailto:${escapeHtml(contact.value)}">${escapeHtml(contact.value)}</a>`);
     } else if (contact.type === "url") {
+      // No target/rel -- confirmed against live view-source, Support
+      // card links open in the same tab on the real site.
       const label = escapeHtml(contact.label || contact.value);
-      parts.push(`<a href="${escapeHtml(contact.value)}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+      parts.push(`<a href="${escapeHtml(contact.value)}">${label}</a>`);
     } else {
       parts.push(escapeHtml(contact.value));
     }
@@ -161,9 +176,12 @@ function genAcrHtml(listing: ListingData): string {
     listing.acr_reports.forEach(acr => {
       parts.push('<article>');
 
+      // No target/rel on either link below -- confirmed against live
+      // view-source, ACR title and "Completed by" links open in the same
+      // tab on the real site.
       const hasValidUrl = acr.url && acr.url !== "#";
       const titleElement = hasValidUrl
-        ? `<a href="${escapeHtml(acr.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.title)}</a>`
+        ? `<a href="${escapeHtml(acr.url)}">${escapeHtml(acr.title)}</a>`
         : escapeHtml(acr.title);
 
       parts.push(`<h3 class="h6 mb-1">${titleElement}</h3>`);
@@ -177,7 +195,7 @@ function genAcrHtml(listing: ListingData): string {
       }
       if (acr.auditor_name) {
         const auditor = acr.auditor_url
-          ? `<a href="${escapeHtml(acr.auditor_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(acr.auditor_name)}</a>`
+          ? `<a href="${escapeHtml(acr.auditor_url)}">${escapeHtml(acr.auditor_name)}</a>`
           : escapeHtml(acr.auditor_name);
         liItems.push(`<li><strong>Completed by:</strong> ${auditor}</li>`);
       }
@@ -220,7 +238,6 @@ export function getSectionHtml(listing: ListingData, key: SectionKey): string {
 // SectionKey shape (types.ts, SectionEditor.tsx) and is out of scope here.
 // Confirmed against live view-source of the Adobe Express product page.
 export function buildNcademiListingHtml(listing: ListingData): string {
-  const header = getSectionHtml(listing, "header");
   const vendorResources = getSectionHtml(listing, "vendor_resources");
   const otherResources = getSectionHtml(listing, "other_resources");
   const support = getSectionHtml(listing, "support");
@@ -238,11 +255,27 @@ export function buildNcademiListingHtml(listing: ListingData): string {
       </section>`
     : "";
 
+  // <header> renders above the row, matching the live page's own structure
+  // (confirmed against view-source of the Adobe Express/Acrobat product
+  // pages) -- only .entry-content sits inside col-lg-8, not the whole
+  // header+entry-content unit as before.
+  //
+  // A "header" section_overrides entry is the one exception: it's an
+  // opaque HTML string (can't be reliably split into <header>/.entry-content
+  // halves), so it keeps the OLD combined-inside-col-lg-8 placement instead
+  // of being split. In practice this only matters for the legacy
+  // app/editor/page.tsx monolith's SectionEditor -- none of the current
+  // routed editors (CandidateEditor.tsx etc.) ever set section_overrides.
+  const headerOverride = listing.section_overrides?.header;
+  const headerTag = headerOverride == null ? genHeaderTagHtml(listing) : "";
+  const entryContentOrOverride = headerOverride ?? genEntryContentHtml(listing);
+
   return `
     <article class="nc-single-product product type-product status-publish hentry">
+      ${headerTag}
       <div class="row g-4 g-lg-5 align-items-start">
         <div class="col-12 col-lg-8">
-          ${header}
+          ${entryContentOrOverride}
           ${resourcesSection}
         </div>
         <div class="col-12 col-lg-4">
