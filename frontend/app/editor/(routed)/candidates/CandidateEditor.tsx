@@ -43,6 +43,7 @@ import { DeleteCandidateModal } from "@/components/DeleteCandidateModal";
 import { CodeViewModal } from "@/components/CodeViewModal";
 import { toListingData } from "@/lib/editor-preview";
 import { buildNcademiListingHtml } from "@/lib/ncademiPreview";
+import type { PasswordRecord } from "@/lib/passwords";
 import { USERS, fullName } from "@/lib/users";
 import vendorsData from "@/lib/vendors.json";
 import { useMessages } from "@/components/IntegratedListPanel";
@@ -116,6 +117,27 @@ export function CandidateEditor({
   const [meta] = useState(initialMeta);
   const [etag, setEtag] = useState<string | null>(initialEtag);
 
+  // Fetched once per mount, not per record -- passwords.json only grows via
+  // handleImport's own POST below (which appends the new record locally
+  // too, see there), so there's nothing else that would make an existing
+  // entry go stale during this component's lifetime.
+  const [passwordRecords, setPasswordRecords] = useState<PasswordRecord[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/local/passwords")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`GET failed with ${res.status}`))))
+      .then((body: { passwords?: PasswordRecord[] }) => {
+        if (!cancelled) setPasswordRecords(Array.isArray(body.passwords) ? body.passwords : []);
+      })
+      .catch(() => {
+        // No password data is a display-only degradation (the field just
+        // shows blank) -- not worth surfacing as a save-blocking error.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Initialized from the `slug` route param, same value on every fresh
   // mount -- but tracked as its own state (rather than reading `slug`
   // directly) so handleImport can select a just-imported record locally.
@@ -186,6 +208,16 @@ export function CandidateEditor({
   // the Code modal shows it as read-only text instead of rendering it. See
   // CodeViewModal.tsx's header comment.
   const codeHtml = useMemo(() => (listing ? buildNcademiListingHtml(listing) : ""), [listing]);
+
+  // Matched by exact product_name, same convention as VENDORS_REGISTRY's
+  // lookup above. Blank for a candidate imported before this feature
+  // shipped, or before it's been picked up by the one-off backfill script
+  // -- read-only display only, never generated from here (see
+  // handleImport below for the one place a password IS created).
+  const password = useMemo(
+    () => (selected ? passwordRecords.find((p) => p.product_name === selected.product_name) : undefined),
+    [selected, passwordRecords]
+  );
 
   const handleHeaderSave = useCallback(
     (fields: HeaderFields) => {
@@ -260,7 +292,7 @@ export function CandidateEditor({
   }, []);
 
   const handleImport = useCallback(
-    (record: PublishedProductRecord) => {
+    async (record: PublishedProductRecord) => {
       if (products.some((p) => p.slug === record.slug)) {
         setStatusMessage(`Cannot import: slug "${record.slug}" already exists in the candidate list.`);
         return;
@@ -270,6 +302,29 @@ export function CandidateEditor({
       // value below, overriding whatever the pasted JSON happened to carry
       // (if anything) rather than only filling it in when absent.
       const importedRecord = { ...record, tracking_status: "Gathering" };
+
+      // Password generation happens HERE, once, at import time -- not
+      // lazily on view (see the passwordRecords fetch above) -- and is
+      // persisted to passwords.json immediately, independent of whether
+      // this candidate itself is ever saved. Non-blocking: a failure here
+      // shouldn't stop the import, just leave the Password field blank
+      // until a retry or the backfill script picks it up.
+      try {
+        const res = await fetch("/api/local/passwords", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ product_name: record.product_name, vendor_name: record.vendor_name }),
+        });
+        if (res.ok) {
+          const { record: passwordRecord } = (await res.json()) as { record: PasswordRecord };
+          setPasswordRecords((prev) =>
+            prev.some((p) => p.product_name === passwordRecord.product_name) ? prev : [...prev, passwordRecord]
+          );
+        }
+      } catch {
+        // Degrades to a blank Password field -- see the comment above.
+      }
+
       updateProducts((prev) => [...prev, importedRecord].sort((a, b) => a.product_name.localeCompare(b.product_name)));
       setStatusMessage(`Imported "${importedRecord.product_name}" into the candidate list (not yet saved to disk).`);
       // selected/listing (the viewer below) are derived from activeSlug, not
@@ -386,7 +441,15 @@ export function CandidateEditor({
 
       setIsDirty(false);
       router.refresh();
-      router.push("/editor/candidates");
+
+      // Delay navigation to allow router.refresh() to clear the server cache
+      // -- see VendorEditor.tsx's saveToServer for the same pattern. Without
+      // this, the sidebar list on the route we're navigating to can render
+      // from a stale cache, same class of race as handleSaveToServer above
+      // never hits (it never navigates away in the same tick).
+      setTimeout(() => {
+        router.push("/editor/candidates");
+      }, 100);
     });
   }, [selected, products, etag, schemaVersion, meta, postDocument, router, setSaveError]);
 
@@ -400,7 +463,12 @@ export function CandidateEditor({
       if (newEtag !== null) {
         setIsDirty(false);
         router.refresh();
-        router.push("/editor/candidates");
+
+        // Delay navigation to allow router.refresh() to clear the server
+        // cache -- see VendorEditor.tsx's saveToServer for the same pattern.
+        setTimeout(() => {
+          router.push("/editor/candidates");
+        }, 100);
       }
     });
   }, [selected, products, etag, schemaVersion, meta, postDocument, router, setSaveError, setStatusMessage]);
@@ -471,6 +539,26 @@ export function CandidateEditor({
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
+          </label>
+
+          <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Password
+            {/* size=9 (roughly "Password"'s own 8 characters, plus a hair
+                of room) rather than a fixed Tailwind width, so the field
+                stays sized to its label regardless of the actual password
+                string's length. readOnly (not disabled): the value stays
+                focusable/selectable/copyable, matching the whole point of
+                displaying it. Generated once at Import Candidate time (see
+                handleImport) -- blank here for anything imported before
+                this feature shipped, until the one-off backfill script
+                runs. */}
+            <input
+              type="text"
+              readOnly
+              size={9}
+              value={password?.password ?? ""}
+              className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700 cursor-default focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </label>
 
           <div className="ml-auto">

@@ -12,7 +12,7 @@
  * "Added to Site" / "Delete Candidate".
  */
 
-import { useCallback, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ListingCard } from "@/components/ListingCard";
@@ -25,6 +25,7 @@ import { DeleteAddedModal } from "@/components/DeleteAddedModal";
 import { CodeViewModal } from "@/components/CodeViewModal";
 import { toListingData } from "@/lib/editor-preview";
 import { buildNcademiListingHtml } from "@/lib/ncademiPreview";
+import type { PasswordRecord } from "@/lib/passwords";
 import vendorsData from "@/lib/vendors.json";
 import { useMessages } from "@/components/IntegratedListPanel";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
@@ -84,6 +85,26 @@ export function AddedEditor({ slug, initialProducts, initialSchemaVersion, initi
   const [meta] = useState(initialMeta);
   const [etag, setEtag] = useState<string | null>(initialEtag);
 
+  // Read-only lookup only -- passwords are generated once, at Import
+  // Candidate time (CandidateEditor.tsx's handleImport), never from here.
+  // See that file's identical fetch-once-on-mount comment.
+  const [passwordRecords, setPasswordRecords] = useState<PasswordRecord[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/local/passwords")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`GET failed with ${res.status}`))))
+      .then((body: { passwords?: PasswordRecord[] }) => {
+        if (!cancelled) setPasswordRecords(Array.isArray(body.passwords) ? body.passwords : []);
+      })
+      .catch(() => {
+        // No password data is a display-only degradation -- not worth
+        // surfacing as a save-blocking error.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // See CandidateEditor.tsx's own comment on this pattern (plain state,
   // not a ref read during render -- forbidden by this repo's
   // eslint-plugin-react-hooks config).
@@ -130,6 +151,13 @@ export function AddedEditor({ slug, initialProducts, initialSchemaVersion, initi
   // the Code modal shows it as read-only text instead of rendering it. See
   // CodeViewModal.tsx's header comment.
   const codeHtml = useMemo(() => (listing ? buildNcademiListingHtml(listing) : ""), [listing]);
+
+  // Matched by exact product_name -- see CandidateEditor.tsx's identical
+  // lookup for the full rationale.
+  const password = useMemo(
+    () => (selected ? passwordRecords.find((p) => p.product_name === selected.product_name) : undefined),
+    [selected, passwordRecords]
+  );
 
   const handleHeaderSave = useCallback(
     (fields: HeaderFields) => {
@@ -294,9 +322,25 @@ export function AddedEditor({ slug, initialProducts, initialSchemaVersion, initi
       const sourceEtag = await postDocument("added", newSourceArray, schemaVersion, meta, etag);
       if (sourceEtag === null) return;
 
+      // A password is vendor-review-only metadata for a still-gated
+      // "Added to Site" page -- once published, the review gate is gone and
+      // the password is stale. Best-effort/non-blocking: this is hygiene,
+      // not a promotion-blocking step, so a failure here is silently
+      // ignored rather than surfaced as a save error.
+      fetch("/api/local/passwords", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_name: promotedRecord.product_name }),
+      }).catch(() => {});
+
       setIsDirty(false);
       router.refresh();
-      router.push("/editor/added");
+
+      // Delay navigation to allow router.refresh() to clear the server cache
+      // -- see VendorEditor.tsx's saveToServer for the same pattern.
+      setTimeout(() => {
+        router.push("/editor/added");
+      }, 100);
     });
   }, [selected, products, etag, schemaVersion, meta, postDocument, router, setSaveError]);
 
@@ -310,7 +354,12 @@ export function AddedEditor({ slug, initialProducts, initialSchemaVersion, initi
       if (newEtag !== null) {
         setIsDirty(false);
         router.refresh();
-        router.push("/editor/added");
+
+        // Delay navigation to allow router.refresh() to clear the server
+        // cache -- see VendorEditor.tsx's saveToServer for the same pattern.
+        setTimeout(() => {
+          router.push("/editor/added");
+        }, 100);
       }
     });
   }, [selected, products, etag, schemaVersion, meta, postDocument, router, setSaveError, setStatusMessage]);
@@ -351,6 +400,20 @@ export function AddedEditor({ slug, initialProducts, initialSchemaVersion, initi
               <option value="contacted vendor">contacted vendor</option>
               <option value="replied back to vendor">replied back to vendor</option>
             </select>
+          </label>
+
+          <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Password
+            {/* Read-only display only -- see CandidateEditor.tsx's
+                identical field for the full rationale (generated once at
+                Import Candidate time, never from here). */}
+            <input
+              type="text"
+              readOnly
+              size={9}
+              value={password?.password ?? ""}
+              className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700 cursor-default focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </label>
 
           <div className="ml-auto">
