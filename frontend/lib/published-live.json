@@ -1,7 +1,7 @@
 {
   "$meta": {
-    "last_scraped": "2026-08-27T21:19:06.440176+00:00",
-    "total_records": 79,
+    "last_scraped": "2026-08-27T23:18:05.043757+00:00",
+    "total_records": 60,
     "generated_by": "scrape_ncademi_live.py"
   },
   "products": [
@@ -297,11 +297,6 @@
       "tracking_status": null,
       "tracking_gatherer": null,
       "tracking_reviewer": null
-    },
-    {
-      "product_name": "Amplify Classroom",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-classroom/",
-      "is_protected": true
     },
     {
       "product_name": "Amplify Core Knowledge Language Arts (CKLA)",
@@ -1091,11 +1086,6 @@
       "tracking_reviewer": null
     },
     {
-      "product_name": "Ck 12",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/ck-12/",
-      "is_protected": true
-    },
-    {
       "product_name": "Code.org",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/code-org/",
       "vendor_name": null,
@@ -1127,11 +1117,6 @@
       "tracking_status": null,
       "tracking_gatherer": null,
       "tracking_reviewer": null
-    },
-    {
-      "product_name": "Commonlit 360",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/commonlit-360/",
-      "is_protected": true
     },
     {
       "product_name": "CoolMathGames",
@@ -1444,16 +1429,6 @@
       "tracking_reviewer": null
     },
     {
-      "product_name": "Formative",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/formative/",
-      "is_protected": true
-    },
-    {
-      "product_name": "Frax",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/frax/",
-      "is_protected": true
-    },
-    {
       "product_name": "Gimkit",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/gimkit/",
       "vendor_name": null,
@@ -1485,11 +1460,6 @@
       "tracking_status": null,
       "tracking_gatherer": null,
       "tracking_reviewer": null
-    },
-    {
-      "product_name": "Gizmos",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/gizmos/",
-      "is_protected": true
     },
     {
       "product_name": "Google Classroom",
@@ -1838,11 +1808,6 @@
       "tracking_status": null,
       "tracking_gatherer": null,
       "tracking_reviewer": null
-    },
-    {
-      "product_name": "Grammarly",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/grammarly/",
-      "is_protected": true
     },
     {
       "product_name": "History.com",
@@ -2222,21 +2187,6 @@
       "tracking_reviewer": null
     },
     {
-      "product_name": "Lexia Core5 Reading",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/lexia-core5-reading/",
-      "is_protected": true
-    },
-    {
-      "product_name": "Lexia English Language Development",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/lexia-english-language-development/",
-      "is_protected": true
-    },
-    {
-      "product_name": "Lexia Powerup Literacy",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/lexia-powerup-literacy/",
-      "is_protected": true
-    },
-    {
       "product_name": "Mastery Connect",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/mastery-connect/",
       "vendor_name": "Instructure",
@@ -2336,11 +2286,6 @@
       "tracking_reviewer": null
     },
     {
-      "product_name": "Mathway",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/mathway/",
-      "is_protected": true
-    },
-    {
       "product_name": "mCLASS",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/mclass/",
       "vendor_name": "Amplify",
@@ -2387,16 +2332,6 @@
       "tracking_reviewer": null
     },
     {
-      "product_name": "Nearpod",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/nearpod/",
-      "is_protected": true
-    },
-    {
-      "product_name": "Newsela Student Platform",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/newsela-student-platform/",
-      "is_protected": true
-    },
-    {
       "product_name": "Nitro Type",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/nitro-type/",
       "vendor_name": "Teaching.com",
@@ -2422,11 +2357,6 @@
       "tracking_status": null,
       "tracking_gatherer": null,
       "tracking_reviewer": null
-    },
-    {
-      "product_name": "Noredink",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/noredink/",
-      "is_protected": true
     },
     {
       "product_name": "Notebook LM",
@@ -2538,16 +2468,6 @@
       "tracking_status": null,
       "tracking_gatherer": null,
       "tracking_reviewer": null
-    },
-    {
-      "product_name": "Pear Deck",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/pear-deck/",
-      "is_protected": true
-    },
-    {
-      "product_name": "Pebblego",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/pebblego/",
-      "is_protected": true
     },
     {
       "product_name": "PhET Interactive Simulations",
@@ -2759,11 +2679,6 @@
       "tracking_reviewer": null
     },
     {
-      "product_name": "Readworks",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/readworks/",
-      "is_protected": true
-    },
-    {
       "product_name": "Schoology",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/schoology/",
       "vendor_name": "PowerSchool",
@@ -2846,16 +2761,6 @@
       "tracking_status": null,
       "tracking_gatherer": null,
       "tracking_reviewer": null
-    },
-    {
-      "product_name": "Seesaw Elementary Lms",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/seesaw-elementary-lms/",
-      "is_protected": true
-    },
-    {
-      "product_name": "Sparknotes",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/sparknotes/",
-      "is_protected": true
     },
     {
       "product_name": "Study.com",

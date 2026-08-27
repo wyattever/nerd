@@ -1,0 +1,294 @@
+{
+  "$meta": {
+    "last_scraped": "2026-08-27T23:22:34.460650+00:00",
+    "total_records": 6,
+    "generated_by": "scrape_ncademi_live.py"
+  },
+  "products": [
+    {
+      "product_name": "CommonLit 360",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/commonlit-360/",
+      "vendor_name": "CommonLit",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/commonlit/",
+      "product_website_url": "https://www.commonlit.org/ela-curriculum",
+      "product_description": "CommonLit 360 is a literacy curriculum and reading comprehension platform that provides reading lessons, texts, and assessments for ELA instruction in grades 6–12. It is used in classroom and independent reading activities.",
+      "vendor_resources": [
+        {
+          "text": "Trust Center (Conformance Report available for request here.)",
+          "url": "http://trust.commonlit.org"
+        },
+        {
+          "text": "Accessibility Statement",
+          "url": "https://www.commonlit.org/accessibility"
+        }
+      ],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://www.commonlit.org/contact",
+          "label": "CommonLit | Contact Us"
+        },
+        {
+          "type": "email",
+          "value": "help@commonlit.org",
+          "label": null
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "Protected: CommonLit Compliance Center",
+          "url": "https://trust.commonlit.org/",
+          "version": null,
+          "date": null,
+          "auditor_name": null,
+          "auditor_url": null
+        }
+      ],
+      "last_updated": "August 18, 2026",
+      "is_protected": true,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Lexia CORE5 Reading",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/lexia-core5-reading/",
+      "vendor_name": "Protected: Lexia",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/lexia/",
+      "product_website_url": "https://www.lexialearning.com/core5",
+      "product_description": "Lexia Core5® Reading is an adaptive literacy instruction program that provides personalized reading instruction across phonological awareness, phonics, fluency, vocabulary, and comprehension for students in pre-K through grade 5. It is used to support core instruction and reading intervention.",
+      "vendor_resources": [
+        {
+          "text": "Impact of the Lexia® Core5® Reading Program on Students with Reading and Language-Based Disabilities (PDF)",
+          "url": "https://www.lexialearning.com/sites/default/files/Misc/Core5%20ESSA%20Strong%20Report%20-%20Impact%20of%20the%20Lexia%C2%AE%20Core5%C2%AE%20Reading%20Program%20on%20Students%20with%20Reading%20and%20Language-Based%20Disabilities.pdf"
+        }
+      ],
+      "other_resources": [
+        {
+          "text": "Educational Technology in Support of Elementary Students With Reading or Language-Based Disabilities: A Cluster Randomized Control Trial - PubMed",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/36519673/"
+        },
+        {
+          "text": "A Causal-Comparative Study of the Supplemental Lexia Core5 Reading Computer-Assisted Instruction Program Intervention for Improving the Reading Achievement of Elementary School Students with Disabilities - ERIC",
+          "url": "https://eric.ed.gov/?q=ex+AND+post&ff1=eduGrade+3&id=ED642661"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://community.lexialearning.com/contact-us-196",
+          "label": "Contact Us"
+        },
+        {
+          "type": "email",
+          "value": "accessibility@lexialearning.com",
+          "label": null
+        },
+        {
+          "type": "url",
+          "value": "https://community.lexialearning.com/contact-us-196",
+          "label": "Contact Us"
+        },
+        {
+          "type": "email",
+          "value": "accessibility@lexialearning.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "Available on Request",
+          "url": null,
+          "version": null,
+          "date": null,
+          "auditor_name": null,
+          "auditor_url": null
+        }
+      ],
+      "last_updated": "August 4, 2026",
+      "is_protected": true,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Newsela Student Platform",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/newsela-student-platform/",
+      "vendor_name": "Protected: Newsela",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/newsela/",
+      "product_website_url": "https://newsela.com/",
+      "product_description": "Newsela is an instructional content platform designed to bridge real-world media and classroom learning for students in grades 3–12. It converts authentic, current-events news and cross-curricular content--ELA (English Language Arts), Social Studies, STEM, and Writing--into accessible learning materials.",
+      "vendor_resources": [
+        {
+          "text": "Accessibility on Newsela",
+          "url": "https://help.newsela.com/en/articles/13656107-accessibility-on-newsela"
+        },
+        {
+          "text": "Newsela Accessibility Statement",
+          "url": "https://help.newsela.com/en/articles/13656089-newsela-accessibility-statement?_gl=1*caouf4*_gcl_au*MTgxMTgwNjA4My4xNzg1MjYzMzgy"
+        },
+        {
+          "text": "Video Accessibility",
+          "url": "https://help.newsela.com/en/articles/13656184-video-content#h_71b5d25168"
+        }
+      ],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://newsela.com/support",
+          "label": "Contact Newsela Support"
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "Protected: Newsela Accessibility Conformance Report",
+          "url": "https://go.newsela.com/rs/628-ZPE-510/images/Newsela-ACR-VPAT-2.4-Rev.pdf",
+          "version": "2.4 Rev",
+          "date": null,
+          "auditor_name": "TPGi - Vispero",
+          "auditor_url": "https://vispero.com/"
+        }
+      ],
+      "last_updated": "August 7, 2026",
+      "is_protected": true,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "NoRedInk",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/noredink/",
+      "vendor_name": null,
+      "vendor_directory_url": null,
+      "product_website_url": "https://www.noredink.com/",
+      "product_description": "NoRedInk is a writing instruction platform that provides grammar practice, revision activities, and scaffolded writing assignments in areas such as sentence structure, usage, essay writing, and text-based analysis. It is used in grades 3–12 for English language arts instruction and writing practice.",
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://www.noredink.com/support",
+          "label": "Support (requires a login)"
+        },
+        {
+          "type": "email",
+          "value": "support@noredink.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "Protected: NoRedInk Accessibility Conformance Report, WCAG Edition (PDF)",
+          "url": "https://noredink-product.s3.amazonaws.com/teacher-resources/ACR_VPAT_NoRedInk.pdf",
+          "version": "2.5",
+          "date": null,
+          "auditor_name": "Zenyth",
+          "auditor_url": "https://www.zenythgroup.com/"
+        }
+      ],
+      "last_updated": "July 23, 2026",
+      "is_protected": true,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "ReadWorks",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/readworks/",
+      "vendor_name": null,
+      "vendor_directory_url": null,
+      "product_website_url": "https://www.readworks.org/",
+      "product_description": "ReadWorks is a nonprofit educational technology organization that provides a reading comprehension and literacy instruction platform for K-12 students and teachers. The ReadWorks platform features reading passages, comprehension question and vocabulary sets, and writing activities for K–12 English language arts instruction. It is used to support close reading, background knowledge building, and reading comprehension.",
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://help.readworks.org/",
+          "label": "ReadWorks Support Center"
+        },
+        {
+          "type": "email",
+          "value": "help@readworks.org",
+          "label": null
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "Protected: ReadWorks Accessibility Conformance Report, WCAG Edition 2.1 (GDOC)",
+          "url": "https://docs.google.com/document/d/1Kp8sT7vuryJIsXTL5sWmRv0TKYxFit6CWMsS00TOKpc/edit?tab=t.0",
+          "version": null,
+          "date": null,
+          "auditor_name": null,
+          "auditor_url": null
+        }
+      ],
+      "last_updated": "July 21, 2026",
+      "is_protected": true,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "SeeSaw Elementary LMS",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/seesaw-elementary-lms/",
+      "vendor_name": "Protected: SeeSaw",
+      "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/seesaw/",
+      "product_website_url": "https://seesaw.com/products/all-in-one-platform/",
+      "product_description": "Seesaw Elementary LMS is a learning management system that enables students to create and share classwork and allows teachers to assign, review, and communicate about learning activities in elementary classrooms.",
+      "vendor_resources": [
+        {
+          "text": "Inclusive Tools for Accessibility in the Classroom",
+          "url": "https://seesaw.com/benefits/differentiated-learning/accessibility/"
+        },
+        {
+          "text": "Accessibility Compliance",
+          "url": "https://help.seesaw.me/hc/en-us/articles/44773317621005-Accessibility-Compliance"
+        },
+        {
+          "text": "Accessibility and SeeSaw",
+          "url": "https://help.seesaw.me/hc/en-us/articles/360047206692-Accessibility-and-Seesaw"
+        },
+        {
+          "text": "Accessibility Statement for Seesaw",
+          "url": "https://help.seesaw.me/hc/en-us/articles/23669137411085-Accessibility-Statement-for-Seesaw"
+        },
+        {
+          "text": "Accessibility Help Center",
+          "url": "https://help.seesaw.me/hc/en-us/sections/35662161178381-Accessibility"
+        }
+      ],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "email",
+          "value": "accessibility@seesaw.me",
+          "label": null
+        }
+      ],
+      "acr_reports": [
+        {
+          "title": "Protected: Seesaw Accessibility Conformance Report",
+          "url": "https://trust.seesaw.me/resources?s=mwvjsdmw0qe27u1sja2kt2&name=seesaw-accessibility-conformance-report",
+          "version": "2.5",
+          "date": null,
+          "auditor_name": null,
+          "auditor_url": null
+        }
+      ],
+      "last_updated": "June 19, 2026",
+      "is_protected": true,
+      "tracking_priority": null,
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    }
+  ]
+}

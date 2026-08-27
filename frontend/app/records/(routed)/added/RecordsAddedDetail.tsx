@@ -6,21 +6,26 @@
  * article for one added record -- see
  * frontend/app/records/(routed)/candidates/RecordsCandidateDetail.tsx for
  * the shared rationale, including the HTML/JSON viewer toggle (Phase 4.6).
+ *
+ * SourceToggle (imported from ../published/SourceToggle.tsx, same as
+ * RecordsVendorDetail.tsx does) replaces this file's own standalone
+ * HTML/JSON button row -- adds the Stored/Live data-source toggle plus
+ * "Update Stored Data"/"Retrieve Live Data". `category="added"` drives a
+ * `{ target: "added" }` scrape, which unlocks each password-protected
+ * product page and writes full detail to added-live.json; the ?source=live
+ * view reads that file (see [slug]/page.tsx's own header).
  */
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import type { PublishedProductRecord } from "@/lib/published-tables";
-
-const PRIMARY_BUTTON_CLASSES =
-  "rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500";
-const SECONDARY_BUTTON_CLASSES =
-  "rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500";
+import { SourceToggle } from "../published/SourceToggle";
 
 interface RecordsAddedDetailProps {
   record: PublishedProductRecord;
+  hasLiveScrapeData: boolean;
 }
 
-export function RecordsAddedDetail({ record }: RecordsAddedDetailProps) {
+export function RecordsAddedDetail({ record, hasLiveScrapeData }: RecordsAddedDetailProps) {
   const [viewMode, setViewMode] = useState<"html" | "json">("html");
 
   return (
@@ -53,27 +58,9 @@ export function RecordsAddedDetail({ record }: RecordsAddedDetailProps) {
         </div>
       </div>
 
-      <div className="w-full rounded-md border border-gray-300 bg-white mb-6">
-        <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Viewer</div>
-        <div className="flex flex-wrap items-center gap-3 p-4">
-          <div className="ml-auto flex gap-3">
-            <button
-              type="button"
-              onClick={() => setViewMode("html")}
-              className={viewMode === "html" ? PRIMARY_BUTTON_CLASSES : SECONDARY_BUTTON_CLASSES}
-            >
-              HTML
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("json")}
-              className={viewMode === "json" ? PRIMARY_BUTTON_CLASSES : SECONDARY_BUTTON_CLASSES}
-            >
-              JSON
-            </button>
-          </div>
-        </div>
-      </div>
+      <Suspense fallback={<div className="h-[74px] w-full animate-pulse rounded-md border border-gray-300 bg-gray-100" />}>
+        <SourceToggle category="added" hasLiveScrapeData={hasLiveScrapeData} viewMode={viewMode} onViewModeChange={setViewMode} />
+      </Suspense>
 
       <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4 w-full min-w-0">
         {viewMode === "json" ? (

@@ -178,6 +178,42 @@ export async function getPublishedLiveProducts(): Promise<{ products: PublishedP
 
 // See local-write.ts's libDir() for why process.cwd() alone isn't reliable
 // here under the standalone build.
+const ADDED_LIVE_PATH = path.join(libDir(), "added-live.json");
+
+/**
+ * Reads added-live.json -- mirrors getPublishedLiveProducts() exactly (same
+ * isLocalOnlyAllowed() + notFound() guard, same "no live data yet" ->
+ * `{ products: [] }` fallback, same deriveLiveProductSlug() injection).
+ *
+ * Separate file because a password-protected ("Added to Site", pending
+ * vendor review) product page is scraped with its vendor-review password
+ * and written here by scrape_ncademi_live.py's `--target added` run, while
+ * published-live.json now holds only publicly-visible pages -- so
+ * /records/added's ?source=live view reads this file, not the one
+ * /records/published reads.
+ */
+export async function getAddedLiveProducts(): Promise<{ products: PublishedProductRecord[] }> {
+  if (!isLocalOnlyAllowed()) notFound();
+
+  let raw: string;
+  try {
+    raw = await fs.readFile(ADDED_LIVE_PATH, "utf8");
+  } catch {
+    return { products: [] };
+  }
+
+  const body = JSON.parse(raw) as { products?: unknown };
+  const rawProducts = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
+  const products = rawProducts.map((p) => ({
+    ...p,
+    slug: deriveLiveProductSlug(p.ncademi_product_url as string),
+  })) as PublishedProductRecord[];
+
+  return { products };
+}
+
+// See local-write.ts's libDir() for why process.cwd() alone isn't reliable
+// here under the standalone build.
 const VENDORS_LIVE_PATH = path.join(libDir(), "vendors-live.json");
 
 /**

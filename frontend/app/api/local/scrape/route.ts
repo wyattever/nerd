@@ -30,13 +30,15 @@
  * spawned command, passed as its own argv element (not interpolated into a
  * shell string), so it cannot inject additional arguments or commands --
  * the script's own argparse `choices` is what rejects a value outside
- * "all"/"products"/"vendors", surfacing as a normal non-zero exit handled
+ * "all"/"published"/"added"/"vendors" (this route also pre-filters to that
+ * set, falling back to "all"), surfacing as a normal non-zero exit handled
  * by the child.on("close") branch below.
  *
  * Post-retrieval comparison: once the child exits successfully, this route
  * also diffs the just-written live snapshot against the relevant stored
- * file(s) (published.json/added.json for a "products" run, vendors.json for
- * a "vendors" run) and sends up to two more `progress` events per pair --
+ * file(s) (published.json for a "published" run, added.json for an "added"
+ * run, vendors.json for a "vendors" run; all three for "all") and sends up
+ * to two more `progress` events per pair --
  * "X not stored" and "X in your records not retrieved from the site" --
  * using the same stage-keyed `progress` protocol as the script's own
  * milestones (see sendPostRetrievalComparisons below), so the client-side
@@ -51,6 +53,7 @@ import {
   getPublishedProducts,
   getAddedProducts,
   getPublishedLiveProducts,
+  getAddedLiveProducts,
   getVendors,
   getLiveVendors,
 } from "@/lib/local-data";
@@ -87,16 +90,6 @@ const PROGRESS_PREFIX = "PROGRESS_JSON:";
  *  run's ~100-line stdout log in memory for no reason. */
 function tail(text: string, lines = 20): string {
   return text.trim().split("\n").slice(-lines).join("\n");
-}
-
-/** published-live.json's raw entries carry `is_protected` (see
- *  scrape_ncademi_live.py's make_protected_product_stub/parse_public_product),
- *  but PublishedProductRecord doesn't declare that field -- it's curated
- *  snapshot data (published.json/added.json), which has no protected stubs
- *  to distinguish. The cast here is local to this one read, not a change to
- *  that shared type. */
-function isProtectedLiveProduct(product: PublishedProductRecord): boolean {
-  return Boolean((product as unknown as { is_protected?: boolean }).is_protected);
 }
 
 /** Splits `liveItems` vs. `storedItems` into "in live but not stored" and
@@ -165,22 +158,19 @@ async function sendPostRetrievalComparisons(
   target: string,
   send: (event: string, data: unknown) => void
 ): Promise<void> {
-  if (target === "products" || target === "all") {
-    const [{ products: storedPublished }, { products: storedAdded }, { products: liveProducts }] = await Promise.all([
+  const keyOf = (p: PublishedProductRecord) => p.ncademi_product_url;
+  const nameOf = (p: PublishedProductRecord) => p.product_name;
+
+  if (target === "published" || target === "all") {
+    // published-live.json now holds ONLY publicly-visible pages (a
+    // protected page is skipped by the `--target published` scrape, not
+    // stubbed), so this is a single, unfiltered comparison against
+    // published.json -- the protected/"added" split moved to the `added`
+    // branch below.
+    const [{ products: storedPublished }, { products: livePublished }] = await Promise.all([
       getPublishedProducts(),
-      getAddedProducts(),
       getPublishedLiveProducts(),
     ]);
-
-    // A protected live product page only ever produced a stub (name/URL/
-    // is_protected) during the scrape -- that's what "added" (not yet
-    // publicly viewable) means here, so it's compared against added.json,
-    // not published.json.
-    const livePublished = liveProducts.filter((p) => !isProtectedLiveProduct(p));
-    const liveAdded = liveProducts.filter((p) => isProtectedLiveProduct(p));
-
-    const keyOf = (p: PublishedProductRecord) => p.ncademi_product_url;
-    const nameOf = (p: PublishedProductRecord) => p.product_name;
 
     const published = diffByKey(livePublished, storedPublished, keyOf, nameOf);
     sendListMessage(send, "published_not_stored", "The following published products are not stored in your records", published.notStored);
@@ -190,6 +180,17 @@ async function sendPostRetrievalComparisons(
       "The following published products in your records were not retrieved from the site",
       published.notRetrieved
     );
+  }
+
+  if (target === "added" || target === "all") {
+    // added-live.json holds the password-protected pages the `--target
+    // added` scrape unlocked and parsed in full (pages whose password was
+    // missing/rejected are reported by the script's own
+    // added_passwords_failed milestone, not here).
+    const [{ products: storedAdded }, { products: liveAdded }] = await Promise.all([
+      getAddedProducts(),
+      getAddedLiveProducts(),
+    ]);
 
     const added = diffByKey(liveAdded, storedAdded, keyOf, nameOf);
     sendListMessage(send, "added_not_stored", "The following added products are not stored in your records", added.notStored);
@@ -229,12 +230,14 @@ export async function POST(req: Request): Promise<Response> {
   if (blocked) return blocked;
 
   const { target = "all" } = await req.json().catch(() => ({}));
-  // scripts/scrape_ncademi_live.py's argparse only accepts
-  // "all"/"products"/"vendors" (its output files are published-live.json/
-  // vendors-live.json, not "published") -- the frontend's category is
-  // "published", so that value is remapped here before it reaches argv, or
-  // argparse rejects it and exits 2.
-  const mappedTarget = target === "published" ? "products" : target;
+  // The frontend's categories ("published"/"added"/"vendors") now map 1:1
+  // to scripts/scrape_ncademi_live.py's own --target choices, each with its
+  // own output file: published-live.json (public pages only), added-live.json
+  // (password-protected pages, unlocked with their vendor-review passwords),
+  // vendors-live.json. Anything unrecognized falls back to "all" rather than
+  // reaching argv and making argparse exit 2.
+  const VALID_TARGETS = ["all", "published", "added", "vendors"] as const;
+  const mappedTarget = (VALID_TARGETS as readonly string[]).includes(target) ? target : "all";
 
   const encoder = new TextEncoder();
 
@@ -321,7 +324,7 @@ export async function POST(req: Request): Promise<Response> {
     cancel() {
       // Client disconnected before the scrape finished -- nothing to clean
       // up beyond letting the child process run to completion on its own;
-      // it still writes published-live.json/vendors-live.json either way.
+      // it still writes its target's output file(s) either way.
     },
   });
 
