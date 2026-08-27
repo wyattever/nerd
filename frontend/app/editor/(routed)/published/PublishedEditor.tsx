@@ -238,7 +238,12 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
       if (res.ok) {
         setIsDirty(false);
         router.refresh();
-        router.push("/editor/published");
+
+        // Delay navigation to allow router.refresh() to clear the server
+        // cache -- see VendorEditor.tsx's saveToServer for the same pattern.
+        setTimeout(() => {
+          router.push("/editor/published");
+        }, 100);
       } else {
         setSaveError(`Save failed: unexpected server response (${res.status}).`);
       }
