@@ -9,89 +9,6 @@
   },
   "products": [
     {
-      "slug": "classdojo-tutoring",
-      "product_name": "ClassDojo Tutoring",
-      "vendor_name": "ClassDojo, Inc.",
-      "product_description": "ClassDojo Tutoring is an online platform connecting K-12 students with certified teachers for personalized 1-on-1 instruction in reading, math, science, and enrichment subjects.",
-      "product_website_url": "https://www.classdojo.com/tutoring/",
-      "vendor_resources": [
-        {
-          "text": "Official Accessibility Statement",
-          "url": "https://www.classdojo.com/accessibility/"
-        }
-      ],
-      "other_resources": [],
-      "support_contacts": [
-        {
-          "type": "email",
-          "value": "hello@classdojo.com",
-          "label": null
-        },
-        {
-          "type": "url",
-          "value": "https://www.classdojo.com/contact/",
-          "label": "ClassDojo Contact Page"
-        }
-      ],
-      "acr_reports": [],
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/classdojo-tutoring/",
-      "vendor_directory_url": null,
-      "last_updated": "2026-08-24T21:00:00.456Z",
-      "ai_insights": null
-    },
-    {
-      "slug": "wevideo",
-      "product_name": "WeVideo",
-      "vendor_name": "WeVideo Inc.",
-      "product_description": "WeVideo is a cloud-based collaborative video creation and interactive learning platform that enables students and educators to capture, edit, share, and collaborate on video projects, podcasts, and digital media.",
-      "product_website_url": "https://www.wevideo.com/education",
-      "vendor_resources": [
-        {
-          "text": "Official Accessibility Statement",
-          "url": "https://www.wevideo.com/accessibility-statement"
-        },
-        {
-          "text": "Accessibility & Compliance Overview",
-          "url": "https://support.wevideo.com/hc/en-us/articles/35602909413915-WeVideo-Accessibility-Compliance-Overview"
-        }
-      ],
-      "other_resources": [],
-      "support_contacts": [
-        {
-          "type": "email",
-          "value": "accessibility@wevideo.com",
-          "label": null
-        },
-        {
-          "type": "url",
-          "value": "https://www.wevideo.com/accessibility-statement",
-          "label": "WeVideo Accessibility Statement"
-        }
-      ],
-      "acr_reports": [
-        {
-          "title": "WeVideo Accessibility Conformance Report - WCAG Edition",
-          "url": "https://www.wevideo.com/hubfs/Accessibility/WeVideo_VPAT_WCAG_April_2026.pdf",
-          "version": "2.5Rev",
-          "date": "April 20, 2026",
-          "auditor_name": null,
-          "auditor_url": null
-        },
-        {
-          "title": "WeVideo Accessibility Conformance Report - Revised Section 508 Edition",
-          "url": "https://www.wevideo.com/hubfs/Accessibility/WeVideo_VPAT_508_April_2026.pdf",
-          "version": "2.5Rev",
-          "date": "April 20, 2026",
-          "auditor_name": null,
-          "auditor_url": null
-        }
-      ],
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/wevideo/",
-      "vendor_directory_url": null,
-      "last_updated": "2026-08-24T21:11:35.730Z",
-      "ai_insights": null
-    },
-    {
       "slug": "amplify-ckla",
       "product_name": "Amplify CKLA",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-ckla/",
@@ -151,36 +68,6 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "7/21/2026 3:23:18 PM",
-      "ai_insights": null
-    },
-    {
-      "slug": "i-ready-inform",
-      "product_name": "[OLD] i-Ready Inform (formerly i-Ready Diagnostic)",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready-inform/",
-      "vendor_name": "Curriculum Associates",
-      "vendor_directory_url": null,
-      "product_website_url": "https://www.curriculumassociates.com/programs/i-ready-assessment/diagnostic",
-      "product_description": "i-Ready Inform is an online adaptive assessment that measures students’ reading and mathematics skills to identify learning needs and provide educators with data to guide instruction.",
-      "vendor_resources": [],
-      "other_resources": [],
-      "support_contacts": [],
-      "acr_reports": [],
-      "last_updated": "4/20/2026 10:50:26 AM",
-      "ai_insights": null
-    },
-    {
-      "slug": "i-ready-personalized-learning",
-      "product_name": "[OLD] i-Ready Personalized Learning",
-      "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready-personalized-learning/",
-      "vendor_name": "Curriculum Associates",
-      "vendor_directory_url": null,
-      "product_website_url": "https://www.curriculumassociates.com/programs/i-ready-learning/personalized-instruction",
-      "product_description": "i‑Ready Personalized Learning is an online instructional program that delivers individualized reading and mathematics lessons based on student performance to support skill development and help address learning gaps.",
-      "vendor_resources": [],
-      "other_resources": [],
-      "support_contacts": [],
-      "acr_reports": [],
-      "last_updated": "4/20/2026 10:50:14 AM",
       "ai_insights": null
     },
     {
