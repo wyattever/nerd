@@ -738,10 +738,16 @@
   width: 4rem;
   white-space: nowrap;
 }
+/* Sized to the longest Row ID in the current data (22 chars, e.g.
+   "8JLw23uQKr4xI3_3wo2SLf") plus a safety buffer -- overflow/ellipsis paired
+   in as a fallback rather than relied on, since the whole point is fitting
+   on one line. */
 .nerd-table th.nerd-col-acr-rowid,
 .nerd-table td.nerd-col-acr-rowid {
-  width: 12rem;
+  width: 24ch;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nerd-table th.nerd-col-acr-name,
 .nerd-table td.nerd-col-acr-name {
@@ -824,12 +830,18 @@
   width: 4rem;
   white-space: nowrap;
 }
+/* Sized to the longest Resource Name in the current data (210 chars -- an
+   academic citation title) plus a safety buffer. Single-line rather than
+   the pre-line wrap used elsewhere for long-text columns (Notes, Product
+   Description): the 210-char value is a genuine outlier (median is 38
+   chars, only 7 of 281 values exceed 100), so this column runs much wider
+   than most of its own values need, by design. */
 .nerd-table th.nerd-col-pres-name,
 .nerd-table td.nerd-col-pres-name {
-  width: 18rem;
-  white-space: pre-line;
-  word-break: normal;
-  overflow-wrap: break-word;
+  width: 215ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nerd-table th.nerd-col-pres-product,
 .nerd-table td.nerd-col-pres-product {
@@ -853,10 +865,14 @@
   width: 10rem;
   white-space: nowrap;
 }
+/* Sized to the longest Date value in the current data (17 chars, e.g.
+   "2/17/26, 10:48 AM") plus a safety buffer. */
 .nerd-table th.nerd-col-pres-date,
 .nerd-table td.nerd-col-pres-date {
-  width: 10rem;
+  width: 19ch;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nerd-table th.nerd-col-pres-added,
 .nerd-table td.nerd-col-pres-added {
@@ -886,14 +902,20 @@
   width: 8rem;
   white-space: nowrap;
 }
+/* Sized to the longest Website Name in the current data (37 chars) plus a
+   safety buffer. */
 .nerd-table th.nerd-col-psup-websitename,
 .nerd-table td.nerd-col-psup-websitename {
-  width: 12rem;
+  width: 39ch;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+/* Sized to the longest Website URL in the current data (99 chars) plus a
+   safety buffer. */
 .nerd-table th.nerd-col-psup-websiteurl,
 .nerd-table td.nerd-col-psup-websiteurl {
-  width: 18rem;
+  width: 102ch;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -915,10 +937,14 @@
   width: 12rem;
   white-space: nowrap;
 }
+/* Sized to the longest Date value in the current data (17 chars) plus a
+   safety buffer. */
 .nerd-table th.nerd-col-psup-date,
 .nerd-table td.nerd-col-psup-date {
-  width: 10rem;
+  width: 19ch;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nerd-table th.nerd-col-psup-added,
 .nerd-table td.nerd-col-psup-added {
@@ -1006,26 +1032,37 @@
   width: 10rem;
   white-space: nowrap;
 }
+/* Sized to the longest ACR IDs list in the current data (118 chars) plus a
+   safety buffer. Single-line rather than the pre-line wrap this column used
+   before: unlike Resource IDs below, only 2 of 59 values exceed 100 chars,
+   so a single-line column stays a reasonable width. */
 .nerd-table th.nerd-col-aprod-acrids,
 .nerd-table td.nerd-col-aprod-acrids {
-  width: 14rem;
-  white-space: pre-line;
-  word-break: normal;
-  overflow-wrap: break-word;
+  width: 123ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+/* Sized to the longest Resource IDs list in the current data (310 chars)
+   plus a safety buffer -- this column is inherently unbounded (it grows
+   with however many resources a product has; 20 of 80 values exceed 100
+   chars, 5 exceed 200), so it runs far wider than its own median (70
+   chars) needs, by design. */
 .nerd-table th.nerd-col-aprod-resourceids,
 .nerd-table td.nerd-col-aprod-resourceids {
-  width: 16rem;
-  white-space: pre-line;
-  word-break: normal;
-  overflow-wrap: break-word;
+  width: 315ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+/* Sized to the longest Support IDs list in the current data (70 chars) plus
+   a safety buffer. */
 .nerd-table th.nerd-col-aprod-supportids,
 .nerd-table td.nerd-col-aprod-supportids {
-  width: 16rem;
-  white-space: pre-line;
-  word-break: normal;
-  overflow-wrap: break-word;
+  width: 73ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Vendor Resources (31 rows) -------------------------------- */
@@ -1038,17 +1075,25 @@
   width: 4rem;
   white-space: nowrap;
 }
+/* Sized to the longest Row ID in the current data (22 chars) plus a safety
+   buffer. */
 .nerd-table th.nerd-col-vres-rowid,
 .nerd-table td.nerd-col-vres-rowid {
-  width: 12rem;
+  width: 24ch;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+/* Sized to the longest Resource Name in the current data (78 chars) plus a
+   safety buffer -- much shorter tail than product-resources' own Resource
+   Name column (nerd-col-pres-name above), so single-lining here doesn't
+   blow the column out the same way. */
 .nerd-table th.nerd-col-vres-name,
 .nerd-table td.nerd-col-vres-name {
-  width: 18rem;
-  white-space: pre-line;
-  word-break: normal;
-  overflow-wrap: break-word;
+  width: 81ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nerd-table th.nerd-col-vres-vendor,
 .nerd-table td.nerd-col-vres-vendor {
@@ -1072,10 +1117,14 @@
   width: 12rem;
   white-space: nowrap;
 }
+/* Sized to the longest Date value in the current data (21 chars, e.g.
+   "2/17/2026 10:13:04 AM") plus a safety buffer. */
 .nerd-table th.nerd-col-vres-date,
 .nerd-table td.nerd-col-vres-date {
-  width: 10rem;
+  width: 23ch;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nerd-table th.nerd-col-vres-added,
 .nerd-table td.nerd-col-vres-added {
@@ -1098,14 +1147,22 @@
   width: 8rem;
   white-space: nowrap;
 }
+/* Sized to the longest Website Name in the current data (33 chars) plus a
+   safety buffer. */
 .nerd-table th.nerd-col-vsup-websitename,
 .nerd-table td.nerd-col-vsup-websitename {
-  width: 12rem;
+  width: 35ch;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+/* Sized to the longest Website URL in the current data (33 chars -- several
+   long source values are already truncated at the data layer, ending in an
+   ellipsis marker; see the "Truncated-value flag" rule above) plus a safety
+   buffer. */
 .nerd-table th.nerd-col-vsup-websiteurl,
 .nerd-table td.nerd-col-vsup-websiteurl {
-  width: 18rem;
+  width: 35ch;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1127,10 +1184,14 @@
   width: 12rem;
   white-space: nowrap;
 }
+/* Sized to the longest Date value in the current data (17 chars) plus a
+   safety buffer. */
 .nerd-table th.nerd-col-vsup-date,
 .nerd-table td.nerd-col-vsup-date {
-  width: 10rem;
+  width: 19ch;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nerd-table th.nerd-col-vsup-checkbox,
 .nerd-table td.nerd-col-vsup-checkbox {
@@ -1158,9 +1219,11 @@
   width: 14rem;
   white-space: nowrap;
 }
+/* Sized to the longest Vendor Website in the current data (32 chars) plus a
+   safety buffer. */
 .nerd-table th.nerd-col-vend-website,
 .nerd-table td.nerd-col-vend-website {
-  width: 20rem;
+  width: 34ch;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
