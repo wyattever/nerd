@@ -31,6 +31,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { ListingCard } from "@/components/ListingCard";
 import { PublishedHeaderEditor, type HeaderFields } from "@/components/PublishedHeaderEditor";
 import { PublishedVendorResourcesEditor } from "@/components/PublishedVendorResourcesEditor";
@@ -39,7 +40,9 @@ import { PublishedSupportEditor } from "@/components/PublishedSupportEditor";
 import { PublishedAcrEditor } from "@/components/PublishedAcrEditor";
 import { ImportJsonModal } from "@/components/ImportJsonModal";
 import { DeleteCandidateModal } from "@/components/DeleteCandidateModal";
+import { CodeViewModal } from "@/components/CodeViewModal";
 import { toListingData } from "@/lib/editor-preview";
+import { buildNcademiListingHtml } from "@/lib/ncademiPreview";
 import { USERS, fullName } from "@/lib/users";
 import vendorsData from "@/lib/vendors.json";
 import { useMessages } from "@/components/IntegratedListPanel";
@@ -146,6 +149,7 @@ export function CandidateEditor({
   const [isAcrEditorOpen, setIsAcrEditorOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
 
   const editHeaderButtonRef = useRef<HTMLButtonElement>(null);
   const editVendorResourcesButtonRef = useRef<HTMLButtonElement>(null);
@@ -153,6 +157,7 @@ export function CandidateEditor({
   const editSupportButtonRef = useRef<HTMLButtonElement>(null);
   const editAcrButtonRef = useRef<HTMLButtonElement>(null);
   const deleteCandidateButtonRef = useRef<HTMLButtonElement>(null);
+  const codeButtonRef = useRef<HTMLButtonElement>(null);
 
   // "Import Candidate" now renders in IntegratedListPanel.tsx's sidebar
   // footer (Phase 4.14) -- this component still owns the modal and its
@@ -176,6 +181,11 @@ export function CandidateEditor({
     };
     return toListingData(previewRecord);
   }, [selected]);
+
+  // Same HTML string ListingCard.tsx builds for the live preview iframe --
+  // the Code modal shows it as read-only text instead of rendering it. See
+  // CodeViewModal.tsx's header comment.
+  const codeHtml = useMemo(() => (listing ? buildNcademiListingHtml(listing) : ""), [listing]);
 
   const handleHeaderSave = useCallback(
     (fields: HeaderFields) => {
@@ -243,6 +253,10 @@ export function CandidateEditor({
   const handleAcrEditorClosed = useCallback(() => {
     setIsAcrEditorOpen(false);
     editAcrButtonRef.current?.focus();
+  }, []);
+  const handleCodeModalClosed = useCallback(() => {
+    setIsCodeModalOpen(false);
+    codeButtonRef.current?.focus();
   }, []);
 
   const handleImport = useCallback(
@@ -490,6 +504,15 @@ export function CandidateEditor({
           <button type="button" ref={editAcrButtonRef} onClick={() => setIsAcrEditorOpen(true)} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
             ACR
           </button>
+          <button
+            type="button"
+            ref={codeButtonRef}
+            onClick={() => setIsCodeModalOpen(true)}
+            aria-label="Code"
+            className="rounded border border-gray-300 bg-white p-2 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <Image src="/code.svg" alt="" width={18} height={18} className="h-4 w-4" />
+          </button>
           <div className="ml-auto flex gap-3">
             <button type="button" onClick={() => handleSaveToServer()} disabled={isSaving} className="rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">
               {isSaving ? "Saving…" : "Save candidate"}
@@ -526,6 +549,7 @@ export function CandidateEditor({
       ) : null}
       {isImportModalOpen ? <ImportJsonModal onImport={handleImport} onClose={handleImportModalClosed} /> : null}
       {isDeleteModalOpen ? <DeleteCandidateModal onConfirm={handleDeleteConfirm} onClose={handleDeleteModalClosed} /> : null}
+      {isCodeModalOpen ? <CodeViewModal code={codeHtml} onClose={handleCodeModalClosed} /> : null}
     </div>
   );
 }
