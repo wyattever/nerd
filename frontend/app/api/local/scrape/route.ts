@@ -100,9 +100,14 @@ function isProtectedLiveProduct(product: PublishedProductRecord): boolean {
 }
 
 /** Splits `liveItems` vs. `storedItems` into "in live but not stored" and
- *  "in stored but not live", matched by `keyOf`. Null/empty keys (e.g. a
- *  vendor record with no vendor_directory_url) are skipped on both sides
- *  rather than colliding into a single "" bucket. */
+ *  "in stored but not live", matched by `keyOf`. A null/empty key (e.g. a
+ *  vendor record with no vendor_directory_url -- a manually Add-Vendor'd
+ *  record commonly has one) is never matched into `liveByKey`/`storedKeys`
+ *  (avoids every such record colliding into a single "" bucket), but on the
+ *  STORED side that means it can never be found in live either -- it
+ *  unconditionally counts as "not retrieved" rather than being silently
+ *  skipped, since a record with no site URL at all is, by definition, not
+ *  on the site. */
 function diffByKey<T>(
   liveItems: T[],
   storedItems: T[],
@@ -128,7 +133,7 @@ function diffByKey<T>(
   const notRetrieved: string[] = [];
   for (const item of storedItems) {
     const key = keyOf(item);
-    if (key && !liveByKey.has(key)) notRetrieved.push(nameOf(item));
+    if (!key || !liveByKey.has(key)) notRetrieved.push(nameOf(item));
   }
 
   return { notStored, notRetrieved };
