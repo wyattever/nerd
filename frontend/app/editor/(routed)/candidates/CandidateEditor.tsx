@@ -9,13 +9,16 @@
  * that page's header for why this does its own independent getCandidates()
  * read rather than sharing candidates/layout.tsx's.
  *
- * `slug` is a route param, not settable state -- this component remounts
- * fresh (new local `products`/`etag`/etc. state) on every navigation to a
- * different record, since Next renders a new subtree below the persisting
- * layout for each [slug] match. That's deliberate: it's the same "no
- * leaked draft between records" property the legacy monolith got from
- * `key={selected.slug}` on its field-editor modals, just extended to the
- * whole editor instead of one modal at a time.
+ * `slug` (the route param) only seeds `activeSlug`'s initial state -- this
+ * component still remounts fresh (new local `products`/`etag`/etc. state)
+ * on every real navigation to a different record, since Next renders a new
+ * subtree below the persisting layout for each [slug] match. That's
+ * deliberate: it's the same "no leaked draft between records" property the
+ * legacy monolith got from `key={selected.slug}` on its field-editor
+ * modals, just extended to the whole editor instead of one modal at a time.
+ * `activeSlug` itself is settable, though -- see handleImport's own comment
+ * for why a just-imported (not-yet-saved) record needs that instead of an
+ * actual navigation.
  *
  * Delete and promote (`handlePromoteToAdded`) both navigate back to the
  * bare /editor/candidates leaf on success via router.push -- unlike the
@@ -97,6 +100,16 @@ export function CandidateEditor({
   const [meta] = useState(initialMeta);
   const [etag, setEtag] = useState<string | null>(initialEtag);
 
+  // Initialized from the `slug` route param, same value on every fresh
+  // mount -- but tracked as its own state (rather than reading `slug`
+  // directly) so handleImport can select a just-imported record locally.
+  // A real navigation to that record's [slug] route would force
+  // [slug]/page.tsx's Server Component to re-read getCandidates() from
+  // disk, which doesn't have it yet (import is deliberately
+  // not-yet-saved), producing that page's own "Record not found" state
+  // instead of the review view. See handleImport below.
+  const [activeSlug, setActiveSlug] = useState(slug);
+
   // Plain state, not a ref-vs-baseline comparison read during render --
   // this repo's eslint-plugin-react-hooks config (the React Compiler
   // ruleset) errors on reading a ref's `.current` in the render body. Set
@@ -139,7 +152,7 @@ export function CandidateEditor({
     return () => setCreateAction(null);
   }, [setCreateAction]);
 
-  const selected = useMemo(() => products.find((p) => p.slug === slug) ?? null, [products, slug]);
+  const selected = useMemo(() => products.find((p) => p.slug === activeSlug) ?? null, [products, activeSlug]);
 
   const listing = useMemo(() => {
     if (!selected) return null;
@@ -153,10 +166,10 @@ export function CandidateEditor({
 
   const handleHeaderSave = useCallback(
     (fields: HeaderFields) => {
-      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, ...fields } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === activeSlug ? { ...p, ...fields } : p)));
       setStatusMessage(`Updated header for ${fields.product_name} (not yet saved to disk).`);
     },
-    [slug, setStatusMessage, updateProducts]
+    [activeSlug, setStatusMessage, updateProducts]
   );
   const handleHeaderEditorClosed = useCallback(() => {
     setIsHeaderEditorOpen(false);
@@ -165,12 +178,12 @@ export function CandidateEditor({
 
   const handleVendorResourcesSave = useCallback(
     (resources: PublishedResourceLink[]) => {
-      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, vendor_resources: resources } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === activeSlug ? { ...p, vendor_resources: resources } : p)));
       setStatusMessage(
         `Updated vendor resources (${resources.length}) for ${selected?.product_name ?? "this record"} (not yet saved to disk).`
       );
     },
-    [slug, selected?.product_name, setStatusMessage, updateProducts]
+    [activeSlug, selected?.product_name, setStatusMessage, updateProducts]
   );
   const handleVendorResourcesEditorClosed = useCallback(() => {
     setIsVendorResourcesEditorOpen(false);
@@ -179,12 +192,12 @@ export function CandidateEditor({
 
   const handleOtherResourcesSave = useCallback(
     (resources: PublishedResourceLink[]) => {
-      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, other_resources: resources } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === activeSlug ? { ...p, other_resources: resources } : p)));
       setStatusMessage(
         `Updated other resources (${resources.length}) for ${selected?.product_name ?? "this record"} (not yet saved to disk).`
       );
     },
-    [slug, selected?.product_name, setStatusMessage, updateProducts]
+    [activeSlug, selected?.product_name, setStatusMessage, updateProducts]
   );
   const handleOtherResourcesEditorClosed = useCallback(() => {
     setIsOtherResourcesEditorOpen(false);
@@ -193,12 +206,12 @@ export function CandidateEditor({
 
   const handleSupportSave = useCallback(
     (contacts: PublishedSupportContact[]) => {
-      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, support_contacts: contacts } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === activeSlug ? { ...p, support_contacts: contacts } : p)));
       setStatusMessage(
         `Updated support contacts (${contacts.length}) for ${selected?.product_name ?? "this record"} (not yet saved to disk).`
       );
     },
-    [slug, selected?.product_name, setStatusMessage, updateProducts]
+    [activeSlug, selected?.product_name, setStatusMessage, updateProducts]
   );
   const handleSupportEditorClosed = useCallback(() => {
     setIsSupportEditorOpen(false);
@@ -207,12 +220,12 @@ export function CandidateEditor({
 
   const handleAcrSave = useCallback(
     (reports: PublishedAcrReport[]) => {
-      updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, acr_reports: reports } : p)));
+      updateProducts((prev) => prev.map((p) => (p.slug === activeSlug ? { ...p, acr_reports: reports } : p)));
       setStatusMessage(
         `Updated ACR reports (${reports.length}) for ${selected?.product_name ?? "this record"} (not yet saved to disk).`
       );
     },
-    [slug, selected?.product_name, setStatusMessage, updateProducts]
+    [activeSlug, selected?.product_name, setStatusMessage, updateProducts]
   );
   const handleAcrEditorClosed = useCallback(() => {
     setIsAcrEditorOpen(false);
@@ -232,13 +245,20 @@ export function CandidateEditor({
       const importedRecord = { ...record, tracking_status: "Gathering" };
       updateProducts((prev) => [...prev, importedRecord].sort((a, b) => a.product_name.localeCompare(b.product_name)));
       setStatusMessage(`Imported "${importedRecord.product_name}" into the candidate list (not yet saved to disk).`);
-      // selected/listing (and so the viewer below) are derived from the
-      // route's `slug` param, not from `products` state -- without this,
-      // the import lands in `products` (which is why Save Candidate works)
-      // but the viewer keeps showing whatever record was already selected.
-      router.push(`/editor/candidates/${record.slug}`);
+      // selected/listing (the viewer below) are derived from activeSlug, not
+      // from `products` state -- without this, the import lands in
+      // `products` (which is why Save Candidate works) but the viewer keeps
+      // showing whatever record was already selected. A real router.push
+      // here would fix that too, EXCEPT [slug]/page.tsx's Server Component
+      // re-reads getCandidates() from disk on every navigation to a new
+      // slug, and this record isn't there yet -- it would render that
+      // page's own "Record not found" instead of the review view. Updating
+      // just the address bar (not Next's router) keeps this component
+      // mounted with its in-memory `products` intact.
+      setActiveSlug(record.slug);
+      window.history.pushState(null, "", `/editor/candidates/${record.slug}`);
     },
-    [products, router, setStatusMessage, updateProducts]
+    [products, setStatusMessage, updateProducts]
   );
   const handleImportModalClosed = useCallback(() => {
     setIsImportModalOpen(false);
@@ -373,7 +393,7 @@ export function CandidateEditor({
             Priority
             <select
               value={selected.tracking_priority ?? ""}
-              onChange={(e) => updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, tracking_priority: e.target.value || null } : p)))}
+              onChange={(e) => updateProducts((prev) => prev.map((p) => (p.slug === activeSlug ? { ...p, tracking_priority: e.target.value || null } : p)))}
               className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">set priority</option>
@@ -387,7 +407,7 @@ export function CandidateEditor({
             Status
             <select
               value={selected.tracking_status ?? ""}
-              onChange={(e) => updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, tracking_status: e.target.value || null } : p)))}
+              onChange={(e) => updateProducts((prev) => prev.map((p) => (p.slug === activeSlug ? { ...p, tracking_status: e.target.value || null } : p)))}
               className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">set status</option>
@@ -402,7 +422,7 @@ export function CandidateEditor({
             Gatherer
             <select
               value={selected.tracking_gatherer ?? ""}
-              onChange={(e) => updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, tracking_gatherer: e.target.value || null } : p)))}
+              onChange={(e) => updateProducts((prev) => prev.map((p) => (p.slug === activeSlug ? { ...p, tracking_gatherer: e.target.value || null } : p)))}
               className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">set gatherer</option>
@@ -416,7 +436,7 @@ export function CandidateEditor({
             Reviewer
             <select
               value={selected.tracking_reviewer ?? ""}
-              onChange={(e) => updateProducts((prev) => prev.map((p) => (p.slug === slug ? { ...p, tracking_reviewer: e.target.value || null } : p)))}
+              onChange={(e) => updateProducts((prev) => prev.map((p) => (p.slug === activeSlug ? { ...p, tracking_reviewer: e.target.value || null } : p)))}
               className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">set reviewer</option>
