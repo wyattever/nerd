@@ -1,128 +1,752 @@
 {
   "$meta": {
-    "last_scraped": "2026-08-26T00:25:38.647120+00:00",
+    "last_scraped": "2026-08-27T01:38:15.765131+00:00",
     "total_records": 24,
     "generated_by": "scrape_ncademi_live.py"
   },
   "vendors": [
     {
+      "kind": "vendor",
+      "product_name": "Adobe",
       "vendor_name": "Adobe",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/adobe/",
+      "product_website_url": "https://www.adobe.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "Accessibility at Adobe",
+          "url": "https://www.adobe.com/trust/accessibility.html"
+        },
+        {
+          "text": "Accessibility initiatives at Adobe",
+          "url": "https://www.adobe.com/trust/accessibility/initiatives.html"
+        },
+        {
+          "text": "Accessibility conformance reports for Adobe solutions.",
+          "url": "https://www.adobe.com/accessibility/compliance.html"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://survey.adobe.com/jfe/form/SV_3sbhTyF03ASFQWy",
+          "label": "Adobe Accessibility Feedback form"
+        },
+        {
+          "type": "email",
+          "value": "access@adobe.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "Adobe Acrobat",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/adobe-acrobat/"
+        },
+        {
+          "product_name": "Adobe Express",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/adobe-express/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "A+E Global Media",
       "vendor_name": "A+E Global Media",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/ae-global-media/",
+      "product_website_url": "https://www.aetv.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://www.aegm.com/accessibility-support",
+          "label": "A+E Global Media Accessibility Support"
+        },
+        {
+          "type": "email",
+          "value": "ClosedCaptions@aegm.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "History.com",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/history-com/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Amplify",
       "vendor_name": "Amplify",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/amplify/",
+      "product_website_url": "https://amplify.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "Our approach to accessibility",
+          "url": "https://amplify.com/high-quality-programs/#h-our-approach-to-accessibility"
+        },
+        {
+          "text": "Help Center",
+          "url": "https://service.amplify.com/help"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://service.amplify.com/support",
+          "label": "Help Center"
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "Amplify Core Knowledge Language Arts (CKLA)",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-core-knowledge-language-arts-ckla/"
+        },
+        {
+          "product_name": "Amplify Desmos Math",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-desmos-math/"
+        },
+        {
+          "product_name": "Amplify ELA",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/amplify-ela/"
+        },
+        {
+          "product_name": "mCLASS",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/mclass/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Barnes Noble",
       "vendor_name": "Barnes Noble",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/barnes-noble/",
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": true
     },
     {
+      "kind": "vendor",
+      "product_name": "BrainPOP",
       "vendor_name": "BrainPOP",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/brainpop/",
+      "product_website_url": "https://www.brainpop.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "Accessibility Statement",
+          "url": "https://www.brainpop.com/discover/accessibility"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "email",
+          "value": "accessibility@brainpop.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "BrainPOP",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop/"
+        },
+        {
+          "product_name": "BrainPOP ELL",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop-ell/"
+        },
+        {
+          "product_name": "BrainPOP Jr.",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop-jr/"
+        },
+        {
+          "product_name": "BrainPOP Science",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/brainpop-science/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Capstone",
       "vendor_name": "Capstone",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/capstone/",
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": true
     },
     {
+      "kind": "vendor",
+      "product_name": "Chegg",
       "vendor_name": "Chegg",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/chegg/",
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": true
     },
     {
+      "kind": "vendor",
+      "product_name": "Ck 12 Foundation",
       "vendor_name": "Ck 12 Foundation",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/ck-12-foundation/",
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": true
     },
     {
+      "kind": "vendor",
+      "product_name": "CommonLit",
       "vendor_name": "CommonLit",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/commonlit/",
+      "product_website_url": "https://www.commonlit.org/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "Accessibility Statement",
+          "url": "https://www.commonlit.org/accessibility"
+        }
+      ],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Curriculum Associates",
       "vendor_name": "Curriculum Associates",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/curriculum-associates/",
+      "product_website_url": "https://www.curriculumassociates.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "Committed to Accessibility",
+          "url": "https://www.curriculumassociates.com/instructional-design/committed-to-accessibility"
+        },
+        {
+          "text": "Accessibility in Our Programs",
+          "url": "https://www.curriculumassociates.com/instructional-design/committed-to-accessibility/accessibility-in-our-programs"
+        },
+        {
+          "text": "Using Student and Teacher Feedback to Improve Product Accessibility",
+          "url": "https://www.curriculumassociates.com/blog/using-feedback-to-improve-product-accessibility"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://www.curriculumassociates.com/support/contact-rep/rep-finder",
+          "label": "Contact your local Curriculum Associates representative"
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "i-Ready",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready/"
+        },
+        {
+          "product_name": "i-Ready Classroom Mathematics",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/i-ready-classroom-mathematics/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "edclub",
       "vendor_name": "edclub",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/edclub/",
+      "product_website_url": "https://www.edclub.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "Accessibility Settings (Video)",
+          "url": "https://www.youtube.com/watch?v=uMq3NHVW4kM"
+        }
+      ],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "TypingClub",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/typingclub/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Explorelearning",
       "vendor_name": "Explorelearning",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/explorelearning/",
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": true
     },
     {
+      "kind": "vendor",
+      "product_name": "Google",
       "vendor_name": "Google",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/google/",
+      "product_website_url": "https://www.google.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "Accessibility features in Google for Education",
+          "url": "https://edu.google.com/intl/ALL_us/our-values/accessibility/"
+        },
+        {
+          "text": "Make your document, presentation, sheets & videos more accessible",
+          "url": "https://support.google.com/accessibility/answer/6199477?hl=en"
+        },
+        {
+          "text": "Use Google Docs Editors with a screen reader",
+          "url": "https://support.google.com/docs/answer/6282736?sjid=8505193452093376458-NC"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://support.google.com/accessibility/answer/7641084?sjid=17911664697938960395-NC",
+          "label": "Contact the Google Disability Support team"
+        },
+        {
+          "type": "email",
+          "value": "apps-accessibility@google.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "Google Classroom",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-classroom/"
+        },
+        {
+          "product_name": "Google Docs",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-docs/"
+        },
+        {
+          "product_name": "Google Forms",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-forms/"
+        },
+        {
+          "product_name": "Google Sheets",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-sheets/"
+        },
+        {
+          "product_name": "Google Slides",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/google-slides/"
+        },
+        {
+          "product_name": "Notebook LM",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/notebook-lm/"
+        },
+        {
+          "product_name": "YouTube",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/youtube/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Instructure",
       "vendor_name": "Instructure",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/instructure/",
+      "product_website_url": "https://www.instructure.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "We believe in accessibility for all",
+          "url": "https://www.instructure.com/accessibility"
+        },
+        {
+          "text": "Instructure Accessibility Community",
+          "url": "https://community.instructure.com/en/categories/accessibility"
+        },
+        {
+          "text": "Accessibility Toolkit",
+          "url": "https://community.instructure.com/en/categories/accessibility"
+        },
+        {
+          "text": "Opening Doors to Learning: The Essential Role of Accessibility in K-12 Schools",
+          "url": "https://www.instructure.com/resources/blog/opening-doors-learning-essential-role-accessibility-k-12-schools"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "email",
+          "value": "support_a11y@instructure.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "Canvas LMS",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/canvas-lms/"
+        },
+        {
+          "product_name": "Canvas Studio",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/canvas-studio/"
+        },
+        {
+          "product_name": "Mastery Connect",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/mastery-connect/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "IXL Learning",
       "vendor_name": "IXL Learning",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/ixl-learning/",
+      "product_website_url": "https://www.ixl.com/company",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "ABCya!",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/abcya/"
+        },
+        {
+          "product_name": "IXL",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/ixl/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Kami",
       "vendor_name": "Kami",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/kami/",
+      "product_website_url": "https://www.kamiapp.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "Book Creator",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/book-creator/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Lexia",
       "vendor_name": "Lexia",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/lexia/",
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": true
     },
     {
+      "kind": "vendor",
+      "product_name": "McGraw Hill",
       "vendor_name": "McGraw Hill",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/mcgraw-hill/",
+      "product_website_url": "https://www.mheducation.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "McGraw Hill Accessibility",
+          "url": "https://www.mheducation.com/about-us/trust-center/accessibility"
+        },
+        {
+          "text": "Accessibility Policy (PDF)",
+          "url": "https://www.mheducation.com/unitas/school/explore/sites/aleks/6-12-accessibility.pdf"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "email",
+          "value": "accessibility@mheducation.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "ALEKS",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/aleks/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Microsoft",
       "vendor_name": "Microsoft",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/microsoft/",
+      "product_website_url": "https://www.microsoft.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "Accessibility at Microsoft",
+          "url": "https://www.microsoft.com/en-us/accessibility"
+        },
+        {
+          "text": "Set up your device to work with accessibility in Microsoft 365",
+          "url": "https://support.microsoft.com/en-us/office/set-up-your-device-to-work-with-accessibility-in-microsoft-365-a0ca81c1-fa3e-417e-9d3b-78b8816fce58#PickTab=Windows"
+        },
+        {
+          "text": "Improve accessibility with the Accessibility Checker",
+          "url": "https://support.microsoft.com/en-us/office/improve-accessibility-with-the-accessibility-checker-a16f6de0-2f39-4a2b-8bd8-5ad801426c7f"
+        },
+        {
+          "text": "Accessibility help & learning",
+          "url": "https://support.microsoft.com/en-us/accessibility"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://www.microsoft.com/en-us/accessibility/disability-answer-desk",
+          "label": "Disability Answer Desk"
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "Excel",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/excel/"
+        },
+        {
+          "product_name": "PowerPoint",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/powerpoint/"
+        },
+        {
+          "product_name": "Word",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/word/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Newsela",
       "vendor_name": "Newsela",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/newsela/",
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": true
     },
     {
+      "kind": "vendor",
+      "product_name": "PowerSchool",
       "vendor_name": "PowerSchool",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/powerschool/",
+      "product_website_url": "https://www.powerschool.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [
+        {
+          "text": "PowerSchool Product Accessibility Statement",
+          "url": "https://www.powerschool.com/legal/product-accessibility-statement/"
+        }
+      ],
+      "support_contacts": [
+        {
+          "type": "email",
+          "value": "accessibility@powerschool.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "Schoology",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/schoology/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     },
     {
+      "kind": "vendor",
+      "product_name": "Renaissance",
       "vendor_name": "Renaissance",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/renaissance/",
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": true
     },
     {
+      "kind": "vendor",
+      "product_name": "Seesaw",
       "vendor_name": "Seesaw",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/seesaw/",
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": true
     },
     {
+      "kind": "vendor",
+      "product_name": "Teaching.com",
       "vendor_name": "Teaching.com",
       "vendor_directory_url": "https://ncademi.org/provide/directory/vendors/teaching-com/",
+      "product_website_url": "https://teaching.com/",
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [
+        {
+          "product_name": "Nitro Type",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/nitro-type/"
+        },
+        {
+          "product_name": "Typing.Com",
+          "ncademi_product_url": "https://ncademi.org/provide/directory/products/typing-com/"
+        }
+      ],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null,
       "is_protected": false
     }
   ]
