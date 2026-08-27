@@ -25,11 +25,13 @@
  * `event:`/`data:` framing instead. See that file's handleRetrieveLiveData
  * for the matching client-side parser.
  *
- * No user-controlled input reaches the spawned command at all
- * (PYTHON_BIN/SCRIPT_PATH are both fixed, derived from REPO_ROOT), so this
- * is not a command-injection-hardening concern; spawn with an argv array
- * (rather than a shell string) is still used throughout, as it was with
- * execFile before.
+ * PYTHON_BIN/SCRIPT_PATH are both fixed, derived from REPO_ROOT. The
+ * request body's `target` is the one user-controlled value that reaches the
+ * spawned command, passed as its own argv element (not interpolated into a
+ * shell string), so it cannot inject additional arguments or commands --
+ * the script's own argparse `choices` is what rejects a value outside
+ * "all"/"products"/"vendors", surfacing as a normal non-zero exit handled
+ * by the child.on("close") branch below.
  */
 
 import { spawn } from "node:child_process";
@@ -57,9 +59,17 @@ function tail(text: string, lines = 20): string {
   return text.trim().split("\n").slice(-lines).join("\n");
 }
 
-export async function POST(): Promise<Response> {
+export async function POST(req: Request): Promise<Response> {
   const blocked = assertLocalOnly();
   if (blocked) return blocked;
+
+  const { target = "all" } = await req.json().catch(() => ({}));
+  // scripts/scrape_ncademi_live.py's argparse only accepts
+  // "all"/"products"/"vendors" (its output files are published-live.json/
+  // vendors-live.json, not "published") -- the frontend's category is
+  // "published", so that value is remapped here before it reaches argv, or
+  // argparse rejects it and exits 2.
+  const mappedTarget = target === "published" ? "products" : target;
 
   const encoder = new TextEncoder();
 
@@ -76,7 +86,7 @@ export async function POST(): Promise<Response> {
         controller.close();
       };
 
-      const child = spawn(PYTHON_BIN, [SCRIPT_PATH], {
+      const child = spawn(PYTHON_BIN, [SCRIPT_PATH, "--target", mappedTarget], {
         cwd: REPO_ROOT,
         env: { ...process.env, PYTHONUNBUFFERED: "1" },
       });

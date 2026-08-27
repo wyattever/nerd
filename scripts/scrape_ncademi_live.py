@@ -32,13 +32,15 @@ Output:
         non-protected record, so the file matches PublishedProductRecord
         (frontend/lib/published-tables.ts) even though nothing here has
         ever set a real tracking value -- that only happens in /editor.
-    frontend/lib/vendors-live.json -- deliberately NOT full vendor detail:
-        just vendor_name/vendor_directory_url/is_protected. The full
-        resources/products detail is still scraped internally (see
-        parse_public_vendor) and used for the product-vendor_resources
-        dedup step below -- simplify_vendor_for_output() trims it only at
-        the write step, so this file stays a lightweight name+URL list
-        without breaking that dedup.
+    frontend/lib/vendors-live.json -- full vendor detail, shaped to match
+        DirectoryRecord (frontend/lib/directory-schema.ts) via
+        map_vendor_to_directory_record(), the same field mapping
+        scripts/migrate_vendors_to_unified.py used to produce the
+        already-migrated frontend/lib/vendors.json. That mapping only runs
+        at the write step, after the product-vendor_resources dedup step
+        below, which needs parse_public_vendor's raw "resources" key on the
+        FULL vendors_out records -- mapping first would silently turn dedup
+        into a no-op.
 Both overwritten unconditionally on a successful run.
 
 Progress streaming: alongside the existing human-readable prints (unchanged,
@@ -60,6 +62,7 @@ anyone invoking this script under a runner that doesn't set that env var.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import time
@@ -370,6 +373,7 @@ def parse_public_vendor(html: str, url: str) -> dict:
         "vendor_directory_url": url,
         "vendor_website_url": vendor_website_url,
         "resources": resources,
+        "support_contacts": extract_support_contacts(soup),
         "products": products,
         "is_protected": False,
     }
@@ -415,18 +419,46 @@ def dedupe_vendor_resources(products: list[dict], vendor_url_index: dict[str, se
 
 
 # --- 5. Output ---
-def simplify_vendor_for_output(vendor: dict) -> dict:
-    """Trims a scraped vendor record (parse_public_vendor's full detail, or
-    make_protected_vendor_stub's already-minimal stub) down to just
-    name/URL/protection status for vendors-live.json. The resources/
-    products detail parse_public_vendor also computes is deliberately NOT
-    persisted here -- it only exists to feed build_vendor_url_index/
-    dedupe_vendor_resources below, which must run on the FULL vendor
-    records (vendors_out), before this trim, or the dedup step would
-    silently become a no-op."""
+def map_vendor_to_directory_record(vendor: dict) -> dict:
+    """Maps a scraped vendor record (parse_public_vendor's full detail, or
+    make_protected_vendor_stub's already-minimal stub) to the DirectoryRecord
+    shape frontend/lib/directory-schema.ts defines, for vendors-live.json --
+    same field mapping scripts/migrate_vendors_to_unified.py established for
+    the already-migrated frontend/lib/vendors.json: a resource only lands in
+    vendor_resources when its source is exactly "Vendor"; every other
+    resource (parse_public_vendor's own resources are all tagged "Internal")
+    lands in other_resources instead, matching that migration's split and
+    the resulting shape already on disk in vendors.json.
+
+    Must run on the FULL vendor records (vendors_out) -- same as the trimmed
+    version this replaces -- and, like that version, only AFTER
+    build_vendor_url_index/dedupe_vendor_resources below, which need the raw
+    "resources" key this function doesn't preserve; running it first would
+    silently turn the dedup step into a no-op.
+
+    acr_reports/product_description/last_updated/ai_insights/tracking_status
+    have no vendor-page equivalent to scrape (mirrors the migration's own
+    "vendors have no ACR reports" stance) and stay null/empty, same as a
+    freshly-scraped product's tracking_* fields in parse_public_product."""
+    resources = vendor.get("resources", [])
+    vendor_resources = [{"text": r["text"], "url": r["url"]} for r in resources if r.get("source") == "Vendor"]
+    other_resources = [{"text": r["text"], "url": r["url"]} for r in resources if r.get("source") != "Vendor"]
+
     return {
+        "kind": "vendor",
+        "product_name": vendor.get("vendor_name"),
         "vendor_name": vendor.get("vendor_name"),
         "vendor_directory_url": vendor.get("vendor_directory_url"),
+        "product_website_url": vendor.get("vendor_website_url"),
+        "product_description": None,
+        "vendor_resources": vendor_resources,
+        "other_resources": other_resources,
+        "support_contacts": vendor.get("support_contacts", []),
+        "acr_reports": [],
+        "products": vendor.get("products", []),
+        "last_updated": None,
+        "ai_insights": None,
+        "tracking_status": None,
         "is_protected": vendor.get("is_protected", False),
     }
 
@@ -457,109 +489,136 @@ def write_output(path: Path, key: str, records: list[dict], last_scraped: str) -
         f.write("\n")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Scrape the NCADEMI directory for products and/or vendors.")
+    parser.add_argument(
+        "--target",
+        choices=["all", "products", "vendors"],
+        default="all",
+        help="Which category to scrape (default: all). 'products'/'vendors' scrape and write only that "
+        "category's output file and skip the cross-category vendor-resource dedup step, which requires "
+        "both datasets loaded.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    target = args.target
+    scrape_products = target in ("products", "all")
+    scrape_vendors = target in ("vendors", "all")
+
     # Milestone A. Fixed text per route.ts/records page's Messages log spec
     # -- printed before URL discovery even starts, so it's the first thing
     # a client streaming this process sees.
-    emit_progress("start", "Retrieving data.")
+    emit_progress("start", "Retrieving data." if target == "all" else f"Retrieving {target} data.")
 
     print("--- 1. REST API URL Discovery ---")
-    product_urls = sorted(get_rest_urls("product"))
-    vendor_urls = sorted(get_rest_urls("vendor"))
+    product_urls = sorted(get_rest_urls("product")) if scrape_products else []
+    vendor_urls = sorted(get_rest_urls("vendor")) if scrape_vendors else []
     print(f"\nTotal: {len(product_urls)} product URL(s), {len(vendor_urls)} vendor URL(s).")
 
-    print("\n--- 2. Scraping products ---")
     products_out: list[dict] = []
-    # Milestone B counts these two outcomes separately: "published" ==
-    # fully scraped public pages (parse_public_product's full detail),
-    # "added" == protected pages that only got a minimal stub (see
-    # make_protected_product_stub) -- the two outcomes this loop can
-    # actually produce for a product URL, distinct from "missing"/"error"
-    # (skipped entirely, not counted here).
-    published_count = 0
-    added_count = 0
-    for i, url in enumerate(product_urls, start=1):
-        print(f"[{i}/{len(product_urls)}] {url}")
-        status, html = fetch_page(url)
-        if status == "protected":
-            products_out.append(make_protected_product_stub(url))
-            added_count += 1
-        elif status == "public":
-            try:
-                products_out.append(parse_public_product(html, url))
-                published_count += 1
-            except Exception as e:
-                print(f"    ERROR parsing {url}: {e}")
-        # "missing"/"error" -- skip, already logged in fetch_page.
-        emit_progress(
-            "products",
-            f"Retrieved {published_count} published product pages and {added_count} added product pages.",
-            published=published_count,
-            added=added_count,
-        )
-        time.sleep(PAGE_FETCH_DELAY_SECONDS)
+    if scrape_products:
+        print("\n--- 2. Scraping products ---")
+        # Milestone B counts these two outcomes separately: "published" ==
+        # fully scraped public pages (parse_public_product's full detail),
+        # "added" == protected pages that only got a minimal stub (see
+        # make_protected_product_stub) -- the two outcomes this loop can
+        # actually produce for a product URL, distinct from "missing"/"error"
+        # (skipped entirely, not counted here).
+        published_count = 0
+        added_count = 0
+        for i, url in enumerate(product_urls, start=1):
+            print(f"[{i}/{len(product_urls)}] {url}")
+            status, html = fetch_page(url)
+            if status == "protected":
+                products_out.append(make_protected_product_stub(url))
+                added_count += 1
+            elif status == "public":
+                try:
+                    products_out.append(parse_public_product(html, url))
+                    published_count += 1
+                except Exception as e:
+                    print(f"    ERROR parsing {url}: {e}")
+            # "missing"/"error" -- skip, already logged in fetch_page.
+            emit_progress(
+                "products",
+                f"Retrieved {published_count} published product pages and {added_count} added product pages.",
+                published=published_count,
+                added=added_count,
+            )
+            time.sleep(PAGE_FETCH_DELAY_SECONDS)
 
-    print("\n--- 3. Scraping vendors ---")
     vendors_out: list[dict] = []
     missing_vendor_urls: list[str] = []
-    vendor_retrieved_count = 0
-    for i, url in enumerate(vendor_urls, start=1):
-        print(f"[{i}/{len(vendor_urls)}] {url}")
-        status, html = fetch_page(url)
-        if status == "protected":
-            vendors_out.append(make_protected_vendor_stub(url))
-            vendor_retrieved_count += 1
-        elif status == "public":
-            try:
-                vendors_out.append(parse_public_vendor(html, url))
+    if scrape_vendors:
+        print("\n--- 3. Scraping vendors ---")
+        vendor_retrieved_count = 0
+        for i, url in enumerate(vendor_urls, start=1):
+            print(f"[{i}/{len(vendor_urls)}] {url}")
+            status, html = fetch_page(url)
+            if status == "protected":
+                vendors_out.append(make_protected_vendor_stub(url))
                 vendor_retrieved_count += 1
-            except Exception as e:
-                print(f"    ERROR parsing {url}: {e}")
+            elif status == "public":
+                try:
+                    vendors_out.append(parse_public_vendor(html, url))
+                    vendor_retrieved_count += 1
+                except Exception as e:
+                    print(f"    ERROR parsing {url}: {e}")
+                    missing_vendor_urls.append(url)
+            else:
+                # "missing"/"error" from fetch_page itself -- no vendor record
+                # at all for this URL, which is exactly what Milestone D reports.
                 missing_vendor_urls.append(url)
-        else:
-            # "missing"/"error" from fetch_page itself -- no vendor record
-            # at all for this URL, which is exactly what Milestone D reports.
-            missing_vendor_urls.append(url)
-        # Milestone C -- same "replace this stage's row in place" live-
-        # counter behavior as Milestone B above.
-        emit_progress(
-            "vendors",
-            f"Retrieved {vendor_retrieved_count} vendor pages.",
-            retrieved=vendor_retrieved_count,
-        )
-        time.sleep(PAGE_FETCH_DELAY_SECONDS)
+            # Milestone C -- same "replace this stage's row in place" live-
+            # counter behavior as Milestone B above.
+            emit_progress(
+                "vendors",
+                f"Retrieved {vendor_retrieved_count} vendor pages.",
+                retrieved=vendor_retrieved_count,
+            )
+            time.sleep(PAGE_FETCH_DELAY_SECONDS)
 
-    # Milestone D. Skipped entirely when nothing is missing -- a "there is
-    # no record for the following: " message naming zero pages has nothing
-    # useful to tell the user, so this milestone is conditional on the rest
-    # of the fixed A/B/C/E progression, not always emitted.
-    if missing_vendor_urls:
-        missing_vendor_names = [slug_to_name(u) for u in missing_vendor_urls]
-        emit_progress(
-            "vendors_missing",
-            "There is no record for the following vendor pages: " + "; ".join(missing_vendor_names) + ".",
-            missing=missing_vendor_names,
-        )
+        # Milestone D. Skipped entirely when nothing is missing -- a "there is
+        # no record for the following: " message naming zero pages has nothing
+        # useful to tell the user, so this milestone is conditional on the rest
+        # of the fixed A/B/C/E progression, not always emitted.
+        if missing_vendor_urls:
+            missing_vendor_names = [slug_to_name(u) for u in missing_vendor_urls]
+            emit_progress(
+                "vendors_missing",
+                "There is no record for the following vendor pages: " + "; ".join(missing_vendor_names) + ".",
+                missing=missing_vendor_names,
+            )
 
-    print("\n--- 4. Deduplicating vendor resources ---")
-    vendor_url_index = build_vendor_url_index(vendors_out)
-    removed = dedupe_vendor_resources(products_out, vendor_url_index)
-    print(f"Removed {removed} product-level vendor_resources URL(s) already captured under their vendor.")
+    # Dedup requires both this run's product and vendor scrapes loaded
+    # together, so it only makes sense -- and only runs -- for target=='all'.
+    if target == "all":
+        print("\n--- 4. Deduplicating vendor resources ---")
+        vendor_url_index = build_vendor_url_index(vendors_out)
+        removed = dedupe_vendor_resources(products_out, vendor_url_index)
+        print(f"Removed {removed} product-level vendor_resources URL(s) already captured under their vendor.")
 
     print("\n--- 5. Saving Results ---")
     last_scraped = datetime.now(timezone.utc).isoformat()
-    write_output(OUT_PRODUCTS, "products", products_out, last_scraped)
-    print(f"Saved {len(products_out)} products to {OUT_PRODUCTS.relative_to(REPO_ROOT)}")
-    write_output(OUT_VENDORS, "vendors", [simplify_vendor_for_output(v) for v in vendors_out], last_scraped)
-    print(f"Saved {len(vendors_out)} vendors to {OUT_VENDORS.relative_to(REPO_ROOT)}")
+    if scrape_products:
+        write_output(OUT_PRODUCTS, "products", products_out, last_scraped)
+        print(f"Saved {len(products_out)} products to {OUT_PRODUCTS.relative_to(REPO_ROOT)}")
+    if scrape_vendors:
+        write_output(OUT_VENDORS, "vendors", [map_vendor_to_directory_record(v) for v in vendors_out], last_scraped)
+        print(f"Saved {len(vendors_out)} vendors to {OUT_VENDORS.relative_to(REPO_ROOT)}")
 
-    # Milestone E. Fixed text, last line of the run.
-    emit_progress(
-        "complete",
-        "Process complete",
-        products=len(products_out),
-        vendors=len(vendors_out),
-    )
+    # Milestone E. Last line of the run -- only reports counts for the
+    # category/categories actually scraped this run, so a targeted run never
+    # reports a misleading 0 for the category it didn't touch.
+    complete_extra: dict = {}
+    if scrape_products:
+        complete_extra["products"] = len(products_out)
+    if scrape_vendors:
+        complete_extra["vendors"] = len(vendors_out)
+    emit_progress("complete", "Process complete", **complete_extra)
 
 
 if __name__ == "__main__":
