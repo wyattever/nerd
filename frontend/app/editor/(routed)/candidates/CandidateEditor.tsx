@@ -225,8 +225,13 @@ export function CandidateEditor({
         setStatusMessage(`Cannot import: slug "${record.slug}" already exists in the candidate list.`);
         return;
       }
-      updateProducts((prev) => [...prev, record].sort((a, b) => a.product_name.localeCompare(b.product_name)));
-      setStatusMessage(`Imported "${record.product_name}" into the candidate list (not yet saved to disk).`);
+      // Every freshly imported candidate starts the tracking workflow at
+      // "Gathering" -- matches the Tracking > Status select's own option
+      // value below, overriding whatever the pasted JSON happened to carry
+      // (if anything) rather than only filling it in when absent.
+      const importedRecord = { ...record, tracking_status: "Gathering" };
+      updateProducts((prev) => [...prev, importedRecord].sort((a, b) => a.product_name.localeCompare(b.product_name)));
+      setStatusMessage(`Imported "${importedRecord.product_name}" into the candidate list (not yet saved to disk).`);
       // selected/listing (and so the viewer below) are derived from the
       // route's `slug` param, not from `products` state -- without this,
       // the import lands in `products` (which is why Save Candidate works)
