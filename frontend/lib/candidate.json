@@ -9,6 +9,72 @@
   },
   "products": [
     {
+      "slug": "abcmouse",
+      "product_name": "ABCmouse",
+      "vendor_name": "Age of Learning",
+      "product_description": "ABCmouse is a digital early learning program for children aged 2 through 8, offering a comprehensive curriculum spanning reading, mathematics, science, art, and other subjects through interactive games, books, and puzzles.",
+      "product_website_url": "https://www.abcmouse.com/",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/abcmouse/",
+      "vendor_resources": [
+        {
+          "text": "Age of Learning Accessibility Statement",
+          "url": "https://www.ageoflearning.com/accessibility/"
+        },
+        {
+          "text": "Supporting Learners with Special Educational Needs in ABCmouse",
+          "url": "https://support.abcmouse.com/hc/en-us/articles/34386021587735-Supporting-Learners-with-Special-Educational-Needs-in-ABCmouse"
+        },
+        {
+          "text": "How to turn on the ABCmouse Classic accessibility feature",
+          "url": "https://support.abcmouse.com/hc/en-us/articles/4422848974487-How-to-turn-on-the-ABCmouse-Classic-accessibility-feature"
+        }
+      ],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "url",
+          "value": "https://www.ageoflearning.com/accessibility/",
+          "label": "Disabled Access Support"
+        },
+        {
+          "type": "email",
+          "value": "Accessibility@aofl.com",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "vendor_directory_url": null,
+      "last_updated": "2026-08-27T17:50:54.358Z",
+      "ai_insights": null
+    },
+    {
+      "slug": "anton",
+      "product_name": "ANTON",
+      "vendor_name": "ANTON",
+      "product_description": "ANTON is a free learning platform and app for school students offering a comprehensive, curriculum-aligned set of interactive exercises across multiple subjects for preschool through 8th grade.",
+      "product_website_url": "https://www.anton.app/en_us/",
+      "ncademi_product_url": "https://ncademi.org/provide/directory/products/anton/",
+      "vendor_resources": [
+        {
+          "text": "ANTON FAQ - Accessibility Settings",
+          "url": "https://anton.app/en_us/faq/wp7cbj/sound-effects-on-and-off/"
+        }
+      ],
+      "other_resources": [],
+      "support_contacts": [
+        {
+          "type": "email",
+          "value": "support@anton.app",
+          "label": null
+        }
+      ],
+      "acr_reports": [],
+      "vendor_directory_url": null,
+      "last_updated": "2026-08-27T18:05:26.368Z",
+      "ai_insights": null,
+      "tracking_status": "Gathering"
+    },
+    {
       "slug": "bridges-in-mathematics",
       "product_name": "Bridges in Mathematics",
       "ncademi_product_url": "https://ncademi.org/provide/directory/products/bridges-in-mathematics/",

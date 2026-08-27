@@ -676,6 +676,40 @@
       "last_updated": null,
       "ai_insights": null,
       "tracking_status": null
+    },
+    {
+      "kind": "vendor",
+      "slug": "test-vendor",
+      "product_name": "Test Vendor",
+      "vendor_name": "Test Vendor",
+      "vendor_directory_url": null,
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null
+    },
+    {
+      "kind": "vendor",
+      "slug": "another-test",
+      "product_name": "Another Test",
+      "vendor_name": "Another Test",
+      "vendor_directory_url": null,
+      "product_website_url": null,
+      "product_description": null,
+      "vendor_resources": [],
+      "other_resources": [],
+      "support_contacts": [],
+      "acr_reports": [],
+      "products": [],
+      "last_updated": null,
+      "ai_insights": null,
+      "tracking_status": null
     }
   ]
 }
