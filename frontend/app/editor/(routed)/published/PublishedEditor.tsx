@@ -33,7 +33,11 @@ import type {
 
 interface VendorRegistryEntry {
   vendor_name: string;
-  resources: PublishedResourceLink[];
+  // See CandidateEditor.tsx's identical VendorRegistryEntry comment: the
+  // vendor-level resources a product's "From {Vendor}" section actually
+  // shows live in vendors.json's other_resources field, not
+  // vendor_resources (empty for every vendor in the current data).
+  other_resources: PublishedResourceLink[];
 }
 const VENDORS_REGISTRY: VendorRegistryEntry[] = vendorsData.vendors as unknown as VendorRegistryEntry[];
 
@@ -88,7 +92,7 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
     const globalVendor = VENDORS_REGISTRY.find((v) => v.vendor_name === selected.vendor_name);
     const previewRecord = {
       ...selected,
-      vendor_resources: [...(selected.vendor_resources || []), ...(globalVendor?.resources || [])],
+      vendor_resources: [...(selected.vendor_resources || []), ...(globalVendor?.other_resources || [])],
     };
     return toListingData(previewRecord);
   }, [selected]);

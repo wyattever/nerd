@@ -56,7 +56,16 @@ const RESEARCHER_NAMES = USERS.filter((u) => u.role === "Researcher").map(fullNa
 
 interface VendorRegistryEntry {
   vendor_name: string;
-  resources: PublishedResourceLink[];
+  // vendors.json's own vendor_resources field is empty for every vendor in
+  // the current data (never populated by either the migration script or
+  // the live scraper -- see scripts/scrape_ncademi_live.py's
+  // map_vendor_to_directory_record, which only classifies a resource as
+  // vendor_resources when its source is exactly "Vendor", something no
+  // vendor's source data has ever actually been tagged). The vendor-level
+  // resources a product page's "From {Vendor}" section actually shows
+  // (confirmed against a live page's source, e.g. Adobe Express) live in
+  // other_resources instead -- read from there, not vendor_resources.
+  other_resources: PublishedResourceLink[];
 }
 const VENDORS_REGISTRY: VendorRegistryEntry[] = vendorsData.vendors as unknown as VendorRegistryEntry[];
 
@@ -76,8 +85,12 @@ async function fetchDocument(url: string): Promise<{
 }> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`GET ${url} failed with ${res.status}`);
-  const etag = res.headers.get("ETag");
-  const body = (await res.json()) as { $schema_version?: unknown; $meta?: unknown; products?: unknown };
+  const body = (await res.json()) as { $schema_version?: unknown; $meta?: unknown; products?: unknown; $etag?: unknown };
+  // Header first, `$etag` (the same value, echoed into the body by the
+  // route) as fallback -- see app/api/local/vendors/route.ts's GET for why
+  // the header alone isn't reliable behind a compressing intermediary like
+  // the nerd_cloud.sh Cloudflare tunnel.
+  const etag = res.headers.get("ETag") ?? (typeof body.$etag === "string" ? body.$etag : null);
   return {
     products: Array.isArray(body.products) ? (body.products as PublishedProductRecord[]) : [],
     schemaVersion: typeof body.$schema_version === "number" ? body.$schema_version : null,
@@ -159,7 +172,7 @@ export function CandidateEditor({
     const globalVendor = VENDORS_REGISTRY.find((v) => v.vendor_name === selected.vendor_name);
     const previewRecord = {
       ...selected,
-      vendor_resources: [...(selected.vendor_resources || []), ...(globalVendor?.resources || [])],
+      vendor_resources: [...(selected.vendor_resources || []), ...(globalVendor?.other_resources || [])],
     };
     return toListingData(previewRecord);
   }, [selected]);

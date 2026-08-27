@@ -35,7 +35,11 @@ import type {
 
 interface VendorRegistryEntry {
   vendor_name: string;
-  resources: PublishedResourceLink[];
+  // See CandidateEditor.tsx's identical VendorRegistryEntry comment: the
+  // vendor-level resources a product's "From {Vendor}" section actually
+  // shows live in vendors.json's other_resources field, not
+  // vendor_resources (empty for every vendor in the current data).
+  other_resources: PublishedResourceLink[];
 }
 const VENDORS_REGISTRY: VendorRegistryEntry[] = vendorsData.vendors as unknown as VendorRegistryEntry[];
 
@@ -55,8 +59,12 @@ async function fetchDocument(url: string): Promise<{
 }> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`GET ${url} failed with ${res.status}`);
-  const etag = res.headers.get("ETag");
-  const body = (await res.json()) as { $schema_version?: unknown; $meta?: unknown; products?: unknown };
+  const body = (await res.json()) as { $schema_version?: unknown; $meta?: unknown; products?: unknown; $etag?: unknown };
+  // Header first, `$etag` (the same value, echoed into the body by the
+  // route) as fallback -- see app/api/local/vendors/route.ts's GET for why
+  // the header alone isn't reliable behind a compressing intermediary like
+  // the nerd_cloud.sh Cloudflare tunnel.
+  const etag = res.headers.get("ETag") ?? (typeof body.$etag === "string" ? body.$etag : null);
   return {
     products: Array.isArray(body.products) ? (body.products as PublishedProductRecord[]) : [],
     schemaVersion: typeof body.$schema_version === "number" ? body.$schema_version : null,
@@ -108,7 +116,7 @@ export function AddedEditor({ slug, initialProducts, initialSchemaVersion, initi
     const globalVendor = VENDORS_REGISTRY.find((v) => v.vendor_name === selected.vendor_name);
     const previewRecord = {
       ...selected,
-      vendor_resources: [...(selected.vendor_resources || []), ...(globalVendor?.resources || [])],
+      vendor_resources: [...(selected.vendor_resources || []), ...(globalVendor?.other_resources || [])],
     };
     return toListingData(previewRecord);
   }, [selected]);
