@@ -1,6 +1,6 @@
 {
   "$meta": {
-    "last_scraped": "2026-08-27T20:50:59.965108+00:00",
+    "last_scraped": "2026-08-27T23:49:48.043064+00:00",
     "total_records": 24,
     "generated_by": "scrape_ncademi_live.py"
   },
@@ -52,7 +52,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -85,7 +84,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -134,7 +132,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -151,7 +148,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": true
     },
     {
@@ -196,7 +192,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -213,7 +208,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": true
     },
     {
@@ -230,7 +224,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": true
     },
     {
@@ -247,7 +240,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": true
     },
     {
@@ -269,7 +261,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -314,7 +305,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -341,7 +331,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -358,7 +347,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": true
     },
     {
@@ -428,7 +416,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -481,7 +468,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -507,7 +493,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -529,7 +514,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -546,7 +530,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": true
     },
     {
@@ -583,7 +566,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -636,7 +618,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -653,7 +634,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": true
     },
     {
@@ -686,7 +666,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     },
     {
@@ -703,7 +682,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": true
     },
     {
@@ -720,7 +698,6 @@
       "products": [],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": true
     },
     {
@@ -746,7 +723,6 @@
       ],
       "last_updated": null,
       "ai_insights": null,
-      "tracking_status": null,
       "is_protected": false
     }
   ]

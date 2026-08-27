@@ -51,12 +51,14 @@ export interface PublishedProductRecord {
   last_updated: string | null;
   ai_insights: string | null;
   /**
-   * Editor-only workflow metadata for the /editor Candidate tab (see
-   * app/editor/page.tsx's TRACKING: fieldset). Genuinely optional -- may be
-   * entirely absent, not just null -- because no existing record in any of
-   * the three snapshot files has these keys yet and the UI does not write
-   * them yet either; published-validate.ts's OPTIONAL_STRING_FIELDS
-   * validates them only when present, so their absence is never an error.
+   * Editor workflow metadata (see app/editor's TRACKING fieldset).
+   * Decoupled into frontend/lib/tracking.json (keyed by product_name) and
+   * merged back in at read time by lib/local-data.ts and the /api/local/*
+   * routes -- the snapshot files themselves no longer carry these keys, and
+   * neither does a fresh live-scrape. Optional because a record with no
+   * tracking.json row simply omits them; published-validate.ts's
+   * OPTIONAL_STRING_FIELDS still validates any that are present. See
+   * lib/tracking.ts.
    */
   tracking_priority?: string | null;
   tracking_status?: string | null;

@@ -6,7 +6,9 @@
  * Modeled exactly after app/api/local/published/route.ts, differing only in
  * the DataKind ("vendors") and the shape validated on POST -- see that
  * file's header comment and docs/NERD_System_Architecture.md for the full
- * rationale (gating, ETag concurrency, atomic writes).
+ * rationale (gating, ETag concurrency, atomic writes, and the tracking.json
+ * split/merge -- tracking_status is keyed by a vendor record's product_name,
+ * i.e. its vendor name).
  *
  * POST validation here is deliberately lightweight (top-level
  * `vendors` array + each entry's `vendor_name` is a string) rather than a
@@ -29,7 +31,14 @@
  * flow).
  */
 
-import { assertLocalOnly, readPublishedRaw, writePublishedAtomic } from "@/lib/local-write";
+import {
+  assertLocalOnly,
+  readPublishedRaw,
+  writePublishedAtomic,
+  readTrackingRecords,
+  writeTrackingRecords,
+} from "@/lib/local-write";
+import { splitTracking, mergeTracking } from "@/lib/tracking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +55,14 @@ export async function GET(): Promise<Response> {
   if (blocked) return blocked;
 
   const { data, etag } = await readPublishedRaw("vendors");
+  const parsed = JSON.parse(data) as Record<string, unknown>;
+  // tracking_status is decoupled into tracking.json (keyed by product_name,
+  // which for a vendor record is its vendor name) -- merged back into
+  // `vendors` here so this route's shape is unchanged. See lib/tracking.ts.
+  parsed.vendors = mergeTracking(
+    Array.isArray(parsed.vendors) ? (parsed.vendors as Array<Record<string, unknown>>) : [],
+    await readTrackingRecords()
+  );
   // The ETag response header is ALSO echoed into the body as `$etag`: a
   // compressing intermediary between this server and the browser (verified
   // against the nerd_cloud.sh Cloudflare tunnel -- present when the client
@@ -56,7 +73,9 @@ export async function GET(): Promise<Response> {
   // the header comes back empty, or saves break in exactly that
   // environment while working fine in dev (no compressing proxy in the
   // path) -- see VendorEditor.tsx's saveToServer for the read side.
-  const body = { ...(JSON.parse(data) as Record<string, unknown>), $etag: etag };
+  // The ETag still hashes the on-disk bytes (no tracking in them), so a
+  // later If-Match POST re-reads the same value -- the merge is display-only.
+  const body = { ...parsed, $etag: etag };
   return new Response(JSON.stringify(body), {
     status: 200,
     // Explicit no-store: this GET backs a read-then-write (etag) flow, so a
@@ -104,8 +123,16 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  const bytes = `${JSON.stringify(body, null, 2)}\n`;
+  // tracking_status is persisted to tracking.json, never this file -- split
+  // it out before writing (see lib/tracking.ts). A vendor record's
+  // product_name is its vendor name, which is the tracking key.
+  const { records: strippedVendors, tracking, scopeNames } = splitTracking(
+    vendors as Array<Record<string, unknown>>
+  );
+
+  const bytes = `${JSON.stringify({ ...(body as Record<string, unknown>), vendors: strippedVendors }, null, 2)}\n`;
   await writePublishedAtomic("vendors", bytes);
+  await writeTrackingRecords(scopeNames, tracking);
 
   const { etag: newEtag } = await readPublishedRaw("vendors");
   return jsonResponse({ ok: true, etag: newEtag }, 200, { ETag: newEtag });

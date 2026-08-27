@@ -22,8 +22,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { assertLocalOnly, libDir } from "@/lib/local-write";
+import { assertLocalOnly, libDir, readTrackingRecords } from "@/lib/local-write";
 import { deriveLiveVendorSlug } from "@/lib/local-data";
+import { mergeTracking } from "@/lib/tracking";
 
 export const runtime = "nodejs";
 // See app/api/local/vendors/route.ts's header comment on `dynamic` --
@@ -61,10 +62,12 @@ export async function GET(): Promise<Response> {
 
   const body = JSON.parse(data) as { vendors?: unknown; [key: string]: unknown };
   const rawVendors = Array.isArray(body.vendors) ? (body.vendors as Array<Record<string, unknown>>) : [];
-  const vendors = rawVendors.map((v) => ({
+  const withSlug = rawVendors.map((v) => ({
     ...v,
     slug: deriveLiveVendorSlug(v.vendor_directory_url as string),
   }));
+  // Same tracking.json merge getLiveVendors() applies -- see lib/tracking.ts.
+  const vendors = mergeTracking(withSlug, await readTrackingRecords());
 
   return NextResponse.json({ ...body, vendors }, { headers: { "Cache-Control": "no-store" } });
 }

@@ -14,12 +14,26 @@
  * declared explicitly here: fs is unavailable on Edge, and this guards
  * against an accidental edge opt-in or a future default change.
  *
+ * tracking_* fields (priority/status/gatherer/reviewer) are NOT stored in
+ * published.json -- GET merges them in from tracking.json and POST splits
+ * them back out to it, so callers see an unchanged record shape while the
+ * file itself stays free of editor workflow state (see lib/tracking.ts for
+ * why). The ETag is unaffected: it hashes the on-disk bytes, which never
+ * contain tracking.
+ *
  * Sibling routes app/api/local/added and app/api/local/candidate mirror
  * this file exactly, differing only in the DataKind passed to
  * readPublishedRaw/writePublishedAtomic.
  */
 
-import { assertLocalOnly, readPublishedRaw, writePublishedAtomic } from "@/lib/local-write";
+import {
+  assertLocalOnly,
+  readPublishedRaw,
+  writePublishedAtomic,
+  readTrackingRecords,
+  writeTrackingRecords,
+} from "@/lib/local-write";
+import { splitTracking, mergeTracking } from "@/lib/tracking";
 import { hasBlockingError, validateProductRecord } from "@/lib/published-validate";
 
 export const runtime = "nodejs";
@@ -41,11 +55,20 @@ export async function GET(): Promise<Response> {
   if (blocked) return blocked;
 
   const { data, etag } = await readPublishedRaw("published");
+  const parsed = JSON.parse(data) as Record<string, unknown>;
+  // tracking_* fields live in tracking.json (see lib/tracking.ts) -- merged
+  // back into `products` here so this route's shape is unchanged for callers.
+  parsed.products = mergeTracking(
+    Array.isArray(parsed.products) ? (parsed.products as Array<Record<string, unknown>>) : [],
+    await readTrackingRecords()
+  );
   // Echoed into the body as `$etag` too -- see app/api/local/vendors/
   // route.ts's GET for why (a compressing intermediary can strip the ETag
   // header without touching the body; every client-side reader must fall
-  // back to this).
-  const body = { ...(JSON.parse(data) as Record<string, unknown>), $etag: etag };
+  // back to this). The ETag is still the hash of the on-disk bytes, which
+  // do NOT contain tracking -- a later If-Match POST re-reads those same
+  // bytes, so the merge never causes a spurious 412.
+  const body = { ...parsed, $etag: etag };
   return new Response(JSON.stringify(body), {
     status: 200,
     // See app/api/local/vendors/route.ts's GET for why no-store is explicit
@@ -82,7 +105,15 @@ export async function POST(request: Request): Promise<Response> {
     return jsonResponse({ error: '"products" must be an array.' }, 400);
   }
 
-  for (const product of products) {
+  // tracking_* is persisted to tracking.json, never this file -- split it
+  // out before validating and writing (see lib/tracking.ts).
+  const {
+    records: strippedProducts,
+    tracking,
+    scopeNames,
+  } = splitTracking(products as Array<Record<string, unknown>>);
+
+  for (const product of strippedProducts) {
     const issues = validateProductRecord(product);
     if (hasBlockingError(issues)) {
       return jsonResponse(
@@ -92,8 +123,11 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  const bytes = `${JSON.stringify(body, null, 2)}\n`;
+  const bytes = `${JSON.stringify({ ...(body as Record<string, unknown>), products: strippedProducts }, null, 2)}\n`;
   await writePublishedAtomic("published", bytes);
+  // After the main document is safely on disk -- a rejected save above must
+  // not leave a half-applied tracking write behind.
+  await writeTrackingRecords(scopeNames, tracking);
 
   const { etag: newEtag } = await readPublishedRaw("published");
   return jsonResponse({ ok: true, etag: newEtag }, 200, { ETag: newEtag });

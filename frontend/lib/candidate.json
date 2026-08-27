@@ -71,8 +71,7 @@
       "acr_reports": [],
       "vendor_directory_url": null,
       "last_updated": "2026-08-27T18:05:26.368Z",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "bridges-in-mathematics",
@@ -92,8 +91,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:29:52 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "bridges-intervention",
@@ -108,8 +106,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:30:42 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "clearfluency",
@@ -124,9 +121,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:17:17 PM",
-      "ai_insights": null,
-      "tracking_priority": "Medium",
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "concept-quests",
@@ -141,8 +136,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:31:46 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "geogebra",
@@ -157,8 +151,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:15:23 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "intuit-for-education",
@@ -173,8 +166,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:20:08 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "myigdis",
@@ -189,8 +181,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:33:00 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "next-gen-personal-finance",
@@ -205,8 +196,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:36:39 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "number-corner",
@@ -221,8 +211,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:30:09 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "number-rack-explorations",
@@ -237,8 +226,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:29:07 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "pblworks-teach",
@@ -253,8 +241,7 @@
       "support_contacts": [],
       "acr_reports": [],
       "last_updated": "8/7/2026 12:40:20 PM",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     },
     {
       "slug": "tynker",
@@ -290,8 +277,7 @@
       "acr_reports": [],
       "vendor_directory_url": null,
       "last_updated": "2026-08-27T22:17:29.195Z",
-      "ai_insights": null,
-      "tracking_status": "Gathering"
+      "ai_insights": null
     }
   ]
 }

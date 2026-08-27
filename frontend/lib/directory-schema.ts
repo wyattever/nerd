@@ -71,7 +71,15 @@ export interface DirectoryRecord {
   products: DirectoryProductLink[];
   last_updated: string | null;
   ai_insights: string | null;
-  tracking_status: "ready for site" | "published to site" | null;
+  /**
+   * Editor workflow state, decoupled into frontend/lib/tracking.json and
+   * merged back in at read time by lib/local-data.ts / the /api/local/vendors
+   * routes (keyed by product_name -- a vendor record's is its vendor name).
+   * Optional because the file on disk and a fresh live-scrape no longer
+   * carry it; a record with no tracking.json row simply omits it. See
+   * lib/tracking.ts.
+   */
+  tracking_status?: "ready for site" | "published to site" | null;
 }
 
 export interface DirectoryFileMeta {

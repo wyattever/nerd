@@ -1,6 +1,6 @@
 {
   "$meta": {
-    "last_scraped": "2026-08-27T23:22:34.460650+00:00",
+    "last_scraped": "2026-08-27T23:49:32.377687+00:00",
     "total_records": 6,
     "generated_by": "scrape_ncademi_live.py"
   },
@@ -46,11 +46,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": true,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": true
     },
     {
       "product_name": "Lexia CORE5 Reading",
@@ -108,11 +104,7 @@
         }
       ],
       "last_updated": "August 4, 2026",
-      "is_protected": true,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": true
     },
     {
       "product_name": "Newsela Student Platform",
@@ -154,11 +146,7 @@
         }
       ],
       "last_updated": "August 7, 2026",
-      "is_protected": true,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": true
     },
     {
       "product_name": "NoRedInk",
@@ -192,11 +180,7 @@
         }
       ],
       "last_updated": "July 23, 2026",
-      "is_protected": true,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": true
     },
     {
       "product_name": "ReadWorks",
@@ -230,11 +214,7 @@
         }
       ],
       "last_updated": "July 21, 2026",
-      "is_protected": true,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": true
     },
     {
       "product_name": "SeeSaw Elementary LMS",
@@ -284,11 +264,7 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "is_protected": true,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": true
     }
   ]
 }

@@ -29,13 +29,12 @@ Usage:
 
 Output:
     frontend/lib/published-live.json -- full product detail (same shape as
-        published.json's records) plus tracking_priority/tracking_status/
-        tracking_gatherer/tracking_reviewer initialized to null on every
-        record, so the file matches PublishedProductRecord
-        (frontend/lib/published-tables.ts) even though nothing here has
-        ever set a real tracking value -- that only happens in /editor.
-        Publicly-visible product pages ONLY: a password-protected page is
-        skipped entirely here (it belongs in added-live.json instead).
+        published.json's records). No tracking_* keys: editor workflow
+        metadata is decoupled into frontend/lib/tracking.json (see
+        frontend/lib/tracking.ts) and merged onto records at read time, so
+        a scrape neither carries nor needs an opinion on it. Publicly-
+        visible product pages ONLY: a password-protected page is skipped
+        entirely here (it belongs in added-live.json instead).
     frontend/lib/added-live.json -- same shape as published-live.json, but
         for the password-protected ("Added to Site", pending vendor
         review) product pages. Each is unlocked with its vendor-review
@@ -403,16 +402,12 @@ def parse_public_product(html: str, url: str, is_protected: bool = False) -> dic
         "acr_reports": extract_acr_reports(article),
         "last_updated": last_updated,
         "is_protected": is_protected,
-        # Editor-only workflow metadata (see published-tables.ts's
-        # PublishedProductRecord and published-validate.ts's
-        # OPTIONAL_STRING_FIELDS) -- always null here since a scrape has no
-        # opinion on priority/status/gatherer/reviewer, but present (not
-        # omitted) so a freshly-scraped record already matches the schema
-        # /editor expects instead of silently lacking these keys.
-        "tracking_priority": None,
-        "tracking_status": None,
-        "tracking_gatherer": None,
-        "tracking_reviewer": None,
+        # No tracking_* keys: editor workflow metadata
+        # (priority/status/gatherer/reviewer) is decoupled into
+        # frontend/lib/tracking.json (see frontend/lib/tracking.ts) and
+        # merged onto records at read time -- a scrape has no opinion on it
+        # and emitting nulls here would just be noise the promote step has
+        # to strip again.
     }
 
 
@@ -525,10 +520,12 @@ def map_vendor_to_directory_record(vendor: dict) -> dict:
     "resources" key this function doesn't preserve; running it first would
     silently turn the dedup step into a no-op.
 
-    acr_reports/product_description/last_updated/ai_insights/tracking_status
-    have no vendor-page equivalent to scrape (mirrors the migration's own
-    "vendors have no ACR reports" stance) and stay null/empty, same as a
-    freshly-scraped product's tracking_* fields in parse_public_product."""
+    acr_reports/product_description/last_updated/ai_insights have no
+    vendor-page equivalent to scrape (mirrors the migration's own "vendors
+    have no ACR reports" stance) and stay null/empty. tracking_status is
+    not emitted at all -- like a product's tracking_* fields it is
+    decoupled into frontend/lib/tracking.json (see frontend/lib/tracking.ts)
+    and merged on at read time."""
     resources = vendor.get("resources", [])
     vendor_resources = [{"text": r["text"], "url": r["url"]} for r in resources if r.get("source") == "Vendor"]
     other_resources = [{"text": r["text"], "url": r["url"]} for r in resources if r.get("source") != "Vendor"]
@@ -547,7 +544,6 @@ def map_vendor_to_directory_record(vendor: dict) -> dict:
         "products": vendor.get("products", []),
         "last_updated": None,
         "ai_insights": None,
-        "tracking_status": None,
         "is_protected": vendor.get("is_protected", False),
     }
 

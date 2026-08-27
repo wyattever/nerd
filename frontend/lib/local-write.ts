@@ -27,6 +27,7 @@ import { promises as fs } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { isLocalOnlyAllowed } from "./local-only";
+import { TRACKING_FIELDS, type TrackingRecord } from "./tracking";
 
 /**
  * The JSON documents the /editor and /vendors pages' local write APIs can
@@ -122,7 +123,10 @@ export async function readPublishedRaw(kind: DataKind): Promise<{ data: string; 
  *    does not, and the old file reappears on an unclean reboot.
  */
 export async function writePublishedAtomic(kind: DataKind, bytes: string): Promise<void> {
-  const targetPath = pathFor(kind);
+  await atomicWrite(pathFor(kind), bytes);
+}
+
+async function atomicWrite(targetPath: string, bytes: string): Promise<void> {
   const dir = path.dirname(targetPath);
   const tempPath = `${targetPath}.tmp`;
 
@@ -143,4 +147,78 @@ export async function writePublishedAtomic(kind: DataKind, bytes: string): Promi
   } finally {
     await dirHandle.close();
   }
+}
+
+// --- tracking.json (editor workflow metadata, decoupled from the four main
+// documents -- see lib/tracking.ts's header). Deliberately NOT a DataKind:
+// like passwords.json it is outside the closed set of documents the
+// ETag/If-Match concurrency system guards, and needs no such guarantee (a
+// single local operator, and a lost tracking edit is trivially re-entered).
+// A plain read / merge / atomic-write is enough. ---
+
+const TRACKING_PATH = () => path.join(libDir(), "tracking.json");
+
+interface TrackingFile {
+  $schema_version: number;
+  $meta: Record<string, unknown>;
+  tracking: TrackingRecord[];
+}
+
+const TRACKING_META = {
+  purpose:
+    "Editor-set workflow metadata (priority/status/gatherer/reviewer) for products and vendors, " +
+    "keyed by product_name. Decoupled from published/added/candidate/vendors.json so a live-data " +
+    "refresh of those files never disturbs it -- see lib/tracking.ts.",
+};
+
+function coerceTrackingRow(value: unknown): TrackingRecord | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  if (typeof row.product_name !== "string" || row.product_name === "") return null;
+  const str = (k: string) => (typeof row[k] === "string" && row[k] !== "" ? (row[k] as string) : null);
+  return {
+    product_name: row.product_name,
+    tracking_priority: str("tracking_priority"),
+    tracking_status: str("tracking_status"),
+    tracking_gatherer: str("tracking_gatherer"),
+    tracking_reviewer: str("tracking_reviewer"),
+  };
+}
+
+/** Every row in tracking.json. Returns `[]` when the file does not exist
+ *  yet (the expected state before any tracking has been set) -- callers
+ *  merge against an empty list without a separate code path. */
+export async function readTrackingRecords(): Promise<TrackingRecord[]> {
+  let raw: string;
+  try {
+    raw = await fs.readFile(TRACKING_PATH(), "utf8");
+  } catch {
+    return [];
+  }
+  const body = JSON.parse(raw) as Partial<TrackingFile>;
+  const rows = Array.isArray(body.tracking) ? body.tracking : [];
+  return rows.map(coerceTrackingRow).filter((r): r is TrackingRecord => r !== null);
+}
+
+/**
+ * Reconciles tracking.json for one /editor category's save: within
+ * `scopeNames` (every product_name that category's POST contained), the
+ * file's rows are replaced by `rows` -- so a product whose tracking was
+ * cleared loses its row, and a newly-set one gains it. Rows for
+ * product_names OUTSIDE `scopeNames` (the other categories) are left
+ * untouched. A no-op write (same content) still rewrites the file; harmless
+ * for a local single-writer tool.
+ */
+export async function writeTrackingRecords(scopeNames: string[], rows: TrackingRecord[]): Promise<void> {
+  const scope = new Set(scopeNames);
+  const existing = await readTrackingRecords();
+
+  const next = existing.filter((r) => !scope.has(r.product_name));
+  for (const row of rows) {
+    if (TRACKING_FIELDS.some((f) => row[f] !== null)) next.push(row);
+  }
+  next.sort((a, b) => a.product_name.localeCompare(b.product_name));
+
+  const payload: TrackingFile = { $schema_version: 1, $meta: TRACKING_META, tracking: next };
+  await atomicWrite(TRACKING_PATH(), `${JSON.stringify(payload, null, 2)}\n`);
 }

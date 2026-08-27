@@ -27,8 +27,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -66,8 +65,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -109,8 +107,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": "ready for site"
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -126,8 +123,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -165,8 +161,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -182,8 +177,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -199,8 +193,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -216,8 +209,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -238,8 +230,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -277,8 +268,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -304,8 +294,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -321,8 +310,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -380,8 +368,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -427,8 +414,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -453,8 +439,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -475,8 +460,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -492,8 +476,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -523,8 +506,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -570,8 +552,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -587,8 +568,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -614,8 +594,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -631,8 +610,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -648,8 +626,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -674,8 +651,7 @@
         }
       ],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -691,8 +667,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     },
     {
       "kind": "vendor",
@@ -708,8 +683,7 @@
       "acr_reports": [],
       "products": [],
       "last_updated": null,
-      "ai_insights": null,
-      "tracking_status": null
+      "ai_insights": null
     }
   ]
 }

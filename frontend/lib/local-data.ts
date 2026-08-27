@@ -25,7 +25,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { notFound } from "next/navigation";
 import { isLocalOnlyAllowed } from "./local-only";
-import { readPublishedRaw, libDir, type DataKind } from "./local-write";
+import { readPublishedRaw, readTrackingRecords, libDir, type DataKind } from "./local-write";
+import { mergeTracking } from "./tracking";
 import type { PublishedProductRecord } from "./published-tables";
 import type { DirectoryRecord, DirectoryFile } from "./directory-schema";
 
@@ -54,8 +55,17 @@ async function readLocalDocument(kind: DataKind): Promise<LocalDocument> {
     products?: unknown;
   };
 
+  // tracking_* fields live in tracking.json, not in these files -- merged
+  // back in here (by product_name) so every /editor and /records consumer
+  // still sees the same PublishedProductRecord shape. See lib/tracking.ts.
+  const rawProducts = Array.isArray(body.products) ? (body.products as PublishedProductRecord[]) : [];
+  const products = mergeTracking(
+    rawProducts as unknown as Array<Record<string, unknown>>,
+    await readTrackingRecords()
+  ) as unknown as PublishedProductRecord[];
+
   return {
-    products: Array.isArray(body.products) ? (body.products as PublishedProductRecord[]) : [],
+    products,
     schemaVersion: typeof body.$schema_version === "number" ? body.$schema_version : null,
     meta: body.$meta ? (body.$meta as SnapshotMeta) : null,
     etag,
@@ -109,8 +119,17 @@ export async function getVendors(): Promise<VendorsDocument> {
     vendors?: unknown;
   };
 
+  // tracking_status is decoupled into tracking.json (keyed by product_name,
+  // which for a vendor record is its vendor name) -- merged back here, same
+  // as readLocalDocument() does for products. See lib/tracking.ts.
+  const rawVendors = Array.isArray(body.vendors) ? (body.vendors as DirectoryRecord[]) : [];
+  const vendors = mergeTracking(
+    rawVendors as unknown as Array<Record<string, unknown>>,
+    await readTrackingRecords()
+  ) as unknown as DirectoryRecord[];
+
   return {
-    vendors: Array.isArray(body.vendors) ? (body.vendors as DirectoryRecord[]) : [],
+    vendors,
     schemaVersion: typeof body.$schema_version === "number" ? body.$schema_version : null,
     meta: body.$meta ? (body.$meta as DirectoryFile["$meta"]) : null,
     etag,
@@ -168,10 +187,15 @@ export async function getPublishedLiveProducts(): Promise<{ products: PublishedP
 
   const body = JSON.parse(raw) as { products?: unknown };
   const rawProducts = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
-  const products = rawProducts.map((p) => ({
+  const withSlug = rawProducts.map((p) => ({
     ...p,
     slug: deriveLiveProductSlug(p.ncademi_product_url as string),
-  })) as PublishedProductRecord[];
+  }));
+  // Same tracking.json merge readLocalDocument() applies -- a live record is
+  // the same product, so its stored tracking (priority/status/...) shows
+  // alongside the freshly-scraped content, and survives a promote of this
+  // snapshot over the stored file. See lib/tracking.ts.
+  const products = mergeTracking(withSlug, await readTrackingRecords()) as unknown as PublishedProductRecord[];
 
   return { products };
 }
@@ -204,10 +228,11 @@ export async function getAddedLiveProducts(): Promise<{ products: PublishedProdu
 
   const body = JSON.parse(raw) as { products?: unknown };
   const rawProducts = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
-  const products = rawProducts.map((p) => ({
+  const withSlug = rawProducts.map((p) => ({
     ...p,
     slug: deriveLiveProductSlug(p.ncademi_product_url as string),
-  })) as PublishedProductRecord[];
+  }));
+  const products = mergeTracking(withSlug, await readTrackingRecords()) as unknown as PublishedProductRecord[];
 
   return { products };
 }
@@ -253,11 +278,12 @@ export async function getLiveVendors(): Promise<{ vendors: DirectoryRecord[] }> 
   // docstring) is synthesized. `product_name` keeps a fallback since
   // DirectoryRecord requires a string and a parse failure (no <h1> found)
   // can leave the script's vendor_name null.
-  const vendors = rawVendors.map((v) => ({
+  const withSlug = rawVendors.map((v) => ({
     ...v,
     slug: deriveLiveVendorSlug(v.vendor_directory_url as string),
     product_name: v.product_name || v.vendor_name || "Unknown",
-  })) as unknown as DirectoryRecord[];
+  }));
+  const vendors = mergeTracking(withSlug, await readTrackingRecords()) as unknown as DirectoryRecord[];
 
   return { vendors };
 }

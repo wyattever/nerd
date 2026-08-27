@@ -38,8 +38,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { assertLocalOnly, libDir } from "@/lib/local-write";
+import { assertLocalOnly, libDir, readTrackingRecords } from "@/lib/local-write";
 import { deriveLiveProductSlug } from "@/lib/local-data";
+import { mergeTracking } from "@/lib/tracking";
 
 export const runtime = "nodejs";
 // See app/api/local/vendors/route.ts's header comment on `dynamic` --
@@ -77,10 +78,13 @@ export async function GET(): Promise<Response> {
 
   const body = JSON.parse(data) as { products?: unknown; [key: string]: unknown };
   const rawProducts = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
-  const products = rawProducts.map((p) => ({
+  const withSlug = rawProducts.map((p) => ({
     ...p,
     slug: deriveLiveProductSlug(p.ncademi_product_url as string),
   }));
+  // Same tracking.json merge lib/local-data.ts's getPublishedLiveProducts()
+  // applies -- see lib/tracking.ts.
+  const products = mergeTracking(withSlug, await readTrackingRecords());
 
   return NextResponse.json({ ...body, products }, { headers: { "Cache-Control": "no-store" } });
 }

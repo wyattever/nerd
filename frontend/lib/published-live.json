@@ -1,6 +1,6 @@
 {
   "$meta": {
-    "last_scraped": "2026-08-27T23:18:05.043757+00:00",
+    "last_scraped": "2026-08-27T23:48:26.916435+00:00",
     "total_records": 60,
     "generated_by": "scrape_ncademi_live.py"
   },
@@ -32,11 +32,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "ABCya!",
@@ -70,11 +66,7 @@
         }
       ],
       "last_updated": "May 13, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Adobe Acrobat",
@@ -162,11 +154,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Adobe Express",
@@ -234,11 +222,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "ALEKS",
@@ -292,11 +276,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Amplify Core Knowledge Language Arts (CKLA)",
@@ -339,11 +319,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Amplify Desmos Math",
@@ -390,11 +366,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Amplify ELA",
@@ -449,11 +421,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Blooket",
@@ -487,11 +455,7 @@
         }
       ],
       "last_updated": "April 10, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Book Creator",
@@ -546,11 +510,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "BookFlix ®",
@@ -589,11 +549,7 @@
         }
       ],
       "last_updated": "June 23, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Brainingcamp",
@@ -622,11 +578,7 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Brainly",
@@ -655,11 +607,7 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "BrainPOP ELL",
@@ -702,11 +650,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "BrainPOP Jr.",
@@ -749,11 +693,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "BrainPOP Science",
@@ -792,11 +732,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "BrainPOP",
@@ -844,11 +780,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Canva",
@@ -891,11 +823,7 @@
         }
       ],
       "last_updated": "April 10, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Canvas LMS",
@@ -970,11 +898,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Canvas Studio",
@@ -1041,11 +965,7 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "ChatGPT",
@@ -1079,11 +999,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Code.org",
@@ -1112,11 +1028,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "CoolMathGames",
@@ -1145,11 +1057,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Desmos",
@@ -1211,11 +1119,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "EdPuzzle",
@@ -1244,11 +1148,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Encyclopedia Britannica",
@@ -1282,11 +1182,7 @@
         }
       ],
       "last_updated": "April 10, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Epic!",
@@ -1315,11 +1211,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Excel",
@@ -1422,11 +1314,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Gimkit",
@@ -1455,11 +1343,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Google Classroom",
@@ -1519,11 +1403,7 @@
         }
       ],
       "last_updated": "April 7, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Google Docs",
@@ -1599,11 +1479,7 @@
         }
       ],
       "last_updated": "April 7, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Google Forms",
@@ -1671,11 +1547,7 @@
         }
       ],
       "last_updated": "July 23, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Google Sheets",
@@ -1739,11 +1611,7 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Google Slides",
@@ -1803,11 +1671,7 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "History.com",
@@ -1841,11 +1705,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "i-Ready Classroom Mathematics",
@@ -1908,11 +1768,7 @@
         }
       ],
       "last_updated": "May 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "i-Ready",
@@ -2011,11 +1867,7 @@
         }
       ],
       "last_updated": "May 27, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "IXL",
@@ -2071,11 +1923,7 @@
         }
       ],
       "last_updated": "March 27, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Kahoot!",
@@ -2104,11 +1952,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Kami",
@@ -2142,11 +1986,7 @@
         }
       ],
       "last_updated": "March 10, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Khan Academy",
@@ -2180,11 +2020,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Mastery Connect",
@@ -2246,11 +2082,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Math Playground",
@@ -2279,11 +2111,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "mCLASS",
@@ -2325,11 +2153,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Nitro Type",
@@ -2352,11 +2176,7 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Notebook LM",
@@ -2417,11 +2237,7 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "PBS",
@@ -2463,11 +2279,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "PhET Interactive Simulations",
@@ -2501,11 +2313,7 @@
         }
       ],
       "last_updated": "March 10, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "PowerPoint",
@@ -2596,11 +2404,7 @@
         }
       ],
       "last_updated": "April 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Prodigy",
@@ -2629,11 +2433,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Quizlet",
@@ -2672,11 +2472,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Schoology",
@@ -2723,11 +2519,7 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Scratch",
@@ -2756,11 +2548,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Study.com",
@@ -2794,11 +2582,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Typing.Com",
@@ -2840,11 +2624,7 @@
         }
       ],
       "last_updated": "June 19, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "TypingClub",
@@ -2887,11 +2667,7 @@
         }
       ],
       "last_updated": "August 18, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Wayground",
@@ -2920,11 +2696,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Weebly",
@@ -2953,11 +2725,7 @@
         }
       ],
       "last_updated": "March 20, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "Word",
@@ -3052,11 +2820,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     },
     {
       "product_name": "YouTube",
@@ -3124,11 +2888,7 @@
         }
       ],
       "last_updated": "March 6, 2026",
-      "is_protected": false,
-      "tracking_priority": null,
-      "tracking_status": null,
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
+      "is_protected": false
     }
   ]
 }

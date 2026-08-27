@@ -1,0 +1,113 @@
+{
+  "$schema_version": 1,
+  "$meta": {
+    "purpose": "Editor-set workflow metadata (priority/status/gatherer/reviewer) for products and vendors, keyed by product_name. Decoupled from published/added/candidate/vendors.json so a live-data refresh of those files never disturbs it -- see lib/tracking.ts."
+  },
+  "tracking": [
+    {
+      "product_name": "99math Stored",
+      "tracking_priority": "Medium",
+      "tracking_status": null,
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "ANTON",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Amplify",
+      "tracking_priority": null,
+      "tracking_status": "ready for site",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Bridges Intervention",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Bridges in Mathematics",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "ClearFluency Stored",
+      "tracking_priority": "Medium",
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Concept Quests",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "GeoGebra",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Intuit for Education",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Next Gen Personal Finance",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Number Corner",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Number Rack Explorations",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "PBLWorks TEACH",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Tynker",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "myIGDIs",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    }
+  ]
+}
