@@ -42,8 +42,32 @@ const FILE_NAMES: Record<DataKind, string> = {
   vendors: "vendors.json",
 };
 
+/**
+ * frontend/lib/ under `next dev`/`next start` (process.cwd() there is
+ * frontend/, matching every other reader/writer's assumption) -- but NOT
+ * under the standalone build nerd_cloud.sh runs in the cloud demo:
+ * .next/standalone/server.js calls process.chdir(__dirname) at startup, so
+ * process.cwd() there is .next/standalone/, and this would resolve to
+ * .next/standalone/lib/ -- a BUILD-TIME COPY Next's file-tracer makes for
+ * static JSON imports elsewhere in the app, not the real source file.
+ * Reads/writes against that copy appear to work within one server process
+ * (the copy is a real, writable file) but silently diverge from
+ * frontend/lib/ and get clobbered by the next `next build`'s fresh copy --
+ * confirmed in production: an "Added" product deleted mid-session
+ * reappeared after the next nerd_cloud.sh restart, because the delete only
+ * ever reached .next/standalone/lib/added.json, never the real file.
+ * NERD_REPO_ROOT (set by nerd_cloud.sh, same env var app/api/local/
+ * scrape/route.ts's REPO_ROOT already uses) is the explicit override for
+ * that environment.
+ */
+export function libDir(): string {
+  return process.env.NERD_REPO_ROOT
+    ? path.join(process.env.NERD_REPO_ROOT, "frontend", "lib")
+    : path.join(process.cwd(), "lib");
+}
+
 function pathFor(kind: DataKind): string {
-  return path.join(process.cwd(), "lib", FILE_NAMES[kind]);
+  return path.join(libDir(), FILE_NAMES[kind]);
 }
 
 /**

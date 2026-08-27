@@ -25,7 +25,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { notFound } from "next/navigation";
 import { isLocalOnlyAllowed } from "./local-only";
-import { readPublishedRaw, type DataKind } from "./local-write";
+import { readPublishedRaw, libDir, type DataKind } from "./local-write";
 import type { PublishedProductRecord } from "./published-tables";
 import type { DirectoryRecord, DirectoryFile } from "./directory-schema";
 
@@ -117,7 +117,9 @@ export async function getVendors(): Promise<VendorsDocument> {
   };
 }
 
-const PUBLISHED_LIVE_PATH = path.join(process.cwd(), "lib", "published-live.json");
+// See local-write.ts's libDir() for why process.cwd() alone isn't reliable
+// here under the standalone build.
+const PUBLISHED_LIVE_PATH = path.join(libDir(), "published-live.json");
 
 /**
  * published-live.json's records carry no `slug` field at all (unlike the
@@ -174,7 +176,9 @@ export async function getPublishedLiveProducts(): Promise<{ products: PublishedP
   return { products };
 }
 
-const VENDORS_LIVE_PATH = path.join(process.cwd(), "lib", "vendors-live.json");
+// See local-write.ts's libDir() for why process.cwd() alone isn't reliable
+// here under the standalone build.
+const VENDORS_LIVE_PATH = path.join(libDir(), "vendors-live.json");
 
 /**
  * Same derivation as deriveLiveProductSlug() above, applied to

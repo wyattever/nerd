@@ -22,7 +22,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { assertLocalOnly } from "@/lib/local-write";
+import { assertLocalOnly, libDir } from "@/lib/local-write";
 import { deriveLiveVendorSlug } from "@/lib/local-data";
 
 export const runtime = "nodejs";
@@ -32,7 +32,9 @@ export const runtime = "nodejs";
 // `{ exists: false }` even after a live scrape has since written the file).
 export const dynamic = "force-dynamic";
 
-const VENDORS_LIVE_PATH = path.join(process.cwd(), "lib", "vendors-live.json");
+// See local-write.ts's libDir() for why process.cwd() alone isn't reliable
+// here under the standalone build.
+const VENDORS_LIVE_PATH = path.join(libDir(), "vendors-live.json");
 
 export async function GET(): Promise<Response> {
   const blocked = assertLocalOnly();
