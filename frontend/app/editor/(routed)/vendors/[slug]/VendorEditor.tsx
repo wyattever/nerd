@@ -27,6 +27,17 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, startSaveTransition] = useTransition();
 
+  // True from handleAddVendor until the draft is actually persisted --
+  // `record` at that point is a brand-new vendor that has never existed on
+  // disk under any slug, unlike `initialSlug` below (this page's ORIGINAL
+  // vendor, e.g. "adobe" if that's what was open when Add Vendor was
+  // clicked). saveToServer and handleDelete both need to know which mode
+  // they're in: identity lookups keyed on `initialSlug` are correct for
+  // editing/renaming the record this page loaded, but would silently
+  // overwrite (or delete) that unrelated original vendor if applied to a
+  // just-added draft instead.
+  const [isNewVendorDraft, setIsNewVendorDraft] = useState(false);
+
   useUnsavedChangesGuard(isDirty);
 
   // Modals
@@ -103,8 +114,15 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
       // 1. GET fresh data and ETag
       const getRes = await fetch("/api/local/vendors");
       if (!getRes.ok) throw new Error(`GET failed with ${getRes.status}`);
-      const etag = getRes.headers.get("ETag");
-      const body = (await getRes.json()) as DirectoryFile;
+      const body = (await getRes.json()) as DirectoryFile & { $etag?: string };
+      // Header first, `$etag` (the same value, echoed into the body by the
+      // route) as fallback -- a compressing intermediary between this
+      // server and the browser (confirmed against the nerd_cloud.sh
+      // Cloudflare tunnel) can strip a custom response header like ETag
+      // without touching the body, so the header alone isn't reliable
+      // there even though it always is in local dev (no compressing proxy
+      // in that path). See app/api/local/vendors/route.ts's GET.
+      const etag = getRes.headers.get("ETag") ?? body.$etag ?? null;
 
       if (!etag || typeof body.$schema_version !== "number" || !body.$meta) {
         setSaveError("Cannot save: vendors snapshot metadata was not loaded.");
@@ -116,6 +134,17 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
       let updatedVendors: DirectoryRecord[];
       if (isDelete) {
         updatedVendors = currentVendors.filter((v) => v.slug !== initialSlug);
+      } else if (isNewVendorDraft) {
+        // recordToSave has never been on disk -- identity is its OWN slug,
+        // not initialSlug (this page's original, unrelated vendor). Re-check
+        // for a collision here (not just VendorCreateModal's product_name
+        // check at draft time) in case another save landed a same-slug
+        // vendor on disk in between.
+        if (currentVendors.some((v) => v.slug === recordToSave.slug)) {
+          setSaveError(`A vendor named "${recordToSave.product_name}" already exists.`);
+          return;
+        }
+        updatedVendors = [...currentVendors, recordToSave];
       } else {
         const exists = currentVendors.some((v) => v.slug === initialSlug);
         updatedVendors = exists
@@ -145,6 +174,11 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
       }
 
       setIsDirty(false);
+      // recordToSave now genuinely exists on disk under its own slug --
+      // subsequent saves of this component instance (if the slug-changed
+      // navigation below doesn't remount it first) should go through the
+      // normal initialSlug-based rename/replace path, not the new-draft one.
+      if (!isDelete) setIsNewVendorDraft(false);
       setStatusMessage(isDelete ? `Deleted "${initialRecord.product_name}".` : `Saved "${recordToSave.product_name}" to disk.`);
 
       router.refresh();
@@ -161,7 +195,7 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
     } catch {
       setSaveError("Save failed: could not reach the local write API.");
     }
-  }, [initialRecord.product_name, initialSlug, router, setSaveError, setStatusMessage]);
+  }, [initialRecord.product_name, initialSlug, isNewVendorDraft, router, setSaveError, setStatusMessage]);
 
   const handleDelete = useCallback(() => {
     if (!window.confirm(`Permanently delete "${record.product_name}"? This cannot be undone.`)) return;
@@ -170,64 +204,20 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
     });
   }, [record, saveToServer]);
 
+  // Stages the new vendor as this component's displayed record -- same
+  // "not yet saved to disk" deferred pattern as CandidateEditor.tsx's
+  // handleImport (see that file for the full rationale). No network call
+  // here: the draft is only committed to vendors.json when the user
+  // explicitly clicks "Save vendor" below, via the same saveToServer used
+  // for editing an existing record, gated by isNewVendorDraft (see that
+  // state's own comment for why it can't just reuse initialSlug).
   const handleAddVendor = useCallback((newRecord: DirectoryRecord) => {
-    setSaveError("");
-    setStatusMessage("Adding vendor…");
+    setRecord(newRecord);
+    setIsDirty(true);
+    setIsNewVendorDraft(true);
+    setStatusMessage(`Added "${newRecord.product_name}" to the vendor list (not yet saved to disk).`);
     setIsCreateModalOpen(false);
-
-    startSaveTransition(async () => {
-      try {
-        const getRes = await fetch("/api/local/vendors");
-        if (!getRes.ok) throw new Error(`GET failed with ${getRes.status}`);
-        const etag = getRes.headers.get("ETag");
-        const body = (await getRes.json()) as DirectoryFile;
-
-        if (!etag || typeof body.$schema_version !== "number" || !body.$meta) {
-          setSaveError("Cannot add vendor: metadata not loaded.");
-          return;
-        }
-
-        const currentVendors = Array.isArray(body.vendors) ? body.vendors : [];
-
-        if (currentVendors.some((v) => v.slug === newRecord.slug)) {
-          setSaveError(`A vendor named "${newRecord.product_name}" already exists.`);
-          return;
-        }
-
-        const updatedVendors = [...currentVendors, newRecord];
-
-        const postRes = await fetch("/api/local/vendors", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "If-Match": etag },
-          body: JSON.stringify({
-            $schema_version: body.$schema_version,
-            $meta: body.$meta,
-            vendors: updatedVendors,
-          }),
-        });
-
-        if (postRes.status === 412) {
-          setSaveError("Add failed: the file on disk changed. Try again.");
-          return;
-        }
-        if (!postRes.ok) {
-          setSaveError(`Add failed: server response (${postRes.status}).`);
-          return;
-        }
-
-        setStatusMessage(`Added "${newRecord.product_name}".`);
-
-        router.refresh();
-
-        // Delay navigation to allow router.refresh() to clear the server cache
-        setTimeout(() => {
-          router.push(`/editor/vendors/${encodeURIComponent(newRecord.slug)}`);
-        }, 100);
-      } catch {
-        setSaveError("Add failed: could not reach the local write API.");
-      }
-    });
-  }, [router, setSaveError, setStatusMessage]);
+  }, [setStatusMessage]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -302,7 +292,8 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
             <button
               type="button"
               onClick={handleDelete}
-              disabled={isSaving}
+              disabled={isSaving || isNewVendorDraft}
+              title={isNewVendorDraft ? "Nothing to delete yet -- this vendor hasn't been saved." : undefined}
               className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Delete vendor
