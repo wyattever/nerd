@@ -59,9 +59,20 @@ import type { DirectoryRecord } from "@/lib/directory-schema";
 
 export const runtime = "nodejs";
 
-// process.cwd() for a Next.js route handler is frontend/ (matches
-// lib/local-write.ts's pathFor) -- repo root is one level up.
-const REPO_ROOT = path.join(process.cwd(), "..");
+// process.cwd() for a Next.js route handler is frontend/ under `next dev`/
+// `next start` (matches lib/local-write.ts's pathFor, one level up to repo
+// root) -- but NOT under the standalone build nerd_cloud.sh runs in the
+// cloud demo: .next/standalone/server.js calls process.chdir(__dirname) at
+// startup, so cwd there is .next/standalone/, and "one level up" lands on
+// .next/ instead of the real repo root. That's harmless for JSON/JS
+// imports (Next's file-tracer copies those into the standalone bundle so
+// cwd-relative reads still resolve), but PYTHON_BIN/SCRIPT_PATH point
+// outside frontend/ entirely and are invoked via child_process.spawn --
+// invisible to that tracer, so there's nothing for a wrong cwd to
+// accidentally still find. NERD_REPO_ROOT (set by nerd_cloud.sh) is the
+// explicit override for that environment; process.cwd()-based inference
+// stays the default for plain dev/start.
+const REPO_ROOT = process.env.NERD_REPO_ROOT ?? path.join(process.cwd(), "..");
 const PYTHON_BIN = path.join(REPO_ROOT, "venv312", "bin", "python3");
 const SCRIPT_PATH = path.join(REPO_ROOT, "scripts", "scrape_ncademi_live.py");
 
