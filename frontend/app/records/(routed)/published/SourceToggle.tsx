@@ -13,13 +13,24 @@
  * RecordsPublishedListPanel.tsx (Phase 3 removed it in favor of
  * IntegratedListPanel), NOT in this file -- this file only ever rendered
  * the two bare Stored/Live buttons before Phase 4.5 moved the rest of the
- * widget markup in. The two data action buttons are stubbed (onClick shows
- * a placeholder alert): their real implementations (a POST to
- * /api/local/scrape with SSE progress streaming, for Retrieve Live Data)
- * lived in RecordsPublishedListPanel.tsx's handleRetrieveLiveData and its
- * messagesLog/isRetrievingLive state, none of which exists anymore.
- * Reimplementing that is a separate, larger change than this phase's UI
- * work.
+ * widget markup in. "Update Stored Data" is still stubbed (onClick shows a
+ * placeholder alert). "Retrieve Live Data" POSTs to /api/local/scrape with
+ * `{ target: category }` and reads the SSE stream that route returns (see
+ * that route's own header for the event framing), pushing each `progress`
+ * event into IntegratedListPanel's shared `liveLog` state (via
+ * useMessages()) rather than a placeholder alert -- restoring the log UI
+ * RecordsPublishedListPanel.tsx's handleRetrieveLiveData used to render,
+ * now hosted in the panel's persisting Messages footer instead of locally.
+ * Once the stream ends (success or error), `router.refresh()` re-runs the
+ * enclosing Server Component so `hasLiveScrapeData` (computed server-side
+ * in page.tsx) picks up the file this run just wrote, without which "Live
+ * Data" would stay disabled until a manual page reload.
+ *
+ * `isRetrievingLive` lives in IntegratedListPanel's MessagesContext, not as
+ * local state here -- the Messages footer (not this component) is what
+ * renders `liveLog`, and it needs to know whether a scrape is still running
+ * to animate only the newest/in-progress row (globals.css's
+ * ellipsis-animation) instead of every past row animating forever.
  *
  * useSearchParams()/router.replace() for the Stored/Live toggle itself --
  * see git history (or an earlier revision of this file) for the full
@@ -32,6 +43,7 @@
  */
 
 import { useSearchParams, useRouter } from "next/navigation";
+import { useMessages } from "@/components/IntegratedListPanel";
 
 const PRIMARY_BUTTON_CLASSES =
   "rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500";
@@ -39,15 +51,78 @@ const SECONDARY_BUTTON_CLASSES =
   "rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 interface SourceToggleProps {
+  category: "published" | "vendors";
   hasLiveScrapeData: boolean;
   viewMode: "html" | "json";
   onViewModeChange: (mode: "html" | "json") => void;
 }
 
-export function SourceToggle({ hasLiveScrapeData, viewMode, onViewModeChange }: SourceToggleProps) {
+export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewModeChange }: SourceToggleProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const source: "stored" | "live" = searchParams.get("source") === "live" ? "live" : "stored";
+  const { setLiveLog, focusMessages, isRetrievingLive, setIsRetrievingLive } = useMessages();
+
+  async function handleRetrieveLiveData() {
+    focusMessages();
+    setLiveLog([]);
+    setIsRetrievingLive(true);
+    try {
+      const response = await fetch("/api/local/scrape", {
+        method: "POST",
+        body: JSON.stringify({ target: category }),
+      });
+      const reader = response.body?.getReader();
+      if (!reader) return;
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      readLoop: while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let separatorIndex: number;
+        while ((separatorIndex = buffer.indexOf("\n\n")) !== -1) {
+          const rawEvent = buffer.slice(0, separatorIndex);
+          buffer = buffer.slice(separatorIndex + 2);
+
+          let eventName = "message";
+          let dataLine = "";
+          for (const line of rawEvent.split("\n")) {
+            if (line.startsWith("event: ")) eventName = line.slice("event: ".length);
+            else if (line.startsWith("data: ")) dataLine = line.slice("data: ".length);
+          }
+          if (!dataLine) continue;
+
+          if (eventName === "progress") {
+            const payload = JSON.parse(dataLine) as { stage: string; message: string };
+            setLiveLog((prev) => {
+              const index = prev.findIndex((entry) => entry.stage === payload.stage);
+              if (index === -1) return [...prev, payload];
+              const next = [...prev];
+              next[index] = payload;
+              return next;
+            });
+          } else if (eventName === "error") {
+            const payload = JSON.parse(dataLine) as { error: string };
+            setLiveLog((prev) => [...prev, { stage: "error", message: payload.error }]);
+            break readLoop;
+          } else if (eventName === "done" || eventName === "end") {
+            break readLoop;
+          }
+        }
+      }
+    } finally {
+      setIsRetrievingLive(false);
+      // Re-runs the Server Component tree for this route so the
+      // `hasLiveScrapeData` prop (a fresh getLiveVendors()/
+      // getPublishedLiveProducts() read in page.tsx) reflects the file this
+      // run just wrote, un-disabling "Live Data" without a manual reload.
+      router.refresh();
+    }
+  }
 
   return (
     <div className="w-full rounded-md border border-gray-300 bg-white">
@@ -79,10 +154,11 @@ export function SourceToggle({ hasLiveScrapeData, viewMode, onViewModeChange }: 
         </button>
         <button
           type="button"
-          onClick={() => alert("Stubbed")}
-          className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={isRetrievingLive}
+          onClick={handleRetrieveLiveData}
+          className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Retrieve Live Data
+          {isRetrievingLive ? "Retrieving..." : "Retrieve Live Data"}
         </button>
 
         <div className="ml-auto flex gap-3">

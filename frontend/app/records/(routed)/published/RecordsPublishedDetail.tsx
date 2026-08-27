@@ -51,7 +51,7 @@ export function RecordsPublishedDetail({ record, hasLiveScrapeData }: RecordsPub
       </div>
 
       <Suspense fallback={<div className="h-[74px] w-full animate-pulse rounded-md border border-gray-300 bg-gray-100" />}>
-        <SourceToggle hasLiveScrapeData={hasLiveScrapeData} viewMode={viewMode} onViewModeChange={setViewMode} />
+        <SourceToggle category="published" hasLiveScrapeData={hasLiveScrapeData} viewMode={viewMode} onViewModeChange={setViewMode} />
       </Suspense>
 
       <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4 w-full min-w-0">

@@ -49,8 +49,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import type { DirectoryRecord } from "@/lib/directory-schema";
+
+export interface LiveLogEntry {
+  stage: string;
+  message: string;
+}
 
 export type IntegratedListPanelMode = "editor" | "records";
 export type IntegratedListPanelCategory = "candidates" | "added" | "published" | "vendors";
@@ -83,6 +88,23 @@ interface MessagesContextValue {
    *  render below. Pass `null` to unregister (e.g. on unmount) so a
    *  stale handler from a previous record can't linger. */
   setCreateAction: (action: (() => void) | null) => void;
+  /** SSE progress log for a live scrape (SourceToggle.tsx) -- one entry per
+   *  stage, replaced in place by stage as new progress lines arrive rather
+   *  than appended, matching scrape_ncademi_live.py's own "replace this
+   *  stage's row" progress protocol (see that script's emit_progress). */
+  liveLog: LiveLogEntry[];
+  setLiveLog: (log: LiveLogEntry[] | ((prev: LiveLogEntry[]) => LiveLogEntry[])) => void;
+  /** Moves focus to the Messages footer -- called when a live scrape starts
+   *  so a screen-reader/keyboard user lands on the log as it begins
+   *  updating instead of it silently changing off-screen. */
+  focusMessages: () => void;
+  /** Whether a live scrape is currently streaming -- lifted up from
+   *  SourceToggle.tsx (rather than kept as that component's own local
+   *  state) so this panel's liveLog render below can tell which entry, if
+   *  any, is still "in progress" and should carry the ellipsis-animation
+   *  class (globals.css) instead of every entry animating forever. */
+  isRetrievingLive: boolean;
+  setIsRetrievingLive: (value: boolean) => void;
 }
 
 const MessagesContext = createContext<MessagesContextValue | null>(null);
@@ -113,10 +135,25 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
   const [statusMessage, setStatusMessage] = useState("");
   const [saveError, setSaveError] = useState("");
   const [createAction, setCreateAction] = useState<(() => void) | null>(null);
+  const [liveLog, setLiveLog] = useState<LiveLogEntry[]>([]);
+  const [isRetrievingLive, setIsRetrievingLive] = useState(false);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const focusMessages = () => messagesRef.current?.focus();
 
   const messagesValue = useMemo(
-    () => ({ statusMessage, saveError, setStatusMessage, setSaveError, setCreateAction }),
-    [statusMessage, saveError]
+    () => ({
+      statusMessage,
+      saveError,
+      setStatusMessage,
+      setSaveError,
+      setCreateAction,
+      liveLog,
+      setLiveLog,
+      focusMessages,
+      isRetrievingLive,
+      setIsRetrievingLive,
+    }),
+    [statusMessage, saveError, liveLog, isRetrievingLive]
   );
 
   const filtered = useMemo(() => {
@@ -299,10 +336,18 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
           <footer className="flex-shrink-0 border-t border-gray-200 p-6">
             <div className="w-full rounded-md border border-gray-300 bg-white">
               <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Messages</div>
-              <div className="flex flex-col gap-1 p-4">
+              <div ref={messagesRef} tabIndex={-1} role="log" className="flex flex-col gap-1 p-4 focus:outline-none">
                 <p className="text-sm text-gray-600">Displaying {items.length} records.</p>
                 <p role="status" aria-live="polite" className="text-sm text-gray-600 min-h-[1.25rem]">{statusMessage}</p>
                 <p role="alert" className="text-sm font-semibold text-red-700 min-h-[1.25rem]">{saveError}</p>
+                {liveLog.map((entry, index) => {
+                  const isActive = isRetrievingLive && index === liveLog.length - 1;
+                  return (
+                    <p key={entry.stage} className={`text-sm text-gray-600${isActive ? " ellipsis-animation" : ""}`}>
+                      {entry.message}
+                    </p>
+                  );
+                })}
               </div>
             </div>
           </footer>
