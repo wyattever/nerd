@@ -42,6 +42,11 @@ import { assertLocalOnly } from "@/lib/local-write";
 import { deriveLiveProductSlug } from "@/lib/local-data";
 
 export const runtime = "nodejs";
+// See app/api/local/vendors/route.ts's header comment on `dynamic` --
+// without this, GET's fs.readFile-only response can be frozen at
+// `next build` time under a production build (e.g. always answering
+// `{ exists: false }` even after a live scrape has since written the file).
+export const dynamic = "force-dynamic";
 
 const PUBLISHED_LIVE_PATH = path.join(process.cwd(), "lib", "published-live.json");
 
@@ -60,7 +65,11 @@ export async function GET(): Promise<Response> {
     // why not.
     return new Response(JSON.stringify({ exists: false }), {
       status: 404,
-      headers: { "Content-Type": "application/json" },
+      // See app/api/local/vendors/route.ts's GET for why no-store is
+      // explicit here -- this route's whole purpose is telling the caller
+      // whether a live scrape has landed since the page loaded, so a cached
+      // 404 would leave "Live Data" stuck disabled after one actually did.
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
     });
   }
 
@@ -71,5 +80,5 @@ export async function GET(): Promise<Response> {
     slug: deriveLiveProductSlug(p.ncademi_product_url as string),
   }));
 
-  return NextResponse.json({ ...body, products });
+  return NextResponse.json({ ...body, products }, { headers: { "Cache-Control": "no-store" } });
 }

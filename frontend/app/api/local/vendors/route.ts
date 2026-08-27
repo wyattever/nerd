@@ -18,11 +18,21 @@
  * Node runtime is the default for App Router route handlers, but it is
  * declared explicitly here: fs is unavailable on Edge, and this guards
  * against an accidental edge opt-in or a future default change.
+ *
+ * `dynamic = "force-dynamic"` is required for the same reason it's required
+ * on every fs-reading Server Component in local-data.ts: GET here has no
+ * request param and reads no cookies/headers, so without this Next's "auto"
+ * caching heuristic can treat it as static and freeze its response (body AND
+ * ETag) at `next build` time -- invisible in dev (always dynamic there), but
+ * exactly what turns every "Save vendor"/"Save candidate" etc. click into a
+ * stale-etag failure under a production build (e.g. the nerd_cloud.sh demo
+ * flow).
  */
 
 import { assertLocalOnly, readPublishedRaw, writePublishedAtomic } from "@/lib/local-write";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function jsonResponse(body: unknown, status: number, extraHeaders?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
@@ -36,9 +46,25 @@ export async function GET(): Promise<Response> {
   if (blocked) return blocked;
 
   const { data, etag } = await readPublishedRaw("vendors");
-  return new Response(data, {
+  // The ETag response header is ALSO echoed into the body as `$etag`: a
+  // compressing intermediary between this server and the browser (verified
+  // against the nerd_cloud.sh Cloudflare tunnel -- present when the client
+  // doesn't negotiate compression, silently dropped from the response
+  // headers once it does, which every real browser always does) can strip
+  // custom headers on a compressed response without touching the body.
+  // Every client-side reader of this route must fall back to `$etag` when
+  // the header comes back empty, or saves break in exactly that
+  // environment while working fine in dev (no compressing proxy in the
+  // path) -- see VendorEditor.tsx's saveToServer for the read side.
+  const body = { ...(JSON.parse(data) as Record<string, unknown>), $etag: etag };
+  return new Response(JSON.stringify(body), {
     status: 200,
-    headers: { "Content-Type": "application/json", ETag: etag },
+    // Explicit no-store: this GET backs a read-then-write (etag) flow, so a
+    // browser (or intermediary) serving ANY cached copy -- even one that
+    // matches HTTP heuristic-caching rules, since there's otherwise no
+    // Cache-Control/Expires here to rule that out -- would hand callers a
+    // stale etag/body and break the very save the read is for.
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ETag: etag },
   });
 }
 

@@ -16,6 +16,11 @@ import { assertLocalOnly, readPublishedRaw, writePublishedAtomic } from "@/lib/l
 import { hasBlockingError, validateProductRecord } from "@/lib/published-validate";
 
 export const runtime = "nodejs";
+// See app/api/local/vendors/route.ts's header comment on `dynamic` --
+// without this, GET's fs.readFile-only response (body AND ETag) can be
+// frozen at `next build` time under a production build, breaking every save
+// that depends on a fresh ETag.
+export const dynamic = "force-dynamic";
 
 function jsonResponse(body: unknown, status: number, extraHeaders?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
@@ -29,9 +34,16 @@ export async function GET(): Promise<Response> {
   if (blocked) return blocked;
 
   const { data, etag } = await readPublishedRaw("added");
-  return new Response(data, {
+  // Echoed into the body as `$etag` too -- see app/api/local/vendors/
+  // route.ts's GET for why (a compressing intermediary can strip the ETag
+  // header without touching the body; every client-side reader must fall
+  // back to this).
+  const body = { ...(JSON.parse(data) as Record<string, unknown>), $etag: etag };
+  return new Response(JSON.stringify(body), {
     status: 200,
-    headers: { "Content-Type": "application/json", ETag: etag },
+    // See app/api/local/vendors/route.ts's GET for why no-store is explicit
+    // here rather than left to browser cache heuristics.
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ETag: etag },
   });
 }
 
