@@ -20,11 +20,12 @@ Generation pattern (must exactly match frontend/lib/passwords.ts's
 getOrCreatePassword -- kept in sync manually, same as every other
 TS/Python duplication in this repo, e.g. scrape_ncademi_live.py's own
 migrate_vendors_to_unified.py counterpart): the first four characters of
-the product name with spaces stripped and lowercased, plus the two-digit
-current year, e.g. "MLC Number Chart" -> "mlcn-26". A second product
-colliding on that same base (e.g. "MLC Number Pieces" -> also "mlcn") gets
-a numeric suffix starting at 1 ("mlcn-26-1"), incrementing past any suffix
-already taken. Idempotent: a product_name that already has a password in
+the product name with spaces stripped and lowercased, immediately
+followed by the two-digit current year with no separator, e.g. "MLC
+Number Chart" -> "mlcn26". A second product colliding on that same base
+(e.g. "MLC Number Pieces" -> also "mlcn") gets a numeric suffix starting
+at 1 ("mlcn26-1"), incrementing past any suffix already taken.
+Idempotent: a product_name that already has a password in
 passwords.json is left untouched and not counted as newly assigned --
 safe to run again after this (e.g. once more candidates/added products
 exist without passwords), it will only fill in the gap.
@@ -100,7 +101,7 @@ def main() -> None:
                 skipped += 1
                 continue
 
-            base = f"{base_slug(product_name)}-{two_digit_year(now)}"
+            base = f"{base_slug(product_name)}{two_digit_year(now)}"
             password = next_available_password(base, existing_passwords)
 
             record = {

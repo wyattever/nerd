@@ -10,12 +10,13 @@
  * enough for a local, single-operator tool.
  *
  * Generation pattern (exact spec): the first four letters of the product
- * name, spaces stripped and lowercased, plus the two-digit current year,
- * e.g. "MLC Number Chart" -> "mlcn-26". A second product colliding on that
- * same base (e.g. "MLC Number Pieces" -> also "mlcn") gets a numeric
- * suffix starting at 1 ("mlcn-26-1"), incrementing past any suffix that's
- * already taken too -- the FIRST record to claim a base keeps it
- * unsuffixed forever; later collisions never renumber it.
+ * name, spaces stripped and lowercased, immediately followed by the
+ * two-digit current year (no separator), e.g. "MLC Number Chart" ->
+ * "mlcn26". A second product colliding on that same base (e.g. "MLC
+ * Number Pieces" -> also "mlcn") gets a numeric suffix starting at 1
+ * ("mlcn26-1"), incrementing past any suffix that's already taken too --
+ * the FIRST record to claim a base keeps it unsuffixed forever; later
+ * collisions never renumber it.
  */
 
 export interface PasswordRecord {
@@ -41,7 +42,7 @@ function twoDigitYear(now: Date): string {
   return String(now.getFullYear() % 100).padStart(2, "0");
 }
 
-/** Finds the next unused password for `base` (e.g. "mlcn-26") against
+/** Finds the next unused password for `base` (e.g. "mlcn26") against
  *  `existingPasswords` -- `base` itself if free, else `${base}-1`,
  *  `${base}-2`, ... incrementing past whatever's already taken. */
 function nextAvailablePassword(base: string, existingPasswords: Set<string>): string {
@@ -73,7 +74,7 @@ export function getOrCreatePassword(
     return { records, record: existing, created: false };
   }
 
-  const base = `${baseSlug(productName)}-${twoDigitYear(now)}`;
+  const base = `${baseSlug(productName)}${twoDigitYear(now)}`;
   const existingPasswords = new Set(records.map((r) => r.password));
   const password = nextAvailablePassword(base, existingPasswords);
 
