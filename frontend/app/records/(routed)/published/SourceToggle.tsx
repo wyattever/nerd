@@ -13,8 +13,18 @@
  * RecordsPublishedListPanel.tsx (Phase 3 removed it in favor of
  * IntegratedListPanel), NOT in this file -- this file only ever rendered
  * the two bare Stored/Live buttons before Phase 4.5 moved the rest of the
- * widget markup in. "Update Stored Data" is still stubbed (onClick shows a
- * placeholder alert). "Retrieve Live Data" POSTs to /api/local/scrape with
+ * widget markup in.
+ *
+ * "Update Stored Data" (enabled only while `hasLiveScrapeData`, the same
+ * gate as "Live Data") POSTs `{ category }` to /api/local/promote-live,
+ * which backs up the stored file, MERGES the live snapshot into it (live
+ * records update their stored counterparts, stored-only records are kept --
+ * see that route's header for why merge, not replace), and deletes the
+ * snapshot. On success this leaves the live view (`router.replace("?")`)
+ * and refreshes, so both it and "Live Data" fall back to disabled until the
+ * next retrieve.
+ *
+ * "Retrieve Live Data" POSTs to /api/local/scrape with
  * `{ target: category }` and reads the SSE stream that route returns (see
  * that route's own header for the event framing), pushing each `progress`
  * event into IntegratedListPanel's shared `liveLog` state (via
@@ -42,6 +52,7 @@
  * clicks upward.
  */
 
+import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMessages } from "@/components/IntegratedListPanel";
 
@@ -62,6 +73,65 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
   const router = useRouter();
   const source: "stored" | "live" = searchParams.get("source") === "live" ? "live" : "stored";
   const { setLiveLog, focusMessages, isRetrievingLive, setIsRetrievingLive } = useMessages();
+  const [isPromoting, setIsPromoting] = useState(false);
+
+  async function handleUpdateStoredData() {
+    const confirmed = window.confirm(
+      `Merge the retrieved live ${category} data into stored ${category}.json?\n\n` +
+        `Live records update their stored counterparts; stored records not in the live ` +
+        `snapshot are kept. ${category}.json is backed up to ${category}.json.bak first, ` +
+        `then the live snapshot is cleared.`
+    );
+    if (!confirmed) return;
+
+    focusMessages();
+    setIsPromoting(true);
+    try {
+      const response = await fetch("/api/local/promote-live", {
+        method: "POST",
+        body: JSON.stringify({ category }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        updated?: number;
+        keptFromStored?: number;
+        addedNew?: number;
+        total?: number;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setLiveLog((prev) => [
+          ...prev,
+          {
+            stage: "promote-error",
+            message: `Update Stored Data failed: ${result.error ?? `server responded ${response.status}`}.`,
+          },
+        ]);
+        return;
+      }
+
+      setLiveLog((prev) => [
+        ...prev,
+        {
+          stage: "promote",
+          message:
+            `Merged live ${category} data into stored ${category}.json ` +
+            `(${result.updated ?? 0} updated, ${result.keptFromStored ?? 0} kept, ${result.addedNew ?? 0} new; ` +
+            `${result.total ?? 0} total). Backup saved to ${category}.json.bak; live data cleared.`,
+        },
+      ]);
+      // The live snapshot is gone -- leave the live view so the refresh
+      // below doesn't try to render a record from a file that no longer
+      // exists.
+      router.replace("?", { scroll: false });
+    } finally {
+      setIsPromoting(false);
+      // Re-run the Server Component tree so `hasLiveScrapeData` reflects the
+      // now-deleted snapshot (disabling "Live Data" and this button) and the
+      // Stored view shows the just-promoted records.
+      router.refresh();
+    }
+  }
 
   async function handleRetrieveLiveData() {
     focusMessages();
@@ -139,10 +209,11 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
         </button>
         <button
           type="button"
-          onClick={() => alert("Stubbed")}
-          className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={!hasLiveScrapeData || isPromoting || isRetrievingLive}
+          onClick={handleUpdateStoredData}
+          className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Update Stored Data
+          {isPromoting ? "Updating..." : "Update Stored Data"}
         </button>
         <button
           type="button"
@@ -154,7 +225,7 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
         </button>
         <button
           type="button"
-          disabled={isRetrievingLive}
+          disabled={isRetrievingLive || isPromoting}
           onClick={handleRetrieveLiveData}
           className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >

@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local-only artifacts: rolling .bak from /records "Update Stored Data",
+# and stray .tmp from lib/local-write.ts's atomic writes (crash residue)
+/lib/*.bak
+/lib/*.tmp

@@ -43,6 +43,17 @@ const FILE_NAMES: Record<DataKind, string> = {
   vendors: "vendors.json",
 };
 
+// The live-scrape snapshot each stored document can be promoted FROM (see
+// promoteLiveOverStored's callers -- /records' "Update Stored Data" button
+// and app/api/local/promote-live/route.ts). "candidate" has no live
+// counterpart -- nothing scrapes it -- so it is absent here, and a promote
+// request for it is rejected at the route.
+const LIVE_FILE_NAMES: Partial<Record<DataKind, string>> = {
+  published: "published-live.json",
+  added: "added-live.json",
+  vendors: "vendors-live.json",
+};
+
 /**
  * frontend/lib/ under `next dev`/`next start` (process.cwd() there is
  * frontend/, matching every other reader/writer's assumption) -- but NOT
@@ -69,6 +80,19 @@ export function libDir(): string {
 
 function pathFor(kind: DataKind): string {
   return path.join(libDir(), FILE_NAMES[kind]);
+}
+
+/** Absolute path to a stored document -- exposed for the promote path (see
+ *  backupThenWrite), which needs to name the file to overwrite. */
+export function documentPath(kind: DataKind): string {
+  return pathFor(kind);
+}
+
+/** Absolute path to `kind`'s live-scrape snapshot, or null when none exists
+ *  for it ("candidate"). */
+export function liveSnapshotPath(kind: DataKind): string | null {
+  const name = LIVE_FILE_NAMES[kind];
+  return name ? path.join(libDir(), name) : null;
 }
 
 /**
@@ -147,6 +171,39 @@ async function atomicWrite(targetPath: string, bytes: string): Promise<void> {
   } finally {
     await dirHandle.close();
   }
+}
+
+// --- Backup + replace / delete, for /records' "Update Stored Data" promote
+// of a live-scrape snapshot over its stored counterpart (see
+// app/api/local/promote-live/route.ts). Each target keeps exactly ONE
+// rolling backup, `${path}.bak`, refreshed on every promote -- deliberately
+// not a timestamped history (the live snapshot is always re-derivable by
+// re-running the scrape; the .bak is a single-step undo, not an archive). ---
+
+/** Removes any existing `${targetPath}.bak`, then copies `targetPath` to it.
+ *  A no-op (beyond clearing the stale .bak) when `targetPath` doesn't exist
+ *  -- there's nothing to back up before a promote that's about to create it. */
+async function refreshBackup(targetPath: string): Promise<void> {
+  const backupPath = `${targetPath}.bak`;
+  await fs.rm(backupPath, { force: true });
+  try {
+    await fs.copyFile(targetPath, backupPath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+}
+
+/** Backs up `targetPath` to `${targetPath}.bak`, then atomically writes
+ *  `bytes` over it. */
+export async function backupThenWrite(targetPath: string, bytes: string): Promise<void> {
+  await refreshBackup(targetPath);
+  await atomicWrite(targetPath, bytes);
+}
+
+/** Backs up `targetPath` to `${targetPath}.bak`, then deletes `targetPath`. */
+export async function backupThenDelete(targetPath: string): Promise<void> {
+  await refreshBackup(targetPath);
+  await fs.rm(targetPath, { force: true });
 }
 
 // --- tracking.json (editor workflow metadata, decoupled from the four main
