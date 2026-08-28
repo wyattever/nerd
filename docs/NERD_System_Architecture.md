@@ -18,7 +18,7 @@ The system utilizes a scalable, asynchronous architecture on Google Cloud Run.
 * **Tailwind CSS 4**: utility-first styling.
 * **Firebase Auth**: entry point for authenticated NCADEMI researchers.
 * **Accessibility**: WCAG 2.2 AA is a hard requirement, built in from the start — not bolted on. Verified with `@axe-core/playwright`.
-* **Routes**: `/` (redirects to `/editor/candidates` as of the routed-leaves split — see §3.F), `/editor` (canonical visual editor for published/added/candidate product data — see §3.F), `/records` (live-scrape retrieval + "Update Stored Data" promotion, with the same `(routed)` `added`/`candidates`/`published`/`vendors` leaves as `/editor` — see §3.F), `/records-test` (in-progress records-UI variant), `/vendors` (thin redirect to `/editor/vendors` — see §3.F), `/researcher` (seeded product-tracking table), `/tables` (read-only AppSheet recovery tables; its `/tables/published` raw-JSON-editor child route is retired, archived to `docs/superseded/legacy_published_json_page.tsx` — see §3.F), `/users` (user directory, no auth gate yet — MVP-stage, see [Decision #29](DECISION_LOG.md#29-security-posture--deferred-until-public-deployment)), `/login`.
+* **Routes**: `/` (redirects to `/editor/candidates` as of the routed-leaves split — see §3.F), `/editor` (canonical visual editor for published/added/candidate product data — see §3.F), `/records` (live-scrape retrieval + "Update Stored Data" promotion, with the same `(routed)` `added`/`candidates`/`published`/`vendors` leaves as `/editor` — see §3.F), `/vendors` (thin redirect to `/editor/vendors` — see §3.F), `/researcher` (seeded product-tracking table), `/tables` (read-only AppSheet recovery tables; its `/tables/published` raw-JSON-editor child route is retired, archived to `docs/superseded/legacy_published_json_page.tsx` — see §3.F), `/users` (user directory, no auth gate yet — MVP-stage, see [Decision #29](DECISION_LOG.md#29-security-posture--deferred-until-public-deployment)), `/login`.
 * **Data grids**: hand-rolled sortable tables (`ResearcherTable.tsx`, the generic pattern reused across `/researcher` and `/tables`), not a third-party grid library. An earlier TanStack Table-based `ResourceGrids` component caused the SSE re-render performance issue documented in `docs/superseded/UI_DIAGNOSTICS.md` and is no longer present in the codebase.
 
 ### B. API Orchestrator (`api/`)
@@ -161,7 +161,6 @@ nerd/
 │   │   ├── vendors/page.tsx           # /vendors — thin redirect to /editor/vendors, see §3.F
 │   │   ├── records/page.tsx           # /records — live-scrape retrieval + "Update Stored Data", see §3.F
 │   │   ├── records/(routed)/{added,candidates,published,vendors}/   # records leaves, mirror of editor/(routed), see §3.F
-│   │   ├── records-test/              # /records-test — in-progress records-UI variant
 │   │   ├── api/local/                 # local-write API + Server Component reads, see §3.F
 │   │   │   ├── published/route.ts / added/route.ts / candidate/route.ts / vendors/route.ts   # core ETag-guarded documents
 │   │   │   ├── published-live/route.ts / vendors-live/route.ts   # live-scrape snapshots (GET)
@@ -179,7 +178,7 @@ nerd/
 │   │   ├── ResearcherTable.tsx / AppsheetSortableTable.tsx
 │   │   ├── SectionEditor.tsx
 │   │   ├── EditorSidebar.tsx          # /editor tab routing, see §3.F
-│   │   ├── EditorNavSidebar.tsx / IntegratedListPanel.tsx / RecordsTestSidebar.tsx   # routed-leaves navigation, see §3.F
+│   │   ├── IntegratedListPanel.tsx   # routed-leaves navigation, see §3.F
 │   │   ├── VendorSidebar.tsx / DirectoryPreview.tsx / VendorCreateModal.tsx   # /editor/vendors, see §3.F
 │   │   ├── PublishedHeaderEditor.tsx / PublishedAcrEditor.tsx / PublishedOtherResourcesEditor.tsx / PublishedSupportEditor.tsx / PublishedVendorResourcesEditor.tsx   # per-section field editors, /editor's published tab
 │   │   ├── DirectoryHeaderEditor.tsx / VendorGlobalResourcesEditor.tsx / VendorProductsEditor.tsx / VendorSupportEditor.tsx   # per-section field editors, /editor/vendors, see §3.F
