@@ -1,0 +1,88 @@
+✦ N.E.R.D. Decision Log (Updated: June 14, 2026)
+
+  Present-tense record of SETTLED decisions and their rationale, so they are not relitigated. Update a line only when
+  the underlying decision actually changes.
+
+  ---
+
+  Architecture & Scope
+
+   1. OUTPUT FORMAT — HTML only, DOCX removed.
+      - Decision: The app generates WordPress-compatible HTML (mirroring wp-block classes). DOCX generation and the lxml
+        dependency are removed entirely.
+      - Rationale: Legacy altChunk DOCX was an XSS vector and non-portable. Product focus is now 100% on the
+        WordPress-native workflow.
+      - Status: SETTLED/VERIFIED. Codebase is clean of python-docx and lxml.
+
+   2. MOBILE — completely out of scope.
+      - Decision: N.E.R.D. is a desktop-only research tool.
+      - Rationale: Explicit product constraint to simplify transport (SSE) and auth (Firebase) logic.
+
+   3. WCAG COMPLIANCE — mandatory streaming UI features.
+      - Decision: Streaming status changes must be announced via ARIA live regions; errors via role="alert".
+      - Status: SETTLED/VERIFIED. Implemented in ResearchForm.tsx using sr-only polite live regions.
+
+  ---
+
+  SSE / Auth (cross-origin)
+
+   4. SSE TRANSPORT — fetch-based with Bearer token.
+      - Decision: SSE consumed via @microsoft/fetch-event-source sending Authorization: Bearer <ID token>.
+      - Rationale: Bypasses cookie-blocking on run.app domains. Handles 1-hour token expiry via onopen refresh logic.
+      - Status: SETTLED/VERIFIED. Implemented in useResearchApi.ts.
+
+   5. BACKEND SSE — standard streaming headers.
+      - Decision: Endpoint yields text/event-stream with Cache-Control: no-cache and X-Accel-Buffering: no.
+      - Status: SETTLED/VERIFIED. Implemented in api/main.py and api/job_store.py.
+
+  ---
+
+  Local Development
+
+   6. LOCAL AUTH BYPASS — env-gated.
+      - Decision: Local dev bypasses login via NEXT_PUBLIC_DISABLE_AUTH=true in middleware.ts.
+      - CRITICAL: Must never reach production.
+      - TODO: Implement CI assertion to fail production builds if this flag is true.
+
+   7. LOCAL MODE — GCP dependency stubbing.
+      - Decision: LOCAL_MODE=true stubs Cloud Tasks (uses BackgroundTasks) and Firestore (uses in-memory dict).
+      - Status: SETTLED/VERIFIED. Implemented in api/job_store.py.
+
+  ---
+
+  Cloud Deployment
+
+   8. FRONTEND BUILD — build-time env inlining.
+      - Decision: NEXT_PUBLIC_API_BASE_URL must be passed as a Docker --build-arg to ensure it is inlined into the JS
+        bundle.
+      - Status: SETTLED/VERIFIED. Dockerfile and deploy.sh updated.
+
+   9. WORKER — OIDC Auth & Retry Suppression.
+      - Decision: Worker is private (--no-allow-unauthenticated) and invoked via OIDC. Worker returns 200 OK on research
+        failure to prevent Cloud Tasks from triggering redundant/expensive retries.
+      - TODO: Implement strict idempotency via atomic state claim (Firestore transaction) to protect against duplicate
+        task delivery.
+
+  ---
+
+  Knowledge Management (Project Context)
+
+   10. CLAUDE PROJECT KNOWLEDGE BASE — Stable Contracts Only.
+       - Decision: The Claude Project knowledge base contains only high-reference, stable files (schemas/architecture)
+         to preserve context. Actively churning files (prompts, progress logs) are excluded.
+       - Included Files:
+           1. docs/NERD_System_Architecture.md (System Map)
+           2. docs/EDTECH_AGENT_LOGIC.md (Parsing/Synthesis Logic)
+           3. api/schemas.py (Pydantic/Data Contract)
+           4. templates/ncademi_listing.html (HTML Target)
+           5. nerd_core/generators.py (Implementation Contract)
+       - Status: SETTLED. Recommendation based on 30-day git stability analysis.
+
+  ---
+
+  Working Model (Multi-Agent)
+
+   11. GIT DISCIPLINE.
+       - Decision: Commit at verified-good states; checkpoint before risky operations; never push/rewrite without
+         instruction.
+       - Status: SETTLED. Standard operating procedure.
