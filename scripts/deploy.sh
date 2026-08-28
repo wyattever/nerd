@@ -111,7 +111,7 @@ gcloud run deploy nerd-worker \
   --min-instances 0 \
   --max-instances 10 \
   --timeout 300 \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
+  --update-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
 
 WORKER_URL=$(gcloud run services describe nerd-worker \
   --platform managed --region "${REGION}" \
@@ -147,7 +147,7 @@ gcloud run deploy nerd-api \
   --allow-unauthenticated \
   --memory 2Gi \
   --max-instances 1 \
-  --set-env-vars="WORKER_URL=${WORKER_URL},QUEUE_NAME=${QUEUE_NAME},GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},TASKS_SA=${TASKS_SA}" \
+  --update-env-vars="WORKER_URL=${WORKER_URL},QUEUE_NAME=${QUEUE_NAME},GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},TASKS_SA=${TASKS_SA}" \
   --set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
 
 API_URL=$(gcloud run services describe nerd-api \
@@ -218,6 +218,17 @@ gcloud run services update nerd-api \
   --region "${REGION}" \
   --update-env-vars="FRONTEND_URL=${FRONTEND_URL}"
 echo "  nerd-api FRONTEND_URL set to: ${FRONTEND_URL}"
+
+# ── 7c. PROMOTE FRONTEND TRAFFIC ─────────────────────────────────────────────
+# Additive: 7 (above) deploys the new revision with --no-traffic --tag=candidate;
+# this step routes 100% of traffic to it. Comment out 7c for an
+# inspect-the-candidate-before-promoting workflow.
+echo "[7c] Promoting nerd-frontend traffic to the latest revision..."
+gcloud run services update-traffic nerd-frontend \
+  --platform managed \
+  --region "${REGION}" \
+  --to-latest
+echo "  nerd-frontend traffic promoted to latest revision."
 
 
 # ── 8. SUMMARY ────────────────────────────────────────────────────────────────

@@ -229,7 +229,7 @@ async def ingest_draft(req: schemas.IngestDraftRequest, uid: str = Depends(verif
 # ── Administrative Endpoints ──────────────────────────────────────────────────
 
 @app.get("/admin/batch-report")
-async def get_batch_report():
+async def get_batch_report(uid: str = Depends(verify_token)):
     report_path = BASE_DIR / "NCADEMI_candidates_summary.html"
     if not report_path.exists():
         raise HTTPException(
