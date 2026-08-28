@@ -296,3 +296,12 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 - **Decision:** Closes out `docs/integrated_list_panel_rollout_guide.md`'s Phase 4. Phases 1-3 (shared `IntegratedListPanel.tsx` component, rollout to `/records`, rollout to `/editor`) were previously completed and verified by grep (`IntegratedListPanel` wired into all four `/editor/(routed)/*` layouts, no legacy `*ListPanel.tsx` remaining under `/editor`). Phase 4's two remaining deletions - `frontend/components/EditorNavSidebar.tsx`, `frontend/components/RecordsTestSidebar.tsx` (both confirmed dead: zero importers outside self and docs), and the `frontend/app/records-test/` sandbox directory - are now deleted. `npx tsc --noEmit` and `npm run lint` both clean, matching the guide's stated exit criterion.
 - **Rationale/process note:** Phase 4's first task - removing `EditorNavSidebar`'s import from the global layout - was done ahead of the other three as an undocumented "Phase 2.5 hotfix" (per the comment left in `frontend/app/editor/(routed)/layout.tsx`), crossing the rollout guide's own "strict phasing, do not proceed until developer confirms" rule. The remaining deletions and the sandbox-directory removal were done together as a single follow-up pass rather than being caught earlier, because neither file threw a build or lint error while orphaned - only a targeted `git grep` for importers surfaced that they were dead.
 - **Status:** SETTLED/VERIFIED.
+
+---
+
+## Stage 3 Preparation
+
+### 50. CLEAR LEGACY FIRESTORE COLLECTIONS — `nerd_products`, `nerd_candidates`.
+- **Context:** The 43 documents in `nerd_products` were created via the old `POST /admin/products` path using a schema (`schemas.ListingData` / `schemas.CandidateRecord`) that has since been completely replaced. `nerd_candidates` was already empty. Both collections' schemas are incompatible with the current data model (`PublishedProductRecord` with `$schema_version` and `$meta` envelopes in `frontend/lib/*.json`).
+- **Decision:** Delete all documents rather than migrate. The collections will be re-provisioned with the new schema during Stage 3 (Firestore persistence port).
+- **Status:** Done.
