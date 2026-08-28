@@ -12,13 +12,6 @@
       "tracking_reviewer": null
     },
     {
-      "product_name": "ANTON",
-      "tracking_priority": null,
-      "tracking_status": "Gathering",
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
-    },
-    {
       "product_name": "Amplify",
       "tracking_priority": null,
       "tracking_status": "ready for site",
@@ -26,14 +19,28 @@
       "tracking_reviewer": null
     },
     {
-      "product_name": "Bridges Intervention",
+      "product_name": "Amplify Change",
+      "tracking_priority": null,
+      "tracking_status": "ready for site",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "ANTON",
+      "tracking_priority": null,
+      "tracking_status": "Needs Review",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "Bridges in Mathematics",
       "tracking_priority": null,
       "tracking_status": "Gathering",
       "tracking_gatherer": null,
       "tracking_reviewer": null
     },
     {
-      "product_name": "Bridges in Mathematics",
+      "product_name": "Bridges Intervention",
       "tracking_priority": null,
       "tracking_status": "Gathering",
       "tracking_gatherer": null,
@@ -62,6 +69,13 @@
     },
     {
       "product_name": "Intuit for Education",
+      "tracking_priority": null,
+      "tracking_status": "Gathering",
+      "tracking_gatherer": null,
+      "tracking_reviewer": null
+    },
+    {
+      "product_name": "myIGDIs",
       "tracking_priority": null,
       "tracking_status": "Gathering",
       "tracking_gatherer": null,
@@ -97,13 +111,6 @@
     },
     {
       "product_name": "Tynker",
-      "tracking_priority": null,
-      "tracking_status": "Gathering",
-      "tracking_gatherer": null,
-      "tracking_reviewer": null
-    },
-    {
-      "product_name": "myIGDIs",
       "tracking_priority": null,
       "tracking_status": "Gathering",
       "tracking_gatherer": null,
