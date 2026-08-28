@@ -1,6 +1,6 @@
 # System Design Document: N.E.R.D.
 
-**NCADEMI EdTech Research & Documentation** *Last Updated: August 25, 2026*
+**NCADEMI EdTech Research & Documentation** *Last Updated: August 28, 2026*
 
 ## 1. Executive Summary
 
@@ -18,7 +18,7 @@ The system utilizes a scalable, asynchronous architecture on Google Cloud Run.
 * **Tailwind CSS 4**: utility-first styling.
 * **Firebase Auth**: entry point for authenticated NCADEMI researchers.
 * **Accessibility**: WCAG 2.2 AA is a hard requirement, built in from the start — not bolted on. Verified with `@axe-core/playwright`.
-* **Routes**: `/` (redirects to `/editor` as of the v1.0 hygiene pass — see [Decision #38](DECISION_LOG.md#38-directory-hygiene-pass-v10)), `/editor` (canonical visual editor for published/added/candidate product data — see §3.F), `/vendors` (visual editor for the global vendor registry — see §3.F), `/researcher` (seeded product-tracking table), `/tables` (read-only AppSheet recovery tables; its `/tables/published` raw-JSON-editor child route is retired, archived to `docs/superseded/legacy_published_json_page.tsx` — see §3.F), `/users` (user directory, no auth gate yet — MVP-stage, see [Decision #29](DECISION_LOG.md#29-security-posture--deferred-until-public-deployment)), `/login`.
+* **Routes**: `/` (redirects to `/editor/candidates` as of the routed-leaves split — see §3.F), `/editor` (canonical visual editor for published/added/candidate product data — see §3.F), `/records` (live-scrape retrieval + "Update Stored Data" promotion, with the same `(routed)` `added`/`candidates`/`published`/`vendors` leaves as `/editor` — see §3.F), `/records-test` (in-progress records-UI variant), `/vendors` (thin redirect to `/editor/vendors` — see §3.F), `/researcher` (seeded product-tracking table), `/tables` (read-only AppSheet recovery tables; its `/tables/published` raw-JSON-editor child route is retired, archived to `docs/superseded/legacy_published_json_page.tsx` — see §3.F), `/users` (user directory, no auth gate yet — MVP-stage, see [Decision #29](DECISION_LOG.md#29-security-posture--deferred-until-public-deployment)), `/login`.
 * **Data grids**: hand-rolled sortable tables (`ResearcherTable.tsx`, the generic pattern reused across `/researcher` and `/tables`), not a third-party grid library. An earlier TanStack Table-based `ResourceGrids` component caused the SSE re-render performance issue documented in `docs/superseded/UI_DIAGNOSTICS.md` and is no longer present in the codebase.
 
 ### B. API Orchestrator (`api/`)
@@ -80,15 +80,15 @@ A distinct workstream from Import Data / Generate Listing, previously tracked in
 
 Introduced to replace three separate, inconsistent surfaces — the 1000+ line legacy `/` page (Generate Listing/Import Data editor mixed with AppSheet-recovery browsing), the raw-JSON `/tables/published` editor, and the abandoned `ncademi-viewer/` prototype (§3.E) — with one consistent visual-editing pattern. See [Decision #37](DECISION_LOG.md#37-editor-consolidation--vendor-registry).
 
-* **`/editor`** (`frontend/app/editor/page.tsx`): visual editor over three parallel documents — `published.json`, `added.json`, and `candidate.json` — fetched concurrently client-side via `Promise.allSettled` so one document's fetch failure degrades only that tab. A single `activeTab` value (shared type with `EditorSidebar.tsx`) drives which `/api/local/*` endpoint, in-memory array, and ETag a save targets.
-* **`/vendors`** (`frontend/app/vendors/page.tsx`): visual editor over the single global vendor registry document, `frontend/lib/vendors.json`. Structurally simpler than `/editor` (one document, no tab routing). As of this pass, "Save vendor" and "Delete vendor" are fully implemented; the four structured field-editor stubs (Header, Global Resources, Product/s, Support) are not yet built — vendor records are still edited as raw fields, not through `PublishedProductRecord`-style per-section editors.
-* **Local-write API** (`frontend/app/api/local/{published,added,candidate,vendors}/route.ts`, backed by `frontend/lib/local-write.ts`): the server-side persistence layer both pages share.
-  * **Gated to local development only** — `assertLocalOnly()` requires `NODE_ENV !== "production"` AND `NEXT_PUBLIC_DISABLE_AUTH === "true"`, both must hold. Returns a bare 404 (not 403) when blocked, so the route is indistinguishable from nonexistent in any environment where it shouldn't run.
+* **`/editor`**: two surfaces coexist. The still-live client-side monolith `frontend/app/editor/page.tsx` serves `/editor` itself — visual editor over three parallel documents (`published.json`, `added.json`, `candidate.json`) fetched concurrently via `Promise.allSettled` so one document's fetch failure degrades only that tab, with a single `activeTab` value (shared type with `EditorSidebar.tsx`) driving which `/api/local/*` endpoint, in-memory array, and ETag a save targets. Alongside it, the `frontend/app/editor/(routed)/{added,candidates,published,vendors}/` route group serves the per-category leaves (`/editor/added`, `/editor/candidates`, `/editor/published`, `/editor/vendors`) as Server Components that read through `frontend/lib/local-data.ts` and select a record via a `[slug]` URL segment; `app/page.tsx` redirects to `/editor/candidates`.
+* **`/vendors`** (`frontend/app/vendors/page.tsx`): now a thin redirect to `/editor/vendors`. The vendor editor itself lives at `frontend/app/editor/(routed)/vendors/[slug]/VendorEditor.tsx`; "Save vendor" and "Delete vendor" run through the same ETag/atomic-write path, and the four structured field editors (Header, Global Resources, Product/s, Support) are implemented as `DirectoryHeaderEditor.tsx`, `VendorGlobalResourcesEditor.tsx`, `VendorProductsEditor.tsx`, and `VendorSupportEditor.tsx`.
+* **Local-write API** (`frontend/app/api/local/*/route.ts`, backed by `frontend/lib/local-write.ts` for writes and `frontend/lib/local-data.ts` for Server Component reads): the server-side persistence layer the editor and records surfaces share. Ten route directories exist under `frontend/app/api/local/`: `published`, `added`, `candidate`, `vendors` (GET/POST, the core ETag-guarded documents), `published-live`, `vendors-live` (GET, live-scrape snapshots), `promote-live` (POST, "Update Stored Data"), `passwords` (GET/POST/DELETE, vendor-review passwords), `scrape` (POST, spawns the live-scrape child process), and `migrate-appsheet` (POST, one-off bootstrap).
+  * **Gated to local development only** — `assertLocalOnly()` delegates to `isLocalOnlyAllowed()`, which requires `(NODE_ENV !== "production" || NERD_CLOUD_DEMO_LOCAL_WRITE === "true")` AND `NEXT_PUBLIC_DISABLE_AUTH === "true"`. `NERD_CLOUD_DEMO_LOCAL_WRITE` is a server-only runtime flag set exclusively by the tunneled-demo script; the `NEXT_PUBLIC_DISABLE_AUTH` half is always independently required. Returns a bare 404 (not 403) when blocked, so the route is indistinguishable from nonexistent in any environment where it shouldn't run.
   * **ETag concurrency pattern**: `GET` reads the target JSON file fresh from disk on every call (never the frozen static import used elsewhere in the app) and returns it with a strong ETag — the SHA-256 hash of the exact bytes on disk. `POST` requires an `If-Match` header equal to that ETag; a mismatch (the file changed on disk since the client's last read — an IDE edit, a git checkout, a concurrent save) is rejected with `412 Precondition Failed` rather than silently overwriting. A successful `POST` returns the new ETag so the client can continue editing without a re-fetch.
   * **Atomic, durable writes**: `writePublishedAtomic()` writes to a sibling temp file, `fsync`s it, `rename()`s it over the target (atomic on the same filesystem), then `fsync`s the parent directory too — so a crash mid-write can never leave a truncated file, and a crash between rename and directory-flush can't resurrect the old file on an unclean reboot.
   * **No path-traversal surface by construction**: every handler takes a closed-union `DataKind` (`"published" | "added" | "candidate" | "vendors"`) mapped to a fixed filename, never a filename built from request input — there is no string to sanitize because no request-controlled string ever reaches the filesystem path.
-  * A fifth route, `/api/local/migrate-appsheet`, is a one-off bootstrap (POST-only, no ETag check by design — it's a deliberate overwrite, not the concurrent-edit path) that seeds `added.json`/`candidate.json` from the legacy AppSheet global table.
-* **`vendors.json`** (`frontend/lib/vendors.json`): the global vendor registry, schema defined in `frontend/lib/vendor-schema.ts` (`VendorRecord`/`VendorResource`/`VendorsFile`). Populated by `scripts/scrape_vendors.py`, which crawls each vendor's own NCADEMI directory page starting from the deduplicated `vendor_directory_url`s in a products JSON file. `scripts/dedupe_vendor_resources.py` then strips a product's own `vendor_resources` entries that exactly duplicate a URL already captured under that same vendor in `vendors.json` (matched by `(vendor_name, url)`), so the frontend doesn't have to de-duplicate at render time.
+  * The `/api/local/migrate-appsheet` route is a one-off bootstrap (POST-only, no ETag check by design — it's a deliberate overwrite, not the concurrent-edit path) that seeds `added.json`/`candidate.json` from the legacy AppSheet global table.
+* **`vendors.json`** (`frontend/lib/vendors.json`): the global vendor registry. Its schema is the unified `frontend/lib/directory-schema.ts` (`DirectoryRecord`/`DirectoryFile`/`DirectoryRecordKind`), regenerated into that shape by `scripts/migrate_vendors_to_unified.py` (see [Decision #47](DECISION_LOG.md#47-vendor-schema-unification--vendor-schemats-superseded-by-directory-schemats)); the older `frontend/lib/vendor-schema.ts` (`VendorRecord`/`VendorResource`/`VendorsFile`) describes the pre-unification shape and is no longer used by the vendors editor stack. Populated by `scripts/scrape_vendors.py`, which crawls each vendor's own NCADEMI directory page starting from the deduplicated `vendor_directory_url`s in a products JSON file. `scripts/dedupe_vendor_resources.py` then strips a product's own `vendor_resources` entries that exactly duplicate a URL already captured under that same vendor in `vendors.json` (matched by `(vendor_name, url)`), so the frontend doesn't have to de-duplicate at render time.
 
 ## 4. Multi-Layer Testing Strategy
 
@@ -155,14 +155,19 @@ nerd/
 ├── frontend/
 │   ├── app/
 │   │   ├── layout.tsx
-│   │   ├── page.tsx                  # redirects to /editor, see §3.F
-│   │   ├── editor/page.tsx            # /editor — canonical visual editor, see §3.F
-│   │   ├── vendors/page.tsx           # /vendors — vendor registry editor, see §3.F
-│   │   ├── api/local/                 # local-write API, see §3.F
-│   │   │   ├── published/route.ts
-│   │   │   ├── added/route.ts
-│   │   │   ├── candidate/route.ts
-│   │   │   ├── vendors/route.ts
+│   │   ├── page.tsx                  # redirects to /editor/candidates, see §3.F
+│   │   ├── editor/page.tsx            # /editor — still-live client-side monolith, see §3.F
+│   │   ├── editor/(routed)/{added,candidates,published,vendors}/   # per-category routed leaves (Server Components via lib/local-data.ts), see §3.F
+│   │   ├── vendors/page.tsx           # /vendors — thin redirect to /editor/vendors, see §3.F
+│   │   ├── records/page.tsx           # /records — live-scrape retrieval + "Update Stored Data", see §3.F
+│   │   ├── records/(routed)/{added,candidates,published,vendors}/   # records leaves, mirror of editor/(routed), see §3.F
+│   │   ├── records-test/              # /records-test — in-progress records-UI variant
+│   │   ├── api/local/                 # local-write API + Server Component reads, see §3.F
+│   │   │   ├── published/route.ts / added/route.ts / candidate/route.ts / vendors/route.ts   # core ETag-guarded documents
+│   │   │   ├── published-live/route.ts / vendors-live/route.ts   # live-scrape snapshots (GET)
+│   │   │   ├── promote-live/route.ts   # "Update Stored Data" merge/promote
+│   │   │   ├── passwords/route.ts      # vendor-review passwords (GET/POST/DELETE)
+│   │   │   ├── scrape/route.ts         # spawns scripts/scrape_ncademi_live.py
 │   │   │   └── migrate-appsheet/route.ts
 │   │   ├── login/page.tsx
 │   │   ├── researcher/page.tsx        # /researcher
@@ -174,17 +179,25 @@ nerd/
 │   │   ├── ResearcherTable.tsx / AppsheetSortableTable.tsx
 │   │   ├── SectionEditor.tsx
 │   │   ├── EditorSidebar.tsx          # /editor tab routing, see §3.F
-│   │   ├── VendorSidebar.tsx / VendorPreview.tsx   # /vendors, see §3.F
+│   │   ├── EditorNavSidebar.tsx / IntegratedListPanel.tsx / RecordsTestSidebar.tsx   # routed-leaves navigation, see §3.F
+│   │   ├── VendorSidebar.tsx / DirectoryPreview.tsx / VendorCreateModal.tsx   # /editor/vendors, see §3.F
 │   │   ├── PublishedHeaderEditor.tsx / PublishedAcrEditor.tsx / PublishedOtherResourcesEditor.tsx / PublishedSupportEditor.tsx / PublishedVendorResourcesEditor.tsx   # per-section field editors, /editor's published tab
+│   │   ├── DirectoryHeaderEditor.tsx / VendorGlobalResourcesEditor.tsx / VendorProductsEditor.tsx / VendorSupportEditor.tsx   # per-section field editors, /editor/vendors, see §3.F
+│   │   ├── CodeViewModal.tsx
 │   │   └── Delete{Added,Candidate,Published}Modal.tsx
 │   ├── hooks/useResearch.ts
 │   ├── lib/
 │   │   ├── appsheet-tables.json / appsheet-tables.ts   # /tables data layer
 │   │   ├── published.json / published-tables.ts / added.json / candidate.json   # /editor's three documents, see §3.F
-│   │   ├── vendors.json / vendor-schema.ts             # /vendors registry + schema, see §3.F
-│   │   ├── local-write.ts             # ETag/atomic-write local persistence layer, see §3.F
+│   │   ├── published-live.json / added-live.json / vendors-live.json   # live-scrape snapshots, see §3.F
+│   │   ├── vendors.json / directory-schema.ts          # /editor/vendors registry + unified schema, see §3.F
+│   │   ├── vendor-schema.ts           # legacy pre-unification vendor shape, see Decision #47
+│   │   ├── tracking.json / tracking.ts                 # decoupled editor workflow metadata, see Decision #43
+│   │   ├── passwords.json / passwords.ts               # vendor-review passwords, see Decision #45
+│   │   ├── local-write.ts / local-data.ts   # ETag/atomic-write persistence + Server Component readers, see §3.F
 │   │   ├── published-validate.ts      # field-by-field validation for the published tab's save path
 │   │   ├── editor-preview.ts
+│   │   ├── useUnsavedChangesGuard.ts
 │   │   ├── debugLog.ts
 │   │   ├── firebase.ts
 │   │   ├── ncademiPreview.ts
@@ -202,6 +215,9 @@ nerd/
 │   ├── ingest_candidates.py / ingest_k12_urls.py
 │   ├── ingest_ai_studio_draft.py   # see §7
 │   ├── scrape_vendors.py           # builds vendors.json, see §3.F
+│   ├── scrape_ncademi_live.py      # production live-scrape (products + vendors); invoked by api/local/scrape/route.ts
+│   ├── scrape_published.py / scrape_ncademi_directory.py   # standalone live-vs-stored diff/verification scrapers (not wired to a route)
+│   ├── migrate_vendors_to_unified.py   # one-off vendors.json -> directory-schema migration, see Decision #47
 │   ├── dedupe_vendor_resources.py  # see §3.F
 │   ├── fix_appsheet_candidate_vendor.py
 │   ├── rerun_redirect_candidates.py
