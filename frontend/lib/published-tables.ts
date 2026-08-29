@@ -14,7 +14,6 @@
  */
 
 import data from "./published.json";
-import { ProductHeaderData } from "@/lib/appsheet-tables";
 
 export interface PublishedResourceLink {
   text: string;
@@ -129,25 +128,6 @@ export function getPublishedSnapshotMeta() {
  */
 export function getPublishedProduct(slug: string): PublishedProductRecord | null {
   return BY_SLUG.get(slug) ?? null;
-}
-
-/**
- * Header fields only, in the same ProductHeaderData shape AppSheet's
- * getPublishedProductHeader/getAddedProductHeader/getCandidateProductHeader
- * already return. Keeping this shape identical is what lets page.tsx branch
- * on data source without changing what any call site consumes.
- */
-export function getPublishedProductHeader(slug: string): ProductHeaderData | null {
-  const record = getPublishedProduct(slug);
-  if (!record) return null;
-  return {
-    product_name: record.product_name,
-    vendor_name: record.vendor_name ?? "",
-    vendor_directory_url: record.vendor_directory_url ?? "",
-    product_description: record.product_description ?? "",
-    product_website_url: record.product_website_url ?? "",
-    last_updated: record.last_updated ?? "",
-  };
 }
 
 export function getPublishedVendorResources(slug: string): PublishedResourceLink[] {
