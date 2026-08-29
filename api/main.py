@@ -1,22 +1,18 @@
 from __future__ import annotations
 
 import os
-import uuid
-import json
 import logging
 
 import asyncio
 from dataclasses import asdict
-from typing import Any
 
 from bs4 import BeautifulSoup
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import FileResponse
 from pathlib import Path
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
-from google.cloud import tasks_v2
 import firebase_admin
 from firebase_admin import auth as fb_auth
 
@@ -26,8 +22,9 @@ from nerd_core.pipeline import validate_draft
 
 from . import schemas
 from .conversions import pydantic_to_dataclass, dataclass_to_pydantic
-from .job_store import create_job, stream_job_events
 from .store import (
+    db as firestore_db,
+    PRODUCTS_COLLECTION,
     slugify,
     get_candidate,
     get_product,
@@ -43,8 +40,6 @@ BASE_DIR = Path(__file__).parent.parent
 
 # ── Local Mode Config ─────────────────────────────────────────────────────────
 LOCAL_MODE = os.getenv("LOCAL_MODE", "false").lower() == "true"
-if LOCAL_MODE:
-    from .worker import worker_initial, WorkerInitialRequest
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Firebase Admin Init ───────────────────────────────────────────────────────
@@ -93,43 +88,6 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
-# ── Cloud Tasks ────────────────────────────────────────────────────────────────
-PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "edtech-agent-2026")
-LOCATION = os.getenv("GCP_LOCATION", "us-central1")
-QUEUE_NAME = os.getenv("QUEUE_NAME", "nerd-research-queue")
-WORKER_URL = os.getenv("WORKER_URL")
-TASKS_SA = os.getenv("TASKS_SA")
-
-tasks_client = None
-queue_path = None
-if not LOCAL_MODE:
-    try:
-        tasks_client = tasks_v2.CloudTasksClient()
-        queue_path = tasks_client.queue_path(PROJECT_ID, LOCATION, QUEUE_NAME)
-    except Exception as e:
-        logger.warning("Failed to initialize Cloud Tasks client: %s", e)
-
-def _enqueue_task(endpoint_path: str, payload: dict) -> None:
-    if not WORKER_URL:
-        raise ValueError("WORKER_URL is not set.")
-
-    task: dict[str, Any] = {
-        "http_request": {
-            "http_method": tasks_v2.HttpMethod.POST,
-            "url": f"{WORKER_URL}{endpoint_path}",
-            "headers": {"Content-type": "application/json"},
-            "body": json.dumps(payload).encode(),
-        }
-    }
-
-    if TASKS_SA:
-        task["http_request"]["oidc_token"] = {
-            "service_account_email": TASKS_SA,
-            "audience": WORKER_URL,
-        }
-
-    tasks_client.create_task(request={"parent": queue_path, "task": task})
-
 def normalize_html_fragment(raw_html: str) -> str:
     if not raw_html:
         return ""
@@ -139,39 +97,6 @@ def normalize_html_fragment(raw_html: str) -> str:
     return str(soup)
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
-
-@app.post("/research/initial", response_model=schemas.EnqueueResponse)
-async def research_initial(
-    req: schemas.InitialResearchRequest, 
-    background_tasks: BackgroundTasks,
-    uid: str = Depends(verify_token)
-):
-    job_id = str(uuid.uuid4())
-    await create_job(job_id)
-    payload = req.model_dump()
-    payload["job_id"] = job_id
-
-    if LOCAL_MODE:
-        worker_req = WorkerInitialRequest(**payload)
-        background_tasks.add_task(worker_initial, worker_req)
-    else:
-        _enqueue_task("/worker/initial", payload)
-
-    return schemas.EnqueueResponse(job_id=job_id)
-
-
-@app.get("/jobs/{job_id}")
-async def jobs_sse(request: Request, job_id: str, uid: str = Depends(verify_token)):
-    last_event_id = request.headers.get("Last-Event-ID")
-    return StreamingResponse(
-        stream_job_events(job_id, last_event_id=last_event_id), 
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        }
-    )
 
 @app.post("/render", response_model=schemas.RenderResponse)
 async def render(payload: schemas.RenderRequest, uid: str = Depends(verify_token)):
@@ -294,52 +219,21 @@ async def update_candidate(slug: str, data: schemas.CandidateRecord, uid: str = 
     await upsert_candidate(model_data)
     return {"message": "Candidate updated successfully", "slug": slug}
 
-@app.post("/admin/candidates/batch", response_model=schemas.BatchResearchResponse)
-async def batch_research_candidates(
-    req: schemas.BatchResearchRequest,
-    background_tasks: BackgroundTasks,
-    uid: str = Depends(verify_token),
-):
-    jobs = []
-    for url in req.urls:
-        job_id = str(uuid.uuid4())
-        await create_job(job_id)
-        payload = {
-            "job_id": job_id,
-            "product_url": url,
-            "timeout_min": 4,
-            "save_as_candidate": True,
-        }
-        if LOCAL_MODE:
-            worker_req = WorkerInitialRequest(**payload)
-            background_tasks.add_task(worker_initial, worker_req)
-        else:
-            _enqueue_task("/worker/initial", payload)
-        jobs.append(schemas.BatchResearchJob(url=url, job_id=job_id))
-    return schemas.BatchResearchResponse(jobs=jobs)
-
 @app.get("/healthz")
 async def healthz():
     from datetime import datetime, timezone
-    
-    checks = {
-        "worker_url_configured": bool(WORKER_URL),
-        "tasks_sa_configured": bool(TASKS_SA),
-        "firestore": "pending",
-        "cloud_tasks_queue": "pending"
-    }
-    
+
     if LOCAL_MODE:
         return {
             "status": "ok",
-            "checks": {**checks, "firestore": "ok (local_mode)", "cloud_tasks_queue": "ok (local_mode)"},
+            "checks": {"firestore": "ok (local_mode)"},
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "note": "local_mode: true"
+            "note": "local_mode: true",
         }
 
+    checks = {"firestore": "pending"}
     try:
-        from .job_store import db, COLLECTION
-        doc_ref = db.collection(COLLECTION).document("health-check-non-existent")
+        doc_ref = firestore_db.collection(PRODUCTS_COLLECTION).document("health-check-non-existent")
         await asyncio.wait_for(doc_ref.get(), timeout=3.0)
         checks["firestore"] = "ok"
     except asyncio.TimeoutError:
@@ -347,28 +241,9 @@ async def healthz():
     except Exception as e:
         checks["firestore"] = f"error: {str(e)}"
 
-    try:
-        await asyncio.wait_for(
-            asyncio.to_thread(tasks_client.get_queue, name=queue_path), 
-            timeout=3.0
-        )
-        checks["cloud_tasks_queue"] = "ok"
-    except asyncio.TimeoutError:
-        checks["cloud_tasks_queue"] = "error: timeout (3s)"
-    except Exception as e:
-        checks["cloud_tasks_queue"] = f"error: {str(e)}"
-
-    all_ok = all(v == "ok" for k, v in checks.items() if k in ["firestore", "cloud_tasks_queue"])
-    any_error = any(isinstance(v, str) and v.startswith("error") for v in checks.values())
-    
-    status = "ok"
-    if any_error:
-        status = "error" if (checks["firestore"].startswith("error") or checks["cloud_tasks_queue"].startswith("error")) else "degraded"
-    elif not all_ok:
-        status = "degraded"
-
+    status = "ok" if checks["firestore"] == "ok" else "error"
     return {
         "status": status,
         "checks": checks,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

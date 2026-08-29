@@ -64,8 +64,11 @@ if LOCAL_MODE:
     )
 
 # ── Firestore client (production only) ────────────────────────────────────────
+# Relocated from api/job_store.py (deleted in the cloud-migration cleanup); this
+# is a move of the client initialization only, no behavior change.
 if not LOCAL_MODE:
-    from .job_store import db
+    from google.cloud.firestore_v1.async_client import AsyncClient
+    db = AsyncClient()
 else:
     db = None
 
