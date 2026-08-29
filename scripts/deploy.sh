@@ -95,42 +95,6 @@ fi
 
 # Store Firebase Web API Key for server-side use (e.g., firebase-admin in Phase 5)
 
-echo "[5] Building and deploying WORKER..."
-cp Dockerfile.worker Dockerfile
-gcloud builds submit \
-  --tag "${REPO}/nerd-worker" \
-  --quiet
-rm Dockerfile
-
-gcloud run deploy nerd-worker \
-  --image "${REPO}/nerd-worker" \
-  --platform managed \
-  --region "${REGION}" \
-  --no-allow-unauthenticated \
-  --concurrency 1 \
-  --min-instances 0 \
-  --max-instances 10 \
-  --timeout 300 \
-  --update-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
-
-WORKER_URL=$(gcloud run services describe nerd-worker \
-  --platform managed --region "${REGION}" \
-  --format "value(status.url)")
-echo "  Worker deployed: ${WORKER_URL}"
-
-# Grant Cloud Tasks SA permission to invoke the worker
-gcloud run services add-iam-policy-binding nerd-worker \
-  --member="serviceAccount:${TASKS_SA}" \
-  --role="roles/run.invoker" \
-  --region="${REGION}"
-
-# Update Cloud Tasks queue to use the service account for OIDC auth
-gcloud tasks queues update "${QUEUE_NAME}" \
-  --location="${REGION}" \
-  --log-sampling-ratio=1.0
-
-echo "  IAM: Cloud Tasks SA granted invoker role on nerd-worker."
-
 # ── 6. BUILD AND DEPLOY API ───────────────────────────────────────────────────
 
 echo "[6] Building and deploying API..."
@@ -147,7 +111,7 @@ gcloud run deploy nerd-api \
   --allow-unauthenticated \
   --memory 2Gi \
   --max-instances 1 \
-  --update-env-vars="WORKER_URL=${WORKER_URL},QUEUE_NAME=${QUEUE_NAME},GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},TASKS_SA=${TASKS_SA}" \
+  --update-env-vars="QUEUE_NAME=${QUEUE_NAME},GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},TASKS_SA=${TASKS_SA}" \
   --set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
 
 API_URL=$(gcloud run services describe nerd-api \
@@ -235,12 +199,10 @@ echo "  nerd-frontend traffic promoted to latest revision."
 
 echo ""
 echo "==> Deployment Complete"
-echo "    Worker:   ${WORKER_URL}"
 echo "    API:      ${API_URL}"
 echo "    Frontend: ${FRONTEND_URL}"
 echo ""
 echo "    Post-deploy checklist:"
 echo "    [ ] Update Firebase Auth > Authorized Domains: add ${FRONTEND_URL}"
 echo "    [ ] Verify Firestore rules allow nerd-api service account read/write"
-echo "    [ ] Run E2E test: curl -X POST ${API_URL}/research/initial ..."
-echo "    [ ] Confirm API is live: curl ${API_URL}/admin/candidates"
+echo "    [ ] Confirm API is live: curl ${API_URL}/healthz"

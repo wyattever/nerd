@@ -1,6 +1,6 @@
 import os
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from httpx import AsyncClient, ASGITransport
 
 # Force LOCAL_MODE for baseline integration tests
@@ -19,17 +19,10 @@ def mock_fb_auth():
         mock.return_value = {"uid": "test-user"}
         yield mock
 
-@pytest.fixture
-def mock_tasks_client():
-    with patch("google.cloud.tasks_v2.CloudTasksClient") as mock:
-        client_instance = MagicMock()
-        mock.return_value = client_instance
-        yield client_instance
-
 import pytest_asyncio
 
 @pytest_asyncio.fixture
-async def client(mock_fb_auth, mock_tasks_client):
+async def client(mock_fb_auth):
     from api.main import app
     # Re-import to ensure env vars are picked up if they weren't already
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
