@@ -9,11 +9,7 @@ set -e
 
 PROJECT_ID="edtech-agent-2026"
 REGION="us-central1"
-QUEUE_NAME="nerd-research-queue"
 REPO="us-central1-docker.pkg.dev/${PROJECT_ID}/nerd-repo"
-
-# Service account used by Cloud Tasks to invoke the worker
-TASKS_SA="nerd-tasks-invoker@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "==> N.E.R.D. Phase 4 Deployment: ${PROJECT_ID}"
 echo ""
@@ -26,7 +22,6 @@ gcloud config set project "${PROJECT_ID}"
 # Enable required APIs
 gcloud services enable \
   run.googleapis.com \
-  cloudtasks.googleapis.com \
   firestore.googleapis.com \
   secretmanager.googleapis.com \
   artifactregistry.googleapis.com \
@@ -43,19 +38,6 @@ if ! gcloud artifacts repositories describe nerd-repo --location="${REGION}" &>/
     --description="N.E.R.D. container images"
 fi
 
-# ── 1. CLOUD TASKS QUEUE ──────────────────────────────────────────────────────
-
-echo "[1] Provisioning Cloud Tasks queue..."
-if ! gcloud tasks queues describe "${QUEUE_NAME}" --location="${REGION}" &>/dev/null; then
-  gcloud tasks queues create "${QUEUE_NAME}" \
-    --location="${REGION}" \
-    --max-concurrent-dispatches=10 \
-    --max-attempts=1
-  echo "  Created queue: ${QUEUE_NAME}"
-else
-  echo "  Queue already exists: ${QUEUE_NAME}"
-fi
-
 # ── 2. FIRESTORE ───────────────────────────────────────────────────────────────
 
 echo "[2] Firestore..."
@@ -70,17 +52,6 @@ echo "  Enabling Firestore TTL on nerd_research_jobs(expires_at)..."
 gcloud firestore fields ttls update expires_at \
   --collection-group=nerd_research_jobs \
   --project="${PROJECT_ID}" --enable-ttl || echo "  Warning: Failed to enable TTL. Ensure Firestore is in Native mode."
-
-# ── 3. SERVICE ACCOUNT FOR CLOUD TASKS → WORKER INVOCATION ───────────────────
-
-echo "[3] Cloud Tasks service account..."
-if ! gcloud iam service-accounts describe "${TASKS_SA}" &>/dev/null; then
-  gcloud iam service-accounts create nerd-tasks-invoker \
-    --display-name="N.E.R.D. Cloud Tasks Invoker"
-  echo "  Created service account: ${TASKS_SA}"
-else
-  echo "  Service account already exists: ${TASKS_SA}"
-fi
 
 # ── 4. SECRET MANAGER ─────────────────────────────────────────────────────────
 
@@ -111,30 +82,13 @@ gcloud run deploy nerd-api \
   --allow-unauthenticated \
   --memory 2Gi \
   --max-instances 1 \
-  --update-env-vars="QUEUE_NAME=${QUEUE_NAME},GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},TASKS_SA=${TASKS_SA}" \
+  --update-env-vars="GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID}" \
   --set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
 
 API_URL=$(gcloud run services describe nerd-api \
   --platform managed --region "${REGION}" \
   --format "value(status.url)")
 echo "  API deployed: ${API_URL}"
-
-# Grant API Service Account permission to act as the Cloud Tasks SA
-# (Required to create tasks with an OIDC token)
-API_SA=$(gcloud run services describe nerd-api \
-  --platform managed --region "${REGION}" \
-  --format "value(spec.template.spec.serviceAccountName)")
-# If no custom SA is set, it uses the default compute SA
-if [ -z "${API_SA}" ] || [ "${API_SA}" = "default" ]; then
-  PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
-  API_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-fi
-
-echo "  Granting ${API_SA} actAs permission on ${TASKS_SA}..."
-gcloud iam service-accounts add-iam-policy-binding "${TASKS_SA}" \
-  --member="serviceAccount:${API_SA}" \
-  --role="roles/iam.serviceAccountUser" \
-  --quiet
 
 # ── 7. BUILD AND DEPLOY FRONTEND ──────────────────────────────────────────────
 
