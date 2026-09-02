@@ -305,3 +305,124 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 - **Context:** The 43 documents in `nerd_products` were created via the old `POST /admin/products` path using a schema (`schemas.ListingData` / `schemas.CandidateRecord`) that has since been completely replaced. `nerd_candidates` was already empty. Both collections' schemas are incompatible with the current data model (`PublishedProductRecord` with `$schema_version` and `$meta` envelopes in `frontend/lib/*.json`).
 - **Decision:** Delete all documents rather than migrate. The collections will be re-provisioned with the new schema during Stage 3 (Firestore persistence port).
 - **Status:** Done.
+
+## Cloud Republish (v2 architecture)
+
+### 51. CLOUD ARCHITECTURE SPLIT — Next.js owns persistence and auth; Python becomes one stateless function service.
+
+The three 08-27 analyses (`cloud-republish-difficulty-assessment`, `backend-rewrite-vs-refactor`, `live-infra-audit`) converged on this and it is adopted. Next.js on Cloud Run owns session authentication, all reads, all writes, and all rendering. The Python service keeps `POST /ingest/draft` — the Gem-markdown parse-and-validate chain — plus a scrape endpoint, and nothing else.
+
+The decisive evidence was caller analysis rather than preference: exactly one live frontend component calls the FastAPI backend (`ImportDataModal.tsx` → `/ingest/draft`), and `POST /render` has no live caller at all. After constraints 3 and 4, the Python backend's entire remaining job in the live application is parsing one pasted draft.
+
+Consequence: the browser no longer talks to Python. That one change removes CORS from the live path, removes the `FRONTEND_URL` patch-back fragility (finding F23), removes duplicated Firebase token verification from Python, and removes `NEXT_PUBLIC_API_BASE_URL` from the build — the build-time-inlining failure Decision #11 describes and which the 08-27 live audit found still shipping in the deployed frontend. The Python service also becomes `--no-allow-unauthenticated`, reached with an OIDC token from the frontend's runtime service account, which is strictly more locked down than its current public posture.
+
+Supersedes the three-tier description in `docs/NERD_System_Architecture.md` for the editor/vendor surface. Decisions #4, #5, #12, #23, #28, and #30 resolve to "not applicable" once the research orchestration is removed.
+
+### 52. PERSISTENCE SUBSTRATE — Firestore, whole-document, JSON stored as a string.
+
+One Firestore document per logical document in collection `nerd_documents`, keyed by the same closed union of literals `local-write.ts` used as filenames. The JSON is stored as a **string** in a `bytes` field, not as a parsed Firestore map.
+
+Storing it as a string is what preserves the ETag contract byte-for-byte: the ETag has always been SHA-256 over the exact serialized bytes, and round-tripping through a Firestore map would reorder keys, coerce types, and reject `undefined`, leaving a hash no client could reproduce. It also avoids creating a second schema authority — the record shapes are owned by `published-tables.ts` and `directory-schema.ts`, and modelling them in Firestore's type system would only create something that has to agree with them.
+
+Two operational facts recorded because both are load-bearing and neither is obvious:
+
+- **Firestore rejects any commit containing an indexed field value larger than 1,500 bytes.** Single-field indexes are automatic. The `bytes` field therefore requires a single-field index exemption on both `nerd_documents` and the `backups` collection group, applied **before the first write**, or every save of every document fails — including the migration. Declared in `firestore.indexes.json`.
+- **`NERD_FIREBASE_PROJECT_ID` is required and `GOOGLE_CLOUD_PROJECT` is never consulted.** This machine exports `GOOGLE_CLOUD_PROJECT="acp-vertex-core"` globally for unrelated tooling; inheriting it would point every read and write at the wrong database while appearing to work. `lib/server/firebase-admin.ts` throws rather than defaulting.
+
+Compare-and-swap is folded into a single Firestore transaction (`saveGuarded`). The HTTP contract is unchanged — `If-Match` still yields 412 — but the read/compare/write/re-read sequence the filesystem version used was safe only because one local disk had one writer. On Cloud Run two instances can both pass the check and both write, and the second silently destroys the first while the UI reports success. Every write also stores the previous bytes at `backups/latest`, replacing what git was doing for these files.
+
+Full rationale: `docs/nerd-persistence-tier-design-08-28-26.md`.
+
+**Status update (2026-09-02):** Empirically tested against live Firestore
+(project edtech-agent-2026, scratch collection nerd_scratch_1500_test) —
+writes of 5,000 bytes and 130,000 bytes to the indexed `bytes` field both
+succeeded with the full value intact on read-back; no truncation observed
+on the document itself, no INVALID_ARGUMENT rejection at either size.
+This contradicts the "hard rejection" reading of the Firestore Native-mode
+error-codes documentation and is consistent with the "silent index
+truncation" reading instead. Gemini Web research (not independently
+citation-verified) suggests the truncation-vs-rejection split may depend
+on Standard vs. Enterprise edition and a ~7.5 KiB index entry limit, but
+that mechanism is not confirmed — treat as unverified.
+
+Practical consequence: the single-field index exemption on `bytes` is no
+longer a hard precondition blocking the first write — writes succeed
+without it. The exemption is still worth applying, but for a different
+reason: every unexempted write generates wasted ascending/descending
+index entries on a field that is never queried, at ongoing storage and
+write cost. Sequencing the exemption before or after the first write no
+longer gates Phase 2.
+
+---
+
+### 53. *(PROPOSED — Phase 2)* SINGLE PERSISTENCE IMPLEMENTATION — no filesystem fallback; local development uses the Firestore emulator.
+
+There is deliberately no `if (local) useFs()` branch. A dual-path persistence layer selected by an environment variable is the exact shape of the 2026-07-08 incident recorded in Decision #27, and it is the opposite of DRY.
+
+Local development runs against the Firestore emulator, seeded by `scripts/nerd_documents.py push` — the same script that performs the production migration, so the riskiest step of the migration is exercised on every local setup rather than run once, in anger, against real data.
+
+Honest cost: local development now requires the emulator running and a seed step where it previously required editing a file. Accepted because it eliminates the class of bug that produced Decision #11, Decision #46, and the `.next/standalone/lib/` divergence documented in `local-write.ts`'s `libDir()` comment, where a deleted product reappeared after a restart because the delete only ever reached a build-time copy.
+
+### 54. *(PROPOSED — Phase 3)* AUTH — Firebase session cookie; the Node runtime is the enforcement point; `proxy.ts` is UX only.
+
+`proxy.ts` runs on the Edge runtime, where `firebase-admin` cannot run. It **cannot** verify a session cookie; it can only observe that one is present, which a forged cookie also satisfies. Recording this explicitly because a naive "just verify the cookie in middleware" fix would inherit the exact flaw it was meant to remove.
+
+Enforcement therefore lives in the Node runtime, co-located with the data access it protects: `assertSession()` in every Route Handler, `requireSessionUser()` in every Server Component. `proxy.ts` keeps a presence-only check, documented in the file as UX and not security.
+
+Also in this decision: `NEXT_PUBLIC_DISABLE_AUTH` is **deleted from the codebase**, not merely unset — a "skip all auth" branch existing anywhere in the tree is a standing invitation. `isLocalOnlyAllowed()` and `lib/local-only.ts` go with it. Access is an email allowlist in `NERD_ALLOWED_EMAILS`, checked both at session mint and on every request, **failing closed on an empty list**. Resolves Decision #29's deferral, whose stated condition ("until the app is published to the web") is now met.
+
+### 55. *(PROPOSED — Phase 1)* GENERATE LISTING AND APPSHEET REMOVED.
+
+Constraint 3 (no Generate Listing, ever) and constraint 4 (AppSheet data is static and does not ship) remove ~1,950 lines and the infrastructure behind them: the `nerd-worker` Cloud Run service, the `nerd-research-queue` Cloud Tasks queue, the `nerd-tasks-invoker` service account and its OIDC handshake, the `gemini-api-key` secret, Vertex AI IAM, and the BigQuery `telemetry.feedback_logs` dataset.
+
+This is subtraction, not migration. The import graph makes the cut clean: `nerd_core/pipeline.py` does not import `services.py`, Vertex AI enters through exactly one door (`api/worker.py`), and `telemetry.log_event` has exactly one caller.
+
+Planned as irreversible. Supersedes Decision #30's "deferred" framing.
+
+**Status update (this session, 2026-09-02):** executed. See Decision #59 for the completion of the last three items left over from this decision's initial commit series.
+
+### 56. *(PROPOSED — Phase 1b)* `nerd_products` RECONCILED BEFORE TEARDOWN.
+
+The 08-27 live audit found 43 real documents in Firestore's `nerd_products`, written through the `POST /admin/products` path this plan deletes, and recorded in no project document. `scripts/reconcile_firestore_products.py` (read-only) diffs them against `published.json` and `added.json` and returns one of three verdicts. Deleting `api/store.py`'s product-side code is blocked on that verdict being A, or on B/C having been resolved and any Firestore-only content merged into the JSON documents first.
+
+**Status update (this session, 2026-09-02):** `scripts/reconcile_firestore_products.py` run against live Firestore. Result: 0 documents in `nerd_products` (already cleared per Decision #50), 77 records in `published.json`/`added.json`. Verdict A — fully subsumed. Note the verdict reflects an empty collection rather than a genuine merge check; per the developer, the original 43 documents were legacy-schema artifacts from a mothballed version and their removal (Decision #50) lost nothing relevant to the current schema. Phase 1b is unblocked.
+
+### 57. *(PROPOSED — Phase 4)* SINGLE RENDERER — TypeScript `ncademiPreview.ts` is authoritative; the Python renderer is deleted.
+
+`POST /render` has no live frontend caller. The WordPress HTML that ships is built client-side by `frontend/lib/ncademiPreview.ts`. The two renderers have already diverged — the empty-ACR link is `https://example.com` in Python output versus `#` in the preview — so this is a decision being made rather than a bug being fixed.
+
+TypeScript wins on caller evidence. Deleting `nerd_core/generators.py`'s render half also drops `jinja2` and `markupsafe` and most of `templates/`. Done in Phase 4 with test coverage, deliberately **not** inside the Phase 1 teardown commit series: `generators.py`'s parser half is the single most valuable asset in the repo and must not be edited inside a 1,950-line deletion diff.
+
+### 58. GCP PROJECT — reuse `edtech-agent-2026`; deploy alongside; teardown decoupled.
+
+The new stack is deployed into the existing project as **new** Cloud Run services (`nerd-web`, `nerd-parser`) beside the stale ones, rather than into a fresh project or over the existing services.
+
+Recorded because the opposite was recommended first, and the reversal is the useful part. The case for a new project rested entirely on teardown risk — Phase 1 removes a Cloud Tasks queue, a service account and its OIDC handshake, an `actAs` grant, a secret, Vertex AI IAM, and a BigQuery dataset, and doing that by omission in a clean project is safer than doing it by deletion in a project with unaudited residents. That reasoning is sound. What it missed is that **the teardown does not have to happen during the migration.** Nothing in the new architecture requires deleting anything: Cloud Run scales to zero, `nerd_documents` is a new collection that never touches `nerd_products`, and the single-field index exemption is scoped per collection group. Decoupling the teardown into Phase 8 buys the same safety property at none of the cost.
+
+What reuse saves is larger than first credited, and it is not Firestore or billing. `authDomain` and the App ID are hardcoded in `frontend/lib/firebase.ts`, so a new project means a new web app registration, a new API key, OAuth consent configuration, authorized domains re-added, and three users re-consenting. Domain verification is also per-project, and `idbygeorge.com` is already verified here — pointing it at `nerd-web` is a domain mapping rather than a DNS round trip and a propagation wait.
+
+Immediate action taken independently of the phase order: `nerd-api` routed to zero traffic. It was seven weeks stale, publicly reachable, and its deploy history runs through the 2026-07-08 LOCAL_MODE incident. Deleting or draining a Cloud Run service is a bounded operation in a way that unwinding IAM bindings is not.
+
+**Two findings would reopen this**, both answered by the Phase 0.3 service-account audit: a broadly-scoped user-managed key on `nerd-cli-admin` that has been distributed anywhere, or confirmation that the undocumented `billing_data` BigQuery dataset belongs to a different workload — which would mean `edtech-agent-2026` is a shared project rather than N.E.R.D.'s, and a project the team does not solely own is the wrong home for a system about to hold all of the directory's data.
+
+**Status update (this session, 2026-09-02):** Phase 0.3 run. `nerd-cli-admin` and `ais-gemini-key-84fb...` both hold zero project-level IAM roles (confirmed via full policy dump, not just filtered query). A user-managed, non-expiring key does exist on `nerd-cli-admin` (created 2026-07-01) — finding #1 partially confirmed (key exists) but not fully (no broad roles found at project level; possible resource-level grants unchecked, and whether the key has been "distributed anywhere" is not answerable from IAM alone). Finding #2 (`billing_data` ownership) not yet checked. Neither finding is conclusive enough to reopen this decision as of this status update.
+
+Supersedes the deferred project-choice question carried from the migration planning phase. Full reasoning: `docs/nerd-cloud-execution-plan-08-28-26.md` §0.4.
+
+---
+
+### 59. PHASE 1a CLEANUP COMPLETED — dead research schemas, Cloud Tasks deploy plumbing, and AppSheet exports removed.
+
+**Commit:** 4474f74090d1771ab6438dce8f3c3bd7a3fb0d6f (branch `cloud-migration-phase-2`)
+
+Decision #55's initial commit series (Group A–E, merged at `7e80ebb`) completed most of the Phase 1a deletion but left three items:
+
+1. `api/schemas.py` still carried 10 dead Pydantic models tied to the removed `/research/*`, `/jobs/*`, and batch-research endpoints.
+2. `scripts/deploy.sh` still provisioned a Cloud Tasks queue and the `nerd-tasks-invoker` service account, with associated IAM bindings and env-var wiring, despite the worker/Cloud Tasks path being deleted.
+3. `data/appsheet-export/` and `data/appsheet-source-html/` (14 tracked files, ~1MB of legacy AppSheet exports and scraped source HTML) remained in the repo.
+
+All three are now removed. Zero-reference grep confirmed no live code depended on any of the deleted schemas or deploy.sh variables. `pytest` and the frontend build are unchanged from baseline (one pre-existing, unrelated failure: `test_candidates_directory_not_empty`).
+
+**Deferred to Phase 4 (not touched by this commit):** the Firestore TTL policy on `nerd_research_jobs` in `scripts/deploy.sh`, which references the already-deleted `api/job_store.py`. Left in place because it's Firestore scope, not Cloud Tasks, and out of bounds for this dispatch.
+
+**Status:** Done.
