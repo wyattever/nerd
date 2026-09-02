@@ -1,90 +1,78 @@
 // frontend/app/api/local/published-live/route.ts
 /**
- * Local-only, read-only existence/content check for the (not-yet-produced)
- * live-scrape snapshot, frontend/lib/published-live.json.
+ * Read-only existence and content check for the live-scrape snapshot of
+ * `published`. Backs /records' mount-time check for whether the "Live Data"
+ * and "Update Stored Data" buttons should be enabled.
  *
- * Unlike published/added/candidate/vendors (lib/local-write.ts's DataKind),
- * this file has no write path yet -- the live-scrape process that will
- * eventually produce it is still being built (see
- * scripts/scrape_ncademi_live.py, which currently outputs
- * live-products.json/live-vendors.json under a different naming scheme, not
- * yet renamed to match). So this route is deliberately NOT added to
- * DataKind/readPublishedRaw: that pair's whole design is "closed set of
- * documents this app can WRITE" (see local-write.ts's header comment), and
- * there is no writePublishedAtomic("published-live", ...) call anywhere.
- * Reusing assertLocalOnly() is still correct -- it's a standalone gate, not
- * tied to DataKind -- so this route gets the same local-development-only
- * guard every other /api/local/* route has.
+ * Deliberately not part of the DataKind write system, unchanged from the
+ * filesystem version: that union is "the closed set of documents this app can
+ * WRITE," and there is no client write path for a scrape snapshot. Under the
+ * new architecture the scrape service writes it (Phase 5); nothing in the
+ * browser does.
  *
- * GET reads frontend/lib/published-live.json fresh from disk on every
- * request (same "never a frozen static import" reasoning as the sibling
- * routes). If the file does not exist yet (the expected case today),
- * returns 404 with an `{ exists: false }` body rather than throwing --
- * /records' mount-time existence check depends on this NOT crashing, since
- * "no live data yet" is the normal, unsurprising state, not an error.
+ * ABSENCE IS THE NORMAL STATE, NOT AN ERROR. A live snapshot exists only
+ * between a scrape and its promote. Returns 404 with `{ exists: false }`
+ * rather than throwing -- /records' check depends on this not crashing.
+ * `readRaw` would throw here, so `tryReadRaw` is used instead; that is the
+ * whole reason the datastore exposes both.
  *
- * Unlike the sibling published/added/candidate routes, this no longer
- * returns the file's bytes verbatim: published-live.json's records carry
- * no `slug` field, and this route's client-side caller (Records
- * Published's live-data fetch) needs one to build record links/lookups the
- * same way the server-side reader does. Parses the file and injects a
- * synthesized slug per product via lib/local-data.ts's
- * deriveLiveProductSlug() -- the SAME function getPublishedLiveProducts()
- * uses -- rather than a second, independently-maintained copy of that
- * derivation, so a given live record can't end up with two different
- * slugs depending on which of the two read paths served it.
+ * Live records carry no `slug` field, so one is synthesized per record via
+ * deriveLiveProductSlug() -- the SAME function lib/server/documents-read.ts's
+ * server-side reader uses, not a second copy of the derivation. If the two
+ * ever diverged, one record would resolve to two different URLs depending on
+ * which path loaded it.
+ *
+ * Sibling routes app/api/local/added-live and app/api/local/vendors-live
+ * mirror this file, differing only in the document key, the array key, and
+ * which slug derivation they apply.
  */
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { NextResponse } from "next/server";
-import { assertLocalOnly, libDir, readTrackingRecords } from "@/lib/local-write";
-import { deriveLiveProductSlug } from "@/lib/local-data";
+import { assertSession } from "@/lib/server/local-session";
+import { tryReadRaw, readTrackingRecords } from "@/lib/server/documents";
+import { deriveLiveProductSlug } from "@/lib/server/documents-read";
 import { mergeTracking } from "@/lib/tracking";
 
 export const runtime = "nodejs";
-// See app/api/local/vendors/route.ts's header comment on `dynamic` --
-// without this, GET's fs.readFile-only response can be frozen at
-// `next build` time under a production build (e.g. always answering
-// `{ exists: false }` even after a live scrape has since written the file).
 export const dynamic = "force-dynamic";
 
-// See local-write.ts's libDir() for why process.cwd() alone isn't reliable
-// here under the standalone build.
-const PUBLISHED_LIVE_PATH = path.join(libDir(), "published-live.json");
+const KEY = "published-live" as const;
+const ARRAY_KEY = "products" as const;
+
+function jsonResponse(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    // no-store is explicit: this route's entire purpose is telling the caller
+    // whether a scrape has landed since the page loaded, so a cached 404
+    // would leave "Live Data" stuck disabled after one actually did.
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
+}
 
 export async function GET(): Promise<Response> {
-  const blocked = assertLocalOnly();
-  if (blocked) return blocked;
+  const gate = await assertSession();
+  if ("response" in gate) return gate.response;
 
-  let data: string;
+  const found = await tryReadRaw(KEY);
+  if (!found) return jsonResponse({ exists: false }, 404);
+
+  let body: { [key: string]: unknown };
   try {
-    data = await fs.readFile(PUBLISHED_LIVE_PATH, "utf8");
+    body = JSON.parse(found.data) as { [key: string]: unknown };
   } catch {
-    // ENOENT (file doesn't exist yet) is the expected, common case today --
-    // any other read failure (permissions, a mid-write partial file, etc.)
-    // degrades the same way rather than 500ing, since the only consumer of
-    // this route just wants to know "can I show the Live Data toggle," not
-    // why not.
-    return new Response(JSON.stringify({ exists: false }), {
-      status: 404,
-      // See app/api/local/vendors/route.ts's GET for why no-store is
-      // explicit here -- this route's whole purpose is telling the caller
-      // whether a live scrape has landed since the page loaded, so a cached
-      // 404 would leave "Live Data" stuck disabled after one actually did.
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    });
+    // A snapshot that will not parse is indistinguishable, to this route's
+    // only consumer, from one that is not there -- it just wants to know
+    // whether the toggle can be shown, not why not.
+    return jsonResponse({ exists: false }, 404);
   }
 
-  const body = JSON.parse(data) as { products?: unknown; [key: string]: unknown };
-  const rawProducts = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
-  const withSlug = rawProducts.map((p) => ({
-    ...p,
-    slug: deriveLiveProductSlug(p.ncademi_product_url as string),
+  const raw = Array.isArray(body[ARRAY_KEY])
+    ? (body[ARRAY_KEY] as Array<Record<string, unknown>>)
+    : [];
+  const withSlug = raw.map((record) => ({
+    ...record,
+    slug: deriveLiveProductSlug(record.ncademi_product_url as string),
   }));
-  // Same tracking.json merge lib/local-data.ts's getPublishedLiveProducts()
-  // applies -- see lib/tracking.ts.
-  const products = mergeTracking(withSlug, await readTrackingRecords());
+  const records = mergeTracking(withSlug, await readTrackingRecords());
 
-  return NextResponse.json({ ...body, products }, { headers: { "Cache-Control": "no-store" } });
+  return jsonResponse({ ...body, [ARRAY_KEY]: records }, 200);
 }

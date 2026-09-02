@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { getIdToken } from "@/lib/firebase";
 import { IngestDraftResponse } from "@/lib/types";
 
 // ACCESSIBILITY NOTE: no manual focus trap is implemented here, by design,
@@ -79,19 +78,19 @@ export function ImportDataModal({ isOpen, onClose, onProcessed }: Props) {
     const timeoutId = setTimeout(() => controller.abort(), ABORT_TIMEOUT_MS);
 
     try {
-      const token = await getIdToken();
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/ingest/draft`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token ?? "local-bypass"}`,
-          },
-          body: JSON.stringify({ draft_markdown: draft }),
-          signal: controller.signal,
-        }
-      );
+      // Same-origin relative URL. The Python service is reached server-side
+      // by app/api/ingest/draft/route.ts, which authenticates the session
+      // and attaches an OIDC token. Three things follow: no Authorization
+      // header here (the session cookie is sent automatically), no CORS,
+      // and NOTHING about the API host compiled into the JS bundle -- which
+      // is what NEXT_PUBLIC_API_BASE_URL was, and the reason the deployed
+      // frontend has been calling the wrong host since June.
+      const res = await fetch("/api/ingest/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ draft_markdown: draft }),
+        signal: controller.signal,
+      });
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);

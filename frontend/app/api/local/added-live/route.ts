@@ -1,7 +1,7 @@
-// frontend/app/api/local/vendors-live/route.ts
+// frontend/app/api/local/added-live/route.ts
 /**
  * Read-only existence and content check for the live-scrape snapshot of
- * `vendors`. Backs /records' mount-time check for whether the "Live Data"
+ * `added`. Backs /records' mount-time check for whether the "Live Data"
  * and "Update Stored Data" buttons should be enabled.
  *
  * Deliberately not part of the DataKind write system, unchanged from the
@@ -17,28 +17,28 @@
  * whole reason the datastore exposes both.
  *
  * Live records carry no `slug` field, so one is synthesized per record via
- * deriveLiveVendorSlug() -- the SAME function lib/server/documents-read.ts's
+ * deriveLiveProductSlug() -- the SAME function lib/server/documents-read.ts's
  * server-side reader uses, not a second copy of the derivation. If the two
  * ever diverged, one record would resolve to two different URLs depending on
  * which path loaded it.
  *
- * Mirrors app/api/local/published-live/route.ts entirely -- see that file's
- * header for the full rationale. Differs only in the document key, the array
- * key (`vendors`), and applying deriveLiveVendorSlug() to
- * vendor_directory_url rather than deriveLiveProductSlug() to
- * ncademi_product_url.
+ * Mirrors app/api/local/published-live/route.ts -- see that file's header for
+ * the full rationale. Separate from it because a password-protected
+ * ("Added to Site", pending vendor review) product page is scraped with its
+ * vendor-review password and written here, while published-live holds only
+ * publicly-visible pages. /records/added's live view reads this one.
  */
 
 import { assertSession } from "@/lib/server/local-session";
 import { tryReadRaw, readTrackingRecords } from "@/lib/server/documents";
-import { deriveLiveVendorSlug } from "@/lib/server/documents-read";
+import { deriveLiveProductSlug } from "@/lib/server/documents-read";
 import { mergeTracking } from "@/lib/tracking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const KEY = "vendors-live" as const;
-const ARRAY_KEY = "vendors" as const;
+const KEY = "added-live" as const;
+const ARRAY_KEY = "products" as const;
 
 function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -72,7 +72,7 @@ export async function GET(): Promise<Response> {
     : [];
   const withSlug = raw.map((record) => ({
     ...record,
-    slug: deriveLiveVendorSlug(record.vendor_directory_url as string),
+    slug: deriveLiveProductSlug(record.ncademi_product_url as string),
   }));
   const records = mergeTracking(withSlug, await readTrackingRecords());
 
