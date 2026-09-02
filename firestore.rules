@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// N.E.R.D. Firestore security rules.
+//
+// DENY EVERYTHING. This is not a placeholder and is not expected to loosen.
+//
+// Every read and write in this system goes through the Next.js server
+// runtime using the Firebase Admin SDK, which bypasses security rules
+// entirely by design. No browser, and no client-side Firebase SDK, ever
+// talks to Firestore directly -- the client-side firebase package is used
+// for Auth (sign-in popup) and nothing else.
+//
+// A deny-all ruleset is therefore the accurate description of the intended
+// access model, not a lockdown pending real rules. Its purpose is to make
+// that model explicit and version-controlled: the 2026-08-27 review found
+// that nothing in the repo declared who could read or write Firestore,
+// which was survivable only for as long as everyone remembered that the
+// answer was "only the service account". This file is that answer, written
+// down and enforced.
+//
+// If a client-side read is ever proposed, this file is the gate it has to
+// come through, and the discussion starts from "why is the server not
+// doing this" rather than from a rules file that already allows something.
+//
+// Deploy:  firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

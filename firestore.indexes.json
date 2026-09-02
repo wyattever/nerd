@@ -1,0 +1,49 @@
+{
+  "_comment": [
+    "N.E.R.D. Firestore index configuration.",
+    "",
+    "THE fieldOverrides BELOW ARE REQUIRED FOR THE APPLICATION TO FUNCTION AT ALL.",
+    "They are not a performance optimization.",
+    "",
+    "Firestore automatically creates single-field indexes for every field, and",
+    "rejects any commit containing an INDEXED field value larger than 1,500 bytes",
+    "with INVALID_ARGUMENT: 'The value of property bytes is longer than 1500 bytes'.",
+    "The nerd_documents/{key}.bytes field holds a whole JSON document -- currently",
+    "between 9 KB and 128 KB. Without these exemptions, every write of every",
+    "document fails, including the initial migration.",
+    "",
+    "Nothing in this application queries these collections. Every access is a",
+    "direct get() or set() by known document id, so no index on any of these",
+    "fields serves any purpose. Disabling them also removes their storage cost,",
+    "which for a 128 KB field would otherwise be non-trivial.",
+    "",
+    "The 'backups' collection group holds the same shape (the previous bytes of",
+    "whatever it shadows) and needs the same exemption.",
+    "",
+    "Deploy:  firebase deploy --only firestore:indexes",
+    "",
+    "Equivalent gcloud form, if the Firebase CLI is not in play:",
+    "  gcloud beta firestore indexes fields update bytes \\",
+    "    --collection-group=nerd_documents --database='(default)' --disable-indexes",
+    "  gcloud beta firestore indexes fields update bytes \\",
+    "    --collection-group=backups --database='(default)' --disable-indexes",
+    "",
+    "Verify after applying, BEFORE running the migration:",
+    "  gcloud firestore indexes fields list --database='(default)'"
+  ],
+
+  "indexes": [],
+
+  "fieldOverrides": [
+    {
+      "collectionGroup": "nerd_documents",
+      "fieldPath": "bytes",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "backups",
+      "fieldPath": "bytes",
+      "indexes": []
+    }
+  ]
+}
