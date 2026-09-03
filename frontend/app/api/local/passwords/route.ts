@@ -28,7 +28,7 @@
  * once a product reaches published it is stale. A no-op when nothing matches.
  */
 
-import { assertSession } from "@/lib/server/local-session";
+import { assertSession } from "@/lib/server/session";
 import { tryReadRaw, saveUnguarded } from "@/lib/server/documents";
 import { getOrCreatePassword, type PasswordRecord } from "@/lib/passwords";
 

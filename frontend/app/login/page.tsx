@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -11,27 +11,44 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_DISABLE_AUTH === "true") {
-      router.replace("/");
-    }
-  }, [router]);
-
   const handleGoogleSignIn = async () => {
     setError(null);
     setIsLoggingIn(true);
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        // Set a cookie so middleware knows we are authed.
-        // Firebase Auth is client-side, but middleware needs a cookie.
-        // We set __session cookie (max-age 1 hour to match token).
-        document.cookie = `__session=true; path=/; max-age=3600; SameSite=Lax`;
-        
-        const from = searchParams.get("from") || "/";
-        router.replace(from);
+      const idToken = await result.user.getIdToken();
+
+      // Exchange the ID token for an HttpOnly session cookie, minted and
+      // signed server-side. Replaces `document.cookie = "__session=true"`,
+      // which was unsigned, script-readable, and settable by any visitor
+      // from devtools. The ID token travels in the body over TLS and is
+      // never persisted; what comes back is a cookie no client code can
+      // read or forge. Access control (the email allowlist) is applied
+      // server-side inside this call.
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        // A 403 here means the Google sign-in succeeded but the account is
+        // not authorized for N.E.R.D. Sign back out so the app is not left
+        // holding a Firebase session it cannot use -- otherwise the next
+        // sign-in attempt silently reuses the same rejected account without
+        // reopening the account chooser.
+        await auth.signOut().catch(() => {});
+        throw new Error(body?.error ?? `Sign-in failed (${res.status}).`);
       }
+
+      const from = searchParams.get("from") || "/";
+      // refresh() before replace(): the destination is a Server Component
+      // that reads the session cookie, and without an explicit refresh the
+      // router may serve a cached render produced before the cookie existed.
+      router.refresh();
+      router.replace(from);
     } catch (err: unknown) {
       console.error("Login failed:", err);
       const message = err instanceof Error ? err.message : "Sign-in failed. Please try again.";
@@ -40,10 +57,6 @@ function LoginContent() {
       setIsLoggingIn(false);
     }
   };
-
-  if (process.env.NEXT_PUBLIC_DISABLE_AUTH === "true") {
-    return null;
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">

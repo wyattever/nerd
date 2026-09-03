@@ -21,7 +21,7 @@
  * identically to the product routes with no special casing.
  */
 
-import { assertSession } from "@/lib/server/local-session";
+import { assertSession } from "@/lib/server/session";
 import {
   readRaw,
   saveGuarded,

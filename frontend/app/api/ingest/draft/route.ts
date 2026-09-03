@@ -37,7 +37,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { assertSession } from "@/lib/server/local-session";
+import { assertSession } from "@/lib/server/session";
 import { getIdentityToken } from "@/lib/server/gcp-identity";
 
 export const runtime = "nodejs";
