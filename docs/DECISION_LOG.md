@@ -564,3 +564,256 @@ succeeded without an explicit `roles/iam.serviceAccountTokenCreator` grant to
 the ADC user identity. Both remain plausible on a fresh environment; see
 `docs/firebase-nextjs-auth-configuration-09-02-26.md`.
 
+---
+
+### 62. `lib/local-data.ts` MIGRATION RECLASSIFIED — Phase 5 dead-code deletion, not an urgent production fix.
+
+**Date:** 2026-09-02
+**Status:** Decided
+**Corrects the reasoning in:** Decision #61 ("Deliberately NOT removed" paragraph)
+**Evidence:** `.scratch/verification/local-data-audit-20260902-2117-raw.md`, audited at `71f1de5`
+**Superseded on phase attribution by:** Decision #63 — the scrape rehome and
+the module-group deletion are Phase 4, not Phase 5. #62's findings stand
+unchanged.
+
+Decision #61 deferred removing `lib/local-only.ts` and `lib/local-write.ts`'s
+`assertLocalOnly` on the stated grounds that `lib/local-data.ts` "still carries
+five live `isLocalOnlyAllowed()` guards on the vendors and candidates editor
+read path." **The guards are real; the read path is not.** A fresh importer
+census at `71f1de5` establishes:
+
+- `lib/local-data.ts` has exactly **one** importer in the entire tree:
+  `app/api/local/scrape/route.ts` (lines 52-59). No module re-exports it.
+- The six files previously believed to consume it —
+  `app/editor/(routed)/vendors/page.tsx`,
+  `app/editor/(routed)/vendors/layout.tsx`,
+  `app/editor/(routed)/vendors/[slug]/page.tsx`,
+  `app/editor/(routed)/candidates/[slug]/page.tsx`, `lib/published-tables.ts`,
+  and `lib/directory-schema.ts` — do not. The four editor routes import
+  `getVendors` / `getCandidates` from `@/lib/server/documents-read`; the two
+  `lib/` files import no reader module at all. They were migrated by commit
+  `5b46330` ([Decision #60](#60-phase-2-bug--editorrecords-pages-read-from-stale-filesystem-module-post-migration)).
+  The earlier belief came from a substring search on the token `local-data`,
+  which matches their **comments**.
+
+**Consequence 1 — there is no production 404 risk, latent or otherwise.** No
+page or layout reads through `lib/local-data.ts`. Its only importer is a Route
+Handler whose own `assertLocalOnly()` is the first statement of `POST`
+(`app/api/local/scrape/route.ts:229-230`) and returns 404 before any
+`local-data.ts` function is reached — those calls sit inside
+`sendPostRetrievalComparisons()`, invoked at line 304, within the response
+stream. In any deployed environment the route 404s at its own gate and the five
+`isLocalOnlyAllowed()` guards inside `local-data.ts` are unreachable.
+
+**Consequence 2 — the module group shares a single root and is deleted
+together, not migrated separately.** `app/api/local/scrape/route.ts` is the sole
+root of the whole subgraph (`scrape → local-data → {local-only, local-write}`,
+and `local-write → local-only`). Migrating that one route in Phase 5 makes
+`lib/local-data.ts`, `lib/local-only.ts`, and `lib/local-write.ts` unreachable
+simultaneously; they come out in one commit. No intermediate migration of
+`local-data.ts` buys anything, because no other consumer exists to benefit from
+it.
+
+**Consequence 3 — Phase 4 moves ahead of this work in sequence.** The
+`local-data.ts` migration was being treated as the next item on the strength of
+the production-bug reading. With that removed it carries no urgency and folds
+into Phase 5. Phase 4 (slim the Python service) becomes the next work.
+
+**Surface parity is already complete, so the eventual deletion is mechanical.**
+`lib/server/documents-read.ts` exports 12 symbols to `lib/local-data.ts`'s 12,
+name-for-name, with identical signatures and return shapes. Document-kind
+coverage is 7 of 7 (`published`, `added`, `candidate`, `vendors`, and the three
+`*-live` snapshots) plus `tracking`; `lib/server/documents.ts` additionally
+reaches `passwords`. Verified by reading both implementations, not by matching
+names.
+
+**Open, UNVERIFIED.** Swapping the scrape route's readers to
+`documents-read.ts` would replace `notFound()` with `requireSessionUser()`,
+which calls `redirect("/login")`. In that route the readers are invoked from
+inside a `ReadableStream` `start()` callback (line ~304), after response headers
+are committed, where a thrown `NEXT_REDIRECT` may not produce a usable response.
+This has **not** been tested. The candidate fix — hoist the session check to the
+top of `POST`, where `assertLocalOnly()` sits at line ~229 — is likewise
+**UNVERIFIED**. Phase 5's design must settle it before the swap.
+
+**Not changed by this entry.**
+[Decision #27](#27-production-guardrails--local_mode-and-next_public_disable_auth-must-never-reach-deployed-environments)
+stands unaffected: `NEXT_PUBLIC_DISABLE_AUTH` and `NERD_CLOUD_DEMO_LOCAL_WRITE`
+must never reach a deployed environment. Decision #54's intent — that the flag
+and `isLocalOnlyAllowed()` are deleted from the codebase rather than merely
+unset — also stands; this entry fixes *when* (Phase 5, with the module group)
+and *why* (dead code, not a live gate), not *whether*. `frontend/README.md` was
+amended in the same pass to describe the flag's remaining scope accurately.
+
+---
+
+### 63. PHASE TARGETING CORRECTED — the scrape rehome and the local-only deletion are Phase 4, not Phase 5.
+
+**Date:** 2026-09-02
+**Status:** Decided
+**Corrects:** Decision #62, which targeted Phase 5 throughout. #62's findings
+stand; only its phase attribution was wrong. Append-only log — #62 is corrected
+by this entry, not edited.
+
+Decision #62 concluded that `lib/local-data.ts`, `lib/local-only.ts`, and
+`lib/local-write.ts` share a single root (`app/api/local/scrape/route.ts`) and
+must be deleted together when that route is migrated. That conclusion is
+unchanged. It assigned the work to **Phase 5**. That was wrong, and the error
+originated in the dispatch language rather than in the code audit.
+
+**The plan of record puts the scrape rehome in Phase 4.** Five independent
+statements, all predating #62:
+
+- `docs/nerd-cloud-migration.md:124` — canonical phase map. Phase 4 is "Slim
+  the Python service; **rehome the scrape as a polled Job**; bound the ingest
+  path." Phase 5 is "Build, deploy, wire Firebase Hosting, attach the domain."
+- `docs/nerd-cloud-migration.md:785` — Phase 4 CLI prompt, "Part C — Rehome the
+  scrape as a polled job," which rewrites
+  `frontend/app/api/local/scrape/route.ts`.
+- `docs/nerd-cloud-migration.md:878` — Phase 4 exit criterion (correction C6):
+  `grep -rn "node:fs\|NERD_REPO_ROOT\|libDir" frontend/` returns **zero** hits.
+  `lib/local-write.ts` is the sole definer of `libDir()`; that criterion already
+  forces the module group out in Phase 4, independent of this entry.
+- `docs/nerd-stage3-architecture-spec-08-28-26.md:120` — "Phase 4: Python
+  service slim + scrape rehome."
+- `docs/nerd-stage3-architecture-spec-08-28-26.md:104` — "`grep -rn "node:fs"
+  frontend/` returns only `app/api/local/scrape/route.ts` (**rehomed in Phase
+  4**)."
+
+Phase 5 also has no exit-criteria block at all, so there was no slot the
+deferred Phase 3 criteria could have been moved into. **No phase is renumbered.**
+Phase 4 and Phase 5 keep the meanings defined at `nerd-cloud-migration.md:124`.
+
+**Documents corrected in this pass:**
+
+- `docs/nerd-cloud-migration.md` — the two deferred Phase 3 exit criteria (the
+  `NEXT_PUBLIC_DISABLE_AUTH` / `NERD_CLOUD_DEMO_LOCAL_WRITE` /
+  `isLocalOnlyAllowed` zero-hit grep, and deleting `lib/local-only.ts`) moved
+  into the Phase 4 exit criteria unchanged, with a note left at the Phase 3
+  location recording the deferral and citing Decision #61. A third criterion was
+  added there making the `local-data.ts` / `local-write.ts` deletion explicit.
+- `docs/nerd-stage3-architecture-spec-08-28-26.md` — the Phase 3 "What it does"
+  paragraph and two "Key changes" bullets annotated to show the local-only
+  removal moved to Phase 4. Items relocated, not deleted.
+- `frontend/README.md` — two "Phase 5" references corrected to Phase 4.
+- `docs/reports/session-handoff-from-claude-09-02-26.md` — its three "Phase 5"
+  sections merged into one Phase 4 entry; "Immediate next work" renumbered to
+  two items.
+
+**One finding worth recording separately.** `NERD_CLOUD_DEMO_LOCAL_WRITE` was
+checked directly rather than assumed: it is **still live**, at
+`frontend/lib/local-only.ts:24`, alongside `isLocalOnlyAllowed()` (line 21) and
+`NEXT_PUBLIC_DISABLE_AUTH` (line 25). None of the three was removed in Phase 3.
+All three come out together in Phase 4. Decision #46, which introduced
+`NERD_CLOUD_DEMO_LOCAL_WRITE` for the tunneled-demo workflow, is retired at that
+point — the workflow it existed for is replaced by a real deployed URL in Phase
+5.
+
+---
+
+### 64. PHASE 4 RECON RESOLVED — renderer-deletion scoping, published.json dead import, stale line counts.
+
+**Date:** 2026-09-03
+**Status:** Decided
+**Source:** `.scratch/verification/phase4-recon-20260903-1133-raw.md`, audited at `71f1de5`
+**Corrects:** the "Done in Phase 4" subtitle of Decision #57 (append-only — #57 is
+not edited); the stale `api/main.py` figure in
+`docs/reports/session-handoff-from-claude-09-02-26.md`; the "1,950-line" phrase
+carried in #57's own body.
+
+#### (a) The `nerd_core/generators.py` render-half deletion is a standalone commit, not Phase 4 work.
+
+Decision #57 is tagged **_(PROPOSED — Phase 4)_** and its subtitle says "Done in
+Phase 4." That subtitle is wrong and is corrected here, not by editing #57: the
+render-half deletion is **not** part of the Phase 4 execution dispatch. It is a
+separate, test-covered commit gated on its own review.
+
+The migration plan already says so, and both gates stand:
+
+- `docs/nerd-cloud-migration.md:786` (Phase 4, Part A): "DECISION REQUIRED - stop
+  and report, do not act ... Do not delete either renderer."
+- `docs/nerd-cloud-migration.md:1115`: the dual renderer "is diagnosed in Phase 4
+  but not resolved ... should happen with test coverage, as its own commit, not
+  folded into a migration phase."
+
+Phase 4's renderer task is diagnosis-and-report only. The recon has already done
+that diagnosis and it holds: nothing reachable from `/ingest/draft` calls the
+render half, and `frontend/lib/ncademiPreview.ts` (18,807 bytes) is the shipping
+renderer per #57.
+
+Why a standalone commit — recon evidence:
+
+- The render half has callers outside `generators.py`:
+  `scripts/migrate_archive_to_products.py` and `scripts/reprocess_redirects.py`
+  both import `render_listing_html`, and `tests/unit/test_generators.py:2` imports
+  parser and render symbols on one line — two render tests
+  (`test_render_with_section_override`, `test_render_without_overrides_regression`)
+  come out with it; the five parser tests in that file do not.
+- The halves **are** cleanly separable: parser `77-209`, render `212-286`, shared
+  dataclasses `30-74`, one bridge line (`generate_ncademi_html`, `285-286`). No
+  shared helpers, no shared state.
+- `jinja2` and `markupsafe` are render-only, and `generators.py` is their sole
+  importer repo-wide — the deletion frees both dependencies and most of
+  `templates/`.
+
+#### (b) The `published.json` static import is dead code (Phase 2 residue), and is deleted.
+
+`frontend/lib/published-tables.ts:16` does `import data from "./published.json"`
+at build time. This is **not** a deliberate editorial freeze — it is left over
+from before the Phase 2 Firestore port.
+
+Evidence (recon):
+
+- The module's runtime accessors (`getAllPublishedProducts`, `getPublishedProduct`,
+  `getPublishedVendorResources`, and the rest) have **zero call sites** anywhere in
+  `frontend/`.
+- All 26 importers of `published-tables.ts` use `import type` — they consume the
+  interfaces, not the data.
+- All six editor/records "published" route files read Firestore via
+  `getPublishedProducts()` from `lib/server/documents-read.ts:99`.
+- Both a Firestore **read** path (`documents-read.ts:99`) and a Firestore **write**
+  path (`documents.ts` — `DataKind` includes `"published"`) exist for the
+  `published` kind.
+
+**Decision:** delete the static import and the module's now-unreachable runtime
+half (the `data` import, `PUBLISHED_DATA`, `BY_SLUG`, and the uncalled accessors).
+Keep the **type** exports — 26 files depend on them.
+
+`frontend/lib/published.json` the file is **retained for now** as the
+pre-migration snapshot. It is removed in the **same commit as the local-only
+module group** (`local-data.ts` / `local-only.ts` / `local-write.ts`, per
+Decision #62), and only **after the Firestore copy of the `published` document is
+confirmed complete and byte-verified**. Until that commit it stays in git as the
+rollback artifact, alongside the other `frontend/lib/*.json` snapshots Phase 6
+migrates.
+
+This closes the UNVERIFIED question raised in the 2026-09-02 handoff ("UNVERIFIED
+whether this is deliberate ... or an integration gap left by Phase 2").
+
+#### (c) Stale line counts, corrected against the recon.
+
+`.scratch/verification/phase4-recon-20260903-1133-raw.md` (at `71f1de5`)
+establishes:
+
+- `api/main.py` is **121 lines**, not 373 — Phase 1a already cut it. The
+  "373 → ~40" framing is in
+  `docs/reports/session-handoff-from-claude-09-02-26.md:60` (corrected in that
+  file in this pass). `docs/nerd-cloud-migration.md` states no `main.py` line
+  count.
+- `nerd_core/generators.py` is **285 lines**, not "1,950"; the render half is
+  ~75 lines. The "1,950-line deletion diff" phrase is in Decision #57's body
+  (append-only — not edited; corrected here). The handoff says "large deletion
+  diff" with no figure; `docs/nerd-cloud-migration.md` states no figure.
+- The **~40-line target** for the Python slim is a goal, not a measurement, and is
+  unchanged. From 121 it is closer than the plan assumes.
+
+**The `store.py` / `job_store.py` import trap is already resolved — no edit is
+pending.** `api/job_store.py` does not exist. `api/store.py:66-73` already carries
+the relocated Firestore client init (`db = AsyncClient()` at line 71, guarded by
+`if not LOCAL_MODE:`), with an explanatory comment ("Relocated from
+api/job_store.py (deleted in the cloud-migration cleanup)"). The only importer of
+`store` is `api/main.py:20`; nothing imports `job_store`. The "three-line move"
+flagged as pending in `docs/nerd-cloud-migration.md` (Phase 1 constraints) and the
+handoff was already done. `api/worker.py`, named in `store.py`'s docstring, is
+also gone.
+

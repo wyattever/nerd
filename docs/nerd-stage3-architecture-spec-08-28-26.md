@@ -105,15 +105,17 @@ Backups: sibling documents with `__bak` suffix, same shape.
 
 ### Phase 3: Authentication (~1 session)
 
-**What it does:** Replaces the forgeable `__session=true` cookie with real Firebase session cookies. Removes `isLocalOnlyAllowed()`, `NEXT_PUBLIC_DISABLE_AUTH`, and `NERD_CLOUD_DEMO_LOCAL_WRITE`.
+**What it does:** Replaces the forgeable `__session=true` cookie with real Firebase session cookies.
+
+It was also planned to remove `isLocalOnlyAllowed()`, `NEXT_PUBLIC_DISABLE_AUTH`, and `NERD_CLOUD_DEMO_LOCAL_WRITE`. **That half was deferred to Phase 4**, with explicit approval at the time (Decision #61). All three are still live in `frontend/lib/local-only.ts` — `isLocalOnlyAllowed()` at line 21, `NERD_CLOUD_DEMO_LOCAL_WRITE` at line 24, `NEXT_PUBLIC_DISABLE_AUTH` at line 25 — verified at `71f1de5`. None of the three was removed; they go together, and Phase 4's scrape rehome is what unblocks them (Decision #62).
 
 **Key changes:**
 - New `POST /api/auth/session` route — mints real Firebase session cookie
 - `proxy.ts` — remove DISABLE_AUTH bypass, remove blanket `/api` exemption
 - New `frontend/lib/session.ts` — `requireSession()` helper
-- Replace `assertLocalOnly()` at every call site with session verification (returns 401, not 404)
+- Replace `assertLocalOnly()` at every call site with session verification (returns 401, not 404) — done for the nine `/api/local/*` routes; **`app/api/local/scrape/route.ts` still calls `assertLocalOnly()` and still returns 404. Deferred to Phase 4** (Decision #61)
 - Create `firestore.rules` (deny-all for now — Admin SDK bypasses rules)
-- Delete `frontend/lib/local-only.ts`
+- ~~Delete `frontend/lib/local-only.ts`~~ — **moved to Phase 4** (Decision #61). It could not be deleted here: the scrape route still reaches it through `lib/local-data.ts`, so removing it would have broken the build. It comes out in Phase 4 together with `lib/local-data.ts` and `lib/local-write.ts`, which share the same single root (Decision #62)
 
 **The test that proves the fix:** A forged `__session=true` cookie must be rejected with 401.
 

@@ -467,6 +467,11 @@ Constraints:
   - api/store.py currently does `from .job_store import db`. Deleting job_store
     breaks that import. Relocate the Firestore client initialization into
     store.py itself. This is a move, not a rewrite - do not change its behavior.
+    [RESOLVED — already done. api/job_store.py no longer exists; api/store.py:66-73
+    carries the relocated client init (db = AsyncClient(), guarded by
+    `if not LOCAL_MODE:`) with an explanatory comment. Nothing imports job_store.
+    Verified in .scratch/verification/phase4-recon-20260903-1133-raw.md at 71f1de5;
+    see Decision #64(c). No action pending here.]
   - nerd_core/generators.py has a parser half and a renderer half. Delete
     NOTHING in that file in this phase. It is decided separately in Phase 4.
   - If deleting a file breaks a test, report the test and stop. Do not rewrite
@@ -606,6 +611,28 @@ reported, not rewritten.
 - [ ] `firebase-admin` is the only added dependency
 - [ ] A save against a stale ETag still returns 412
 
+**The first two criteria above were checked off prematurely when Phase 2 was
+signed off; both are still false today.** As of `71f1de5`, `grep -n "node:fs"`
+across `frontend/` matches `lib/local-write.ts:26` and `lib/local-data.ts:24` —
+and *not* `app/api/local/scrape/route.ts`, which imports `node:child_process`
+and `node:path` but never `node:fs`. `grep -n "NERD_REPO_ROOT\|libDir"` matches
+`lib/local-write.ts` (both tokens) and `lib/local-data.ts` (`libDir`) on top of
+`app/api/local/scrape/route.ts`.
+
+This is a different situation from the two Phase 3 criteria carried forward
+below, which were held back by an explicit decision taken at the time. These
+two were simply written against an end state that a later phase produces. They
+presuppose two things Phase 2 does not do: the scrape-route rewrite that removes
+the child-process spawn and its `NERD_REPO_ROOT` handling, and the deletion of
+the `local-data.ts` / `local-write.ts` / `local-only.ts` module group that owns
+every remaining `node:fs` and `libDir()` reference. Both land in Phase 4 — Part
+C for the scrape, and the one-root/one-commit module deletion in Decision #62.
+
+Phase 4's exit criterion C6 — `grep -rn "node:fs\|NERD_REPO_ROOT\|libDir"
+frontend/` returns **zero** hits — is strictly stronger than either of these
+(zero hits, not "only the scrape route") and supersedes them. They are left
+here as a record of what Phase 2 claimed, not as work Phase 2 can still close.
+
 ---
 
 ## 13. Phase 3 — Authentication
@@ -696,10 +723,23 @@ That second test is the one that proves the fix.
 
 ### Phase 3 exit criteria
 
-- [ ] `grep -rn "NEXT_PUBLIC_DISABLE_AUTH\|NERD_CLOUD_DEMO_LOCAL_WRITE\|isLocalOnlyAllowed" .` returns zero hits outside `docs/`
-- [ ] `frontend/lib/local-only.ts` is deleted
 - [ ] A forged `__session=true` cookie is rejected
 - [ ] `firestore.rules` and `firebase.json` exist and are committed
+
+**Two criteria were deferred out of this phase to Phase 4, with explicit
+approval at the time — see Decision #61.** They are not dropped and are not
+weakened; they are carried unchanged in Phase 4's exit criteria below:
+
+- the `NEXT_PUBLIC_DISABLE_AUTH` / `NERD_CLOUD_DEMO_LOCAL_WRITE` /
+  `isLocalOnlyAllowed` zero-hit grep, and
+- deleting `frontend/lib/local-only.ts`.
+
+The reason is a dependency, not a change of intent: `app/api/local/scrape/route.ts`
+still calls `assertLocalOnly()` and still reads through `lib/local-data.ts`, so
+deleting the module group during Phase 3 would have broken the build. Phase 4
+Part C rehomes that route, which is what unblocks both criteria. See also
+Decision #62, which establishes that the three modules share that single root
+and come out together.
 
 ---
 
@@ -878,6 +918,9 @@ Playwright accessibility suite and paste raw output.
 - [ ] No `Depends(verify_token)` and no CORS middleware remain in Python
 - [ ] `grep -rn "EventSource\|text/event-stream\|ReadableStreamDefaultReader" frontend/` returns zero hits
 - [ ] `grep -rn "node:fs\|NERD_REPO_ROOT\|libDir" frontend/` returns **zero** hits (correction C6)
+- [ ] `grep -rn "NEXT_PUBLIC_DISABLE_AUTH\|NERD_CLOUD_DEMO_LOCAL_WRITE\|isLocalOnlyAllowed" .` returns zero hits outside `docs/` (deferred from Phase 3 — Decision #61)
+- [ ] `frontend/lib/local-only.ts` is deleted (deferred from Phase 3 — Decision #61)
+- [ ] `frontend/lib/local-data.ts` and `frontend/lib/local-write.ts` are deleted with it — one root, one commit (Decision #62)
 - [ ] No new frontend dependency was added (addition A2)
 - [ ] A full scrape completes end to end via the polled job
 - [ ] Ingest duration measured; per-link and overall budgets in place with named constants (addition A1)
