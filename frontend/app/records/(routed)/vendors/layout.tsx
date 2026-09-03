@@ -7,7 +7,7 @@
 // frontend/app/editor/(routed)/vendors/layout.tsx's own read.
 
 import type { ReactNode } from "react";
-import { getVendors } from "@/lib/local-data";
+import { getVendors } from "@/lib/server/documents-read";
 import { IntegratedListPanel } from "@/components/IntegratedListPanel";
 
 export const dynamic = "force-dynamic";

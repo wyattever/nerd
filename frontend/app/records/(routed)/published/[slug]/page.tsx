@@ -13,7 +13,7 @@
 // preview -- this page only fetches `hasLiveScrapeData` and passes it
 // down as a prop.
 
-import { getPublishedLiveProducts, getPublishedProducts } from "@/lib/local-data";
+import { getPublishedLiveProducts, getPublishedProducts } from "@/lib/server/documents-read";
 import { RecordsPublishedDetail } from "../RecordsPublishedDetail";
 
 export const dynamic = "force-dynamic";

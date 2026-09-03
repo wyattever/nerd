@@ -17,7 +17,7 @@
 // `dynamic = "force-dynamic"` is required for the same reason as
 // candidates/layout.tsx -- see that file's header.
 
-import { getCandidates } from "@/lib/local-data";
+import { getCandidates } from "@/lib/server/documents-read";
 import { CandidateEditor } from "../CandidateEditor";
 
 export const dynamic = "force-dynamic";

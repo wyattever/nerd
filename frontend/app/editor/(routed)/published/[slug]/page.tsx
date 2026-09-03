@@ -4,7 +4,7 @@
 // rationale -- identical structure, published.json instead of
 // candidate.json.
 
-import { getPublishedProducts } from "@/lib/local-data";
+import { getPublishedProducts } from "@/lib/server/documents-read";
 import { PublishedEditor } from "../PublishedEditor";
 
 export const dynamic = "force-dynamic";

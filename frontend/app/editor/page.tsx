@@ -550,7 +550,7 @@ export default function EditorPage() {
         if (res.status === 412) {
           setStatusMessage("");
           setSaveError(
-            "Save failed: the file on disk changed since this copy was loaded. Reload the page and re-apply your edits."
+            "Save failed because the data was changed on a different tab or by another user. Reload the page and re-apply your edits."
           );
           return false;
         }

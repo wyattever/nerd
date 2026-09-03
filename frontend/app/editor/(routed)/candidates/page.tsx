@@ -12,7 +12,7 @@
 // sibling [slug]/page.tsx and layout.tsx -- see those files' headers.
 
 import { redirect } from "next/navigation";
-import { getCandidates } from "@/lib/local-data";
+import { getCandidates } from "@/lib/server/documents-read";
 
 export const dynamic = "force-dynamic";
 

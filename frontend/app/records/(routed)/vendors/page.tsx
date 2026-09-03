@@ -5,7 +5,7 @@
 // file for the full rationale.
 
 import { redirect } from "next/navigation";
-import { getVendors } from "@/lib/local-data";
+import { getVendors } from "@/lib/server/documents-read";
 
 export const dynamic = "force-dynamic";
 

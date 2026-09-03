@@ -3,7 +3,7 @@
 // See frontend/app/editor/(routed)/candidates/[slug]/page.tsx for the full
 // rationale -- identical structure, added.json instead of candidate.json.
 
-import { getAddedProducts } from "@/lib/local-data";
+import { getAddedProducts } from "@/lib/server/documents-read";
 import { AddedEditor } from "../AddedEditor";
 
 export const dynamic = "force-dynamic";

@@ -164,7 +164,7 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
       });
 
       if (postRes.status === 412) {
-        setSaveError("Save failed: the file on disk changed since this copy was loaded. Try again.");
+        setSaveError("Save failed because the data was changed on a different tab or by another user. Reload the page and re-apply your edits.");
         return;
       }
 

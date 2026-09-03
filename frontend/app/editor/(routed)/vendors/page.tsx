@@ -11,7 +11,7 @@
 // other leaf in this migration -- see candidates/page.tsx's header.
 
 import { redirect } from "next/navigation";
-import { getVendors } from "@/lib/local-data";
+import { getVendors } from "@/lib/server/documents-read";
 
 export const dynamic = "force-dynamic";
 
