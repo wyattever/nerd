@@ -48,7 +48,6 @@ export default function RecordsPage() {
   const [activeTab, setActiveTab] = useState<SourceTab>("candidate");
   const [dataSource, setDataSource] = useState<"stored" | "live">("stored");
   const [hasLiveScrapeData, setHasLiveScrapeData] = useState(false);
-  const [isRetrievingLive, setIsRetrievingLive] = useState(false);
 
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [addedProducts, setAddedProducts] = useState<ProductRecord[]>([]);
@@ -232,79 +231,6 @@ export default function RecordsPage() {
     };
   }, []);
 
-  // Triggers scripts/scrape_ncademi_live.py via a POST /api/local/scrape
-  // SSE stream (see that route's header comment for the full protocol).
-  // Focus moves to the Messages log synchronously, before the first
-  // `await`, so it happens in the same tick as the click rather than after
-  // the fetch settles. The log is cleared first so a fresh run starts as a
-  // clean A-E progression rather than mixing in whatever the page-load
-  // effect above last wrote to the "load" row.
-  const handleRetrieveLiveData = useCallback(async () => {
-    setIsRetrievingLive(true);
-    setMessagesLog([]);
-    messagesLogRef.current?.focus();
-
-    try {
-      const res = await fetch("/api/local/scrape", { method: "POST" });
-      if (!res.ok || !res.body) {
-        upsertLogEntry(
-          "scrape-error",
-          `Retrieve live data failed: unexpected server response (${res.status}).`
-        );
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      // SSE framing: events are separated by a blank line ("\n\n"); each
-      // event is one or more "field: value" lines. Only `event:`/`data:`
-      // are used here. A chunk from the reader can contain zero, one, or
-      // several complete events, and can also end mid-event -- the while
-      // loop drains every complete event currently in `buffer`, leaving any
-      // trailing partial event for the next chunk to complete.
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let boundary: number;
-        while ((boundary = buffer.indexOf("\n\n")) !== -1) {
-          const rawEvent = buffer.slice(0, boundary);
-          buffer = buffer.slice(boundary + 2);
-
-          let eventType = "message";
-          let dataLine: string | null = null;
-          for (const line of rawEvent.split("\n")) {
-            if (line.startsWith("event: ")) eventType = line.slice("event: ".length);
-            else if (line.startsWith("data: ")) dataLine = line.slice("data: ".length);
-          }
-          if (dataLine === null) continue;
-
-          let data: { stage?: string; message?: string; error?: string };
-          try {
-            data = JSON.parse(dataLine);
-          } catch {
-            continue;
-          }
-
-          if (eventType === "progress" && data.stage && data.message) {
-            upsertLogEntry(data.stage, data.message);
-          } else if (eventType === "done") {
-            setHasLiveScrapeData(true);
-          } else if (eventType === "error") {
-            upsertLogEntry("scrape-error", `Retrieve live data failed: ${data.error ?? "unknown error"}.`);
-          }
-        }
-      }
-    } catch {
-      upsertLogEntry("scrape-error", "Retrieve live data failed: could not reach the local write API.");
-    } finally {
-      setIsRetrievingLive(false);
-    }
-  }, [upsertLogEntry]);
-
   const activeProducts = useMemo(() => {
     switch (activeTab) {
       case "published": return products;
@@ -475,15 +401,6 @@ export default function RecordsPage() {
                 }`}
               >
                 Live Data
-              </button>
-
-              <button
-                type="button"
-                disabled={isRetrievingLive}
-                onClick={handleRetrieveLiveData}
-                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isRetrievingLive ? "Retrieving…" : "Retrieve Live Data"}
               </button>
             </div>
           </div>
