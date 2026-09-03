@@ -426,3 +426,71 @@ All three are now removed. Zero-reference grep confirmed no live code depended o
 **Deferred to Phase 4 (not touched by this commit):** the Firestore TTL policy on `nerd_research_jobs` in `scripts/deploy.sh`, which references the already-deleted `api/job_store.py`. Left in place because it's Firestore scope, not Cloud Tasks, and out of bounds for this dispatch.
 
 **Status:** Done.
+
+### 60. PHASE 2 BUG — editor/records pages read from stale filesystem module post-migration.
+
+**Date:** 2026-09-02
+**Status:** Fixed
+**Commit:** 5b46330 (branch cloud-migration-phase-2)
+
+Decision #59's Phase 2 install (commit 17b728d) wired the write path
+(route handlers -> `documents.ts` -> Firestore) but missed the read path:
+all 27 editor and records page components still imported their document
+readers from `lib/local-data.ts` (the pre-migration filesystem module),
+not `lib/server/documents-read.ts` (the Firestore module installed the
+same session). Both modules export identically-named, identically-shaped
+functions, so the mismatch compiled cleanly and the pages rendered
+correctly-looking data — it just rendered stale, filesystem-era ETags
+alongside a write path now pointed at Firestore.
+
+Effect: every save failed with a false 412. The client always sent the
+original migration-era ETag (the filesystem JSON's hash at the time of
+the `nerd_documents.py push` migration), which could never match
+Firestore's current value once anything had been written through the app.
+Confirmed live: a fully fresh, hard-reloaded page load of
+`/editor/candidates/anton` still produced the stale ETag and a 412 on the
+very first save attempt, with no other tabs or writers involved — ruling
+out browser cache, Next.js Router cache, and double-submit as causes
+before the actual root cause (wrong import source) was found by tracing
+the component's prop chain back to the page-level Server Component.
+
+Fix: swapped the import source on all 27 call sites from
+`@/lib/local-data` to `@/lib/server/documents-read`. No symbol renames —
+`documents-read.ts` was built as a drop-in replacement and its return
+shapes are structurally identical (`tsc --noEmit` confirmed clean, no
+cast or signature changes needed anywhere).
+
+Also folded into this fix:
+- Reworded the 412 error message across all 5 editor components
+  (Candidate/Added/Published/VendorEditor, `editor/page.tsx`) from "the
+  file on disk changed" (filesystem-era phrasing, no longer accurate) to
+  "the data was changed on a different tab or by another user" — matches
+  the new persistence model and the actual, verified cause of a 412 in
+  normal use (confirmed live: two tabs open on the same candidate, second
+  save correctly rejected with a 412, not a silent overwrite).
+- `frontend/.env.local.example`: added `NEXT_PUBLIC_FIREBASE_API_KEY` and
+  `NEXT_PUBLIC_FIREBASE_APP_ID`. `/login` prerenders at build time
+  regardless of `NEXT_PUBLIC_DISABLE_AUTH` and calls `getAuth(app)`,
+  which throws without these. Values are non-secret Firebase web SDK
+  config, retrieved via `firebase apps:sdkconfig WEB --project prod`.
+
+**Verification:** `tsc --noEmit`, `npm run build`, and `npm run lint` all
+clean. Manually verified end-to-end against the Firestore emulator:
+single-tab save succeeds and persists (confirmed via the emulator UI's
+`backups/latest` subcollection showing the correct `replaced_by` actor
+and updated `etag`); a second tab holding a stale ETag correctly receives
+a 412 rather than silently overwriting — the concurrency guarantee
+Decision #52 described as "now real rather than nominal" is confirmed
+working in practice, not just by inspection.
+
+**Lesson:** a Phase-scoped code delivery (session-handoff files) can be
+internally consistent and still leave a real integration gap at the
+boundary between what was delivered and what already existed in the
+repo — `documents-read.ts` was installed and correct, but nothing forced
+the 27 pre-existing page components consuming the *old* reader to be
+updated in the same pass, and `tsc`/build/lint all stayed green
+throughout because the type shapes genuinely matched. This class of bug
+is only caught by exercising the actual write path live, not by static
+verification — worth treating "builds and typechecks" as necessary but
+not sufficient evidence a persistence-layer migration is complete going
+forward.
