@@ -907,3 +907,196 @@ guessable, low-value, single-purpose preview password is itself an acceptable
 design is **not decided by this entry** — it is raised as a separate open
 question for a later review.
 
+---
+
+### 66. SCRAPE RUNS LOCALLY — standalone terminal script over Firestore; no Cloud Run Job, no job-trigger route, no in-browser progress UI.
+
+**Date:** 2026-09-03
+**Status:** Decided
+**Source:** `.scratch/verification/local-scrape-recon-20260903-1252-raw.md` (audited at `a8550b3`);
+`docs/firestore-local-auth-09-03-26.md` for the auth analysis.
+**Corrects:** the mechanism of Decision #65 (append-only — #65 is not edited); supersedes
+"rehome the scrape as a polled Job" from Decision #63 and the Phase 4 Part C / Phase 5
+Step 2b plan of record.
+
+#### DECISION — the scrape runs locally.
+
+`scripts/scrape_ncademi_live.py` becomes a standalone Python script the developer runs
+from their own terminal. It reads what it needs from Firestore and writes the three
+`*-live` documents (`published-live`, `added-live`, `vendors-live`) back to Firestore.
+There is **no Cloud Run Job**, **no job-trigger Route Handler**, and **no in-browser
+scrape progress UI**.
+
+**What every other user retains, unchanged:** the Stored/Live data-source toggle, the
+read-only `*-live` record views, and promote-live ("Update Stored Data"). These read and
+write Firestore documents through the existing `lib/server/documents*.ts` path and are
+indifferent to what produced the `*-live` documents — a Cloud Run Job, a local script, or
+a hand edit all look identical to them.
+
+**What is removed from the frontend:**
+
+- `frontend/app/records/page.tsx` — `handleRetrieveLiveData` (the whole `useCallback`),
+  the `isRetrievingLive` state, the "Retrieve Live Data" button, and the `messagesLogRef`
+  focus/clear on run.
+- `frontend/app/records/(routed)/published/SourceToggle.tsx` — `handleRetrieveLiveData`
+  and the "Retrieve Live Data" button.
+- Both components' SSE readers (`res.body.getReader()` + the `event:`/`data:` hand-parser).
+- `frontend/app/api/local/scrape/route.ts` — **entirely.** There is no `POST /api/local/scrape`.
+
+This also satisfies the Phase 4 exit criterion that `EventSource` /
+`text/event-stream` / `ReadableStreamDefaultReader` reach zero hits in `frontend/`, but by
+deletion rather than by the "poll every 2 seconds" rewrite the plan describes.
+
+#### SHARED-STATE HAZARD — `liveLog` survives; do not delete it with the scrape.
+
+`liveLog` / `setLiveLog` in `frontend/components/IntegratedListPanel.tsx` (its
+`MessagesContext`) is written by **two** paths, not one: the scrape progress reader
+(being removed) **and** the promote-live path. `SourceToggle.tsx:103-122`'s
+`handleUpdateStoredData` appends entries with `stage: "promote"` (success — "Merged live
+… into stored …") and `stage: "promote-error"` (failure) into the same `liveLog`. Those
+promote confirmations are the only user-visible outcome of "Update Stored Data".
+
+Deleting `liveLog` / `LiveLogEntry` / the `role="log"` footer render along with the
+scrape reader **would break promote confirmations.** The scrape-removal change must keep
+`liveLog` (or migrate promote status onto `statusMessage` in the same change).
+`isRetrievingLive` has no surviving writer and can be removed; its only remaining reader
+is the `ellipsis-animation` on the last `liveLog` row.
+
+#### RELATIONSHIP TO #65.
+
+Decision #65's **conclusion survives**: vendor-review passwords come from the Firestore
+`passwords` document, not Secret Manager, and are not transmitted at invocation. Its
+**mechanism is superseded**: there is no Cloud Run Job, so no job runtime service
+account, no `roles/run.invoker` (or `roles/run.developer`) binding on a job, and no
+"act as the job's runtime service account" grant. The script reads
+`nerd_documents/passwords` (and `nerd_documents/added`) directly as whatever local
+identity it runs as. #65's latent-bug finding — that `frontend/lib/passwords.json` has
+had no writer since Phase 2 and the scrape reads a stale copy — still holds and is fixed
+the same way: the local script reads passwords from Firestore, not from the file.
+
+#### AUTH DECISION — the client is pinned to the project in code.
+
+The script constructs its Firestore client with an explicit project argument:
+
+```python
+firestore.Client(project="edtech-agent-2026")
+```
+
+not by relying on environment or `gcloud` resolution.
+
+**Why this is not optional here** (`docs/firestore-local-auth-09-03-26.md` §2): an
+explicit constructor argument is the **highest-precedence** layer of project-ID
+resolution, above the `GOOGLE_CLOUD_PROJECT` environment variable. Without it, the
+standard `google-cloud-firestore` client — which the repo already uses in
+`scripts/nerd_documents.py` — falls to `GOOGLE_CLOUD_PROJECT`, and this machine exports
+`GOOGLE_CLOUD_PROJECT="acp-vertex-core"` shell-globally for unrelated tooling. That value
+would win.
+
+**The critical consequence** (§2, §4): the usual reassurance that "a wrong-project write
+fails with a loud 403" assumes the caller holds **no** permissions on the leaked
+project. IAM authorizes before Firestore checks resource existence, so a caller with no
+access to `acp-vertex-core` gets `PERMISSION_DENIED` and the write is refused. **But the
+developer running this script does have access to `acp-vertex-core`.** A leaked write
+would therefore **succeed silently into the wrong Firestore database** — no error, no
+prompt, wrong data written. The client library performs no pre-flight validation that the
+resolved project matches an intended one; it constructs the request with the
+highest-precedence identifier and sends it blind.
+
+This is the **third occurrence** of this exact failure mode being designed around in this
+project: `frontend/lib/server/firebase-admin.ts` requires `NERD_FIREBASE_PROJECT_ID` and
+throws rather than consulting `GOOGLE_CLOUD_PROJECT` ([Decision #51](#51-cloud-architecture-split--nextjs-owns-persistence-and-auth-python-becomes-one-stateless-function-service));
+`scripts/nerd_documents.py` takes an explicit `--project` and its docstring states
+"GOOGLE_CLOUD_PROJECT is never consulted"; and now this script.
+
+**No native assertion is available** (§4): neither `google-cloud-firestore` nor
+`firebase-admin` offers a documented way to instruct the library to verify that the
+resolved project equals an expected string before transmitting. Any such check is
+hand-written application code. Explicit pinning at construction is the documented
+mechanism; a hand-rolled resolved-project assertion is optional defense-in-depth on top.
+
+#### DESIGN CONSTRAINT — the script's code is the only write boundary.
+
+`docs/firestore-local-auth-09-03-26.md` §5: IAM cannot scope Firestore access below the
+**database** level (IAM Conditions can pin `roles/datastore.user` to one database
+instance, but not to specific collections or documents), and Firebase Security Rules do
+**not** apply to the Admin SDK or to a `google-cloud-firestore` client running with
+service-account or ADC credentials — those operate in a "trusted environment" that
+bypasses Rules entirely. Whatever identity the script runs as can therefore overwrite
+**any** document in the `(default)` database.
+
+Because no platform mechanism can constrain it, the script's own code is the sole
+boundary. Binding requirement: **the write path must name the three target document keys
+explicitly** (`published-live`, `added-live`, `vendors-live`) and **must not** build or
+iterate a computed key list. A bug that produced the wrong key would otherwise overwrite
+`published`, `vendors`, `passwords`, or `tracking` with scrape output, with no ETag guard
+in the way (the `*-live` documents are outside the If-Match system).
+
+#### OPEN, NOT DECIDED — plain user ADC vs. service-account impersonation.
+
+How the script authenticates is not settled here. Both positions, fairly:
+
+- **Service-account impersonation** (`gcloud auth application-default login
+  --impersonate-service-account=…`): narrows the script's blast radius from the
+  developer's *full* set of permissions across every project they can touch to
+  `roles/datastore.user` on `edtech-agent-2026` alone. The developer needs
+  `roles/iam.serviceAccountTokenCreator` on that SA and no direct Firestore permission.
+  Cloud Audit Logs then carry dual attribution — the SA as `principalEmail`, the human in
+  `serviceAccountDelegationInfo` on the same entry — preserving both machine-identity
+  isolation and non-repudiation.
+- **Plain user ADC** (`gcloud auth application-default login`): fewer moving parts for a
+  single developer — no SA to create, no token-creator grant, no impersonation config in
+  the ADC file. Consistent with SRD for a tool one person runs occasionally. The tradeoff
+  is that the script inherits the developer's full permissions for its lifetime, and the
+  audit log shows only the human (`serviceAccountDelegationInfo` empty).
+
+**Ruled out either way:** downloaded service-account key files. Google's documented
+position is that downloaded keys bypass the IAM Credentials API, never expire, and create
+lateral-movement risk if the laptop is compromised; impersonation is the documented
+replacement.
+
+`roles/datastore.user` is the narrowest workable **predefined** role for whichever
+identity ends up holding Firestore access — it carries
+`datastore.entities.get`/`list`/`create`/`update`/`delete`. `roles/datastore.viewer` is
+narrower but read-only and cannot write the `*-live` documents.
+
+#### LIKELY ANSWER to #65's UNVERIFIED audit-logging item.
+
+Decision #65 recorded as UNVERIFIED whether Firestore Data Access audit logs are enabled
+for this project. `docs/firestore-local-auth-09-03-26.md` §6: **Data Access audit logs
+are disabled by default across the entire platform** (Admin Activity logs are always on,
+but document reads and writes are Data Access events). Under the default configuration, a
+script reading two documents and writing three generates **zero** audit-log entries about
+the data mutation. Enabling them requires a Google Cloud administrator to turn on Data
+Access logging for `firestore.googleapis.com` in the project's IAM Audit Logs config.
+
+This is the **documented platform default**, not a verified fact about
+`edtech-agent-2026` — the project could already have Data Access logging enabled. It
+still needs a console check. But the default makes "disabled, zero log entries" the
+likely current state.
+
+#### FRESHNESS FINDING — `$meta.last_scraped` exists but nothing shows it.
+
+The recon (`.scratch/verification/local-scrape-recon-20260903-1252-raw.md`, Task 3)
+establishes: all three `*-live` documents already carry
+`$meta = { last_scraped: <ISO-8601 UTC>, total_records, generated_by:
+"scrape_ncademi_live.py" }`, written by `scrape_ncademi_live.py:747` /
+`write_output()`, and it round-trips into the Firestore document bytes intact. But **no
+UI surfaces it.** `lib/server/documents-read.ts`'s `readLiveProducts()` and
+`getLiveVendors()` return only `{ products }` / `{ vendors }`, dropping `$meta`. The only
+consumer of `last_scraped` is `promote-live/route.ts`, which folds it into the *stored*
+document's `snapshot_taken_at` (not displayed).
+
+While the scrape was an in-app button, a user could see when they had last run it. With
+no in-app trigger, the live data's age is invisible. Surfacing `$meta.last_scraped` near
+the Stored/Live toggle is **required work** for this pivot — it is recorded here as
+required, not yet designed.
+
+#### PLAN-OF-RECORD CORRECTION IS A SEPARATE PASS.
+
+This decision invalidates roughly **30 passages** in `docs/nerd-cloud-migration.md` —
+Phase 4 Part C in full, the Phase 4 client-handler/accessibility instructions, four Phase
+4 exit criteria, Phase 5 Steps 2b and 2c, corrections C4/C9/A2, the architecture diagram,
+the `nerd_scrape_jobs` section, and more. Every one is enumerated with line numbers in
+the recon artifact (Task 5). That correction pass is deliberately **not** folded into
+this entry; it is its own dispatch against `nerd-cloud-migration.md`.
+
