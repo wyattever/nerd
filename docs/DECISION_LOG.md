@@ -817,3 +817,93 @@ flagged as pending in `docs/nerd-cloud-migration.md` (Phase 1 constraints) and t
 handoff was already done. `api/worker.py`, named in `store.py`'s docstring, is
 also gone.
 
+---
+
+### 65. SCRAPE CREDENTIAL SOURCE DECIDED — the rehomed scrape reads passwords from Firestore, not Secret Manager, not at invocation.
+
+**Date:** 2026-09-03
+**Status:** Decided
+**Source:** `.scratch/verification/passwords-recon-20260903-1209-raw.md`, audited at `20bb3ee`
+
+**DECISION.** The rehomed scrape (Phase 4 Part C, run as a Cloud Run Job) obtains
+vendor-review passwords by reading the Firestore `passwords` document
+(`nerd_documents/passwords`) directly, using the Job's own runtime service
+account. It does **not** read them from Secret Manager, and they are **not**
+passed to the Job at invocation time (no `containerOverrides`, no env var, no
+argument).
+
+**This closes the open item** previously described in the 2026-09-02 handoff as
+*"the scrape script reads password files from disk, so after the filesystem
+removal the Next.js route must build and transmit a password index to the Python
+service … a conscious credential exposure requiring an explicit decision."*
+Nothing is transmitted. The Next.js route builds no index. The Job reads its own
+credential source under its own identity.
+
+**Rationale, in order.**
+
+1. **Invocation-time passing is ruled out on documented grounds.** Per
+   `docs/cloud-run-jobs-secrets-09-03-26.md`: execution overrides are recorded
+   permanently in the immutable Execution resource in plain text, readable by
+   anyone who can run `gcloud run jobs executions describe`; the `RunJob` API
+   call is audit-classified as **Data Write**, so an override payload may be
+   captured in Cloud Logging outside the container's isolated environment; and
+   Google's own environment-variable documentation explicitly cautions against
+   putting secrets in env vars. Passing the passwords per-execution would be the
+   worst of the three options on exposure.
+
+2. **Secret Manager is ruled out on source-of-truth grounds, not security
+   grounds.** `passwords` is a live Firestore document kind (`AuxKind` in
+   `frontend/lib/server/documents.ts:130`) that the editor writes to through
+   `frontend/app/api/local/passwords/route.ts` — created on Candidate import
+   (`POST`), removed on promote-to-published (`DELETE`). A Secret Manager copy
+   would be a second store with no writer keeping it in sync: an operator
+   importing a Candidate would update Firestore while the Secret Manager blob
+   silently went stale. One authority is correct here; Secret Manager would
+   manufacture a divergence.
+
+3. **Firestore is already a Job dependency.** Phase 4 Part C has the Job writing
+   progress to `nerd_scrape_jobs` in Firestore. Reading `nerd_documents/passwords`
+   adds no new infrastructure, no new client library, and no new API surface.
+
+**Latent bug this fixes.** `scripts/scrape_ncademi_live.py:186-212`
+(`load_added_passwords()`) reads `frontend/lib/passwords.json`. That file has had
+no writer since the Phase 2 Firestore port — it is frozen at its 2026-08-27
+state, 31 records. Passwords are created once at Candidate import and never
+edited or regenerated (`frontend/lib/passwords.ts`), so the Firestore document is
+a strict superset of the file: any Candidate imported after 2026-08-27 has a
+password that exists in Firestore and **not** in `passwords.json`, and the
+current scrape cannot see it. Repointing the Job to Firestore fixes this
+independently of the credential-source question.
+
+**IAM consequence.** Because no overrides are passed, the frontend service
+account needs only `roles/run.invoker` on the Job, not `roles/run.developer` /
+`run.jobs.runWithOverrides`. The Job's **runtime** service account needs a
+Firestore read role (`roles/datastore.viewer`, or `roles/datastore.user`)
+scoped to the project — deny-all `firestore.rules` does not apply to Admin/SA
+access. Neither service account is pinned today — `scripts/deploy.sh` passes no
+`--service-account`, so both `nerd-frontend` and `nerd-api` run as the project
+default Compute Engine SA. The intended bindings are described in
+`docs/nerd-cloud-migration.md:970-982` but are not yet concrete.
+
+**UNVERIFIED — Firestore Data Access audit logging.** Whether Data Access audit
+logs are enabled for Firestore in this project is **not determinable from the
+repo** (no `auditConfig` or IAM policy is version-controlled here). This matters
+because Secret Manager's `AccessSecretVersion` Data Access log is the documented
+strong-audit path for credential retrieval, whereas a Firestore `get` on
+`nerd_documents/passwords` is only audited if project Data Access logs are on.
+This was judged **not** to outweigh the source-of-truth argument in (2), given
+the credential value recorded next. If a strong per-access audit trail on these
+passwords is later required, enabling Firestore Data Access logs is the
+mitigation, not switching stores.
+
+**Credential value — observation, not a decision.** These passwords are generated
+deterministically as `<first-four-letters-of-the-product-name><two-digit-year>`
+(`frontend/lib/passwords.ts`), lowercased and space-stripped, with a numeric
+suffix only on collision. They are created once at import, never regenerated, and
+deleted at promote-to-published. Anyone who knows the scheme can derive a
+product's password from its public product name. This is recorded here as
+context for why the audit-logging tradeoff above is acceptable. Whether a
+guessable, low-value, single-purpose preview password is itself an acceptable
+design is **not decided by this entry** — it is raised as a separate open
+question for a later review.
+
