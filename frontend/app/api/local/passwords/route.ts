@@ -1,48 +1,39 @@
 // frontend/app/api/local/passwords/route.ts
 /**
- * Local-only read/create path for lib/passwords.json -- see that file's
- * own $meta and lib/passwords.ts's header for the full rationale.
- * Deliberately NOT routed through local-write.ts's DataKind/ETag system:
- * passwords.json isn't one of the four main documents that system guards
- * concurrent writes for, and doesn't need that guarantee (a password is
- * only ever created once, never edited) -- a plain read-modify-write is
- * enough for a local, single-operator tool.
+ * Read / get-or-create / delete for vendor-review passwords. See
+ * lib/passwords.ts's header for the generation spec and the rationale.
  *
- * GET returns the whole file -- CandidateEditor.tsx/AddedEditor.tsx fetch
- * it once and look up by product_name client-side, the same "read the
- * whole array, filter locally" pattern local-data.ts's readers use.
+ * Deliberately NOT part of the DataKind ETag system, carried over unchanged
+ * from the filesystem version: a password is created once and never edited,
+ * so there is no read-modify-write conflict worth guarding against with an
+ * If-Match round trip.
  *
- * POST is get-or-create, called only from CandidateEditor.tsx's
- * handleImport (per this feature's own spec: passwords are generated
- * during the Import Candidate process, not lazily on every view -- a
- * pre-existing candidate imported before this feature shipped gets its
- * password from a one-off backfill script instead, not from viewing it in
- * either editor). Returns the existing record unchanged if one already
- * exists for that product_name.
+ * KNOWN LIMITATION, PRESERVED RATHER THAN SILENTLY CHANGED. POST is a plain
+ * read-modify-write. Two simultaneous creates for different products could
+ * interleave such that one overwrites the other's append. The filesystem
+ * version had exactly this property and it never mattered, because the only
+ * caller is CandidateEditor.tsx's handleImport -- one operator, one import at
+ * a time. Firestore makes it *possible* to fix (wrap in a transaction) and
+ * that is worth doing if this ever gains a second caller, but doing it now
+ * would be adding a guarantee the prior code did not make, on a code path
+ * nobody has reported a problem with. Flagged here rather than fixed
+ * silently or left undocumented.
  *
- * DELETE removes the record for one product_name, called only from
- * AddedEditor.tsx's handlePromoteToPublished -- a password is
- * vendor-review-only metadata for a page that's still gated ("Added to
- * Site"), so once a product is promoted to published.json (publicly live,
- * no more review gate) it's stale, kept around for no reason. Silently a
- * no-op if no record matches (nothing to clean up).
+ * GET returns the whole document -- CandidateEditor.tsx and AddedEditor.tsx
+ * fetch once and look up by product_name client-side, the same "read the
+ * whole array, filter locally" pattern the other readers use.
  *
- * Node runtime is the default for App Router route handlers, but it is
- * declared explicitly here: fs is unavailable on Edge, and this guards
- * against an accidental edge opt-in or a future default change.
+ * DELETE is called only from AddedEditor.tsx's handlePromoteToPublished: a
+ * password is vendor-review-only metadata for a page that is still gated, so
+ * once a product reaches published it is stale. A no-op when nothing matches.
  */
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { assertLocalOnly, libDir } from "@/lib/local-write";
+import { assertSession } from "@/lib/server/local-session";
+import { tryReadRaw, saveUnguarded } from "@/lib/server/documents";
 import { getOrCreatePassword, type PasswordRecord } from "@/lib/passwords";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-// See local-write.ts's libDir() for why process.cwd() alone isn't reliable
-// here under the standalone build.
-const PASSWORDS_PATH = path.join(libDir(), "passwords.json");
 
 interface PasswordsFile {
   $schema_version: number;
@@ -50,14 +41,25 @@ interface PasswordsFile {
   passwords: PasswordRecord[];
 }
 
+const EMPTY: PasswordsFile = { $schema_version: 1, $meta: {}, passwords: [] };
+
 async function readPasswordsFile(): Promise<PasswordsFile> {
-  const raw = await fs.readFile(PASSWORDS_PATH, "utf8");
-  const body = JSON.parse(raw) as Partial<PasswordsFile>;
+  const found = await tryReadRaw("passwords");
+  if (!found) return { ...EMPTY };
+  const body = JSON.parse(found.data) as Partial<PasswordsFile>;
   return {
     $schema_version: typeof body.$schema_version === "number" ? body.$schema_version : 1,
     $meta: body.$meta ?? {},
     passwords: Array.isArray(body.passwords) ? body.passwords : [],
   };
+}
+
+async function writePasswordsFile(file: PasswordsFile, actor: string): Promise<void> {
+  await saveUnguarded({
+    key: "passwords",
+    bytes: `${JSON.stringify(file, null, 2)}\n`,
+    actor,
+  });
 }
 
 function jsonResponse(body: unknown, status: number): Response {
@@ -68,16 +70,15 @@ function jsonResponse(body: unknown, status: number): Response {
 }
 
 export async function GET(): Promise<Response> {
-  const blocked = assertLocalOnly();
-  if (blocked) return blocked;
+  const gate = await assertSession();
+  if ("response" in gate) return gate.response;
 
-  const file = await readPasswordsFile();
-  return jsonResponse(file, 200);
+  return jsonResponse(await readPasswordsFile(), 200);
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const blocked = assertLocalOnly();
-  if (blocked) return blocked;
+  const gate = await assertSession();
+  if ("response" in gate) return gate.response;
 
   let body: unknown;
   try {
@@ -97,16 +98,15 @@ export async function POST(request: Request): Promise<Response> {
   const { records, record, created } = getOrCreatePassword(file.passwords, productName, vendorName);
 
   if (created) {
-    const bytes = `${JSON.stringify({ ...file, passwords: records }, null, 2)}\n`;
-    await fs.writeFile(PASSWORDS_PATH, bytes, "utf8");
+    await writePasswordsFile({ ...file, passwords: records }, gate.user.email);
   }
 
   return jsonResponse({ record, created }, 200);
 }
 
 export async function DELETE(request: Request): Promise<Response> {
-  const blocked = assertLocalOnly();
-  if (blocked) return blocked;
+  const gate = await assertSession();
+  if ("response" in gate) return gate.response;
 
   let body: unknown;
   try {
@@ -121,13 +121,11 @@ export async function DELETE(request: Request): Promise<Response> {
   }
 
   const file = await readPasswordsFile();
-  const before = file.passwords.length;
   const passwords = file.passwords.filter((r) => r.product_name !== productName);
-  const deleted = passwords.length < before;
+  const deleted = passwords.length < file.passwords.length;
 
   if (deleted) {
-    const bytes = `${JSON.stringify({ ...file, passwords }, null, 2)}\n`;
-    await fs.writeFile(PASSWORDS_PATH, bytes, "utf8");
+    await writePasswordsFile({ ...file, passwords }, gate.user.email);
   }
 
   return jsonResponse({ deleted }, 200);

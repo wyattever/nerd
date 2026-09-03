@@ -10,7 +10,7 @@
 // this can redirect into it like the /editor leaves already do.
 
 import { redirect } from "next/navigation";
-import { getCandidates } from "@/lib/local-data";
+import { getCandidates } from "@/lib/server/documents-read";
 
 export const dynamic = "force-dynamic";
 

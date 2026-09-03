@@ -1,82 +1,122 @@
 // frontend/app/api/local/candidate/route.ts
 /**
- * Local-only server-side write path for candidate.json.
+ * Server-side read/write path for the `candidate` document.
  *
- * Mirrors app/api/local/published/route.ts exactly, differing only in the
- * DataKind ("candidate") passed to readPublishedRaw/writePublishedAtomic.
- * See that file's header comment and docs/NERD_System_Architecture.md for the
- * full rationale (gating, ETag concurrency, atomic writes, and the
- * tracking.json split/merge).
+ * PORTED FROM THE FILESYSTEM VERSION. Deliberately unchanged: the HTTP
+ * contract. GET still returns the document plus a strong ETag, in both the
+ * header and the body's `$etag` (a compressing intermediary can strip the
+ * header without touching the body -- verified against the nerd_cloud.sh
+ * Cloudflare tunnel -- so every client-side reader falls back to the body
+ * value). POST still requires If-Match and still answers 412 on mismatch.
+ * tracking_* fields are still merged in on read and split back out on
+ * write. No client component changes because of this file.
  *
- * Node runtime is the default for App Router route handlers, but it is
- * declared explicitly here: fs is unavailable on Edge, and this guards
- * against an accidental edge opt-in or a future default change.
+ * TWO THINGS DID CHANGE, plus one deliberate non-change:
+ *
+ * 1. Read-compare-write is now ONE transaction. The old sequence read the
+ *    ETag, compared it, wrote, then re-read -- four operations, safe only
+ *    because one local disk had one writer. saveGuarded() folds the
+ *    comparison and the write into a single Firestore transaction, so two
+ *    concurrent saves can no longer both pass the check and both write.
+ *    See lib/server/documents.ts.
+ *
+ * 2. Validation now runs BEFORE the ETag check rather than after. Forced by
+ *    (1): the comparison no longer happens in this file. The visible effect
+ *    is that a save which is both stale AND invalid now reports the
+ *    validation problems instead of only the 412. That is more useful, and
+ *    it is the only behavioral difference a user can observe.
+ *
+ * 3. The gate is UNCHANGED in effect: local-only (NODE_ENV plus
+ *    NEXT_PUBLIC_DISABLE_AUTH), returning a bare 404. This file was
+ *    delivered with it swapped for a Phase 3 assertSession() Firebase
+ *    session-cookie check; that was reverted because real auth does not
+ *    exist yet in this phase. The call site still reads assertSession() --
+ *    it now resolves to the local-only shim in lib/server/local-session.ts,
+ *    which Phase 3 replaces with the real check.
+ *
+ * The `dynamic = "force-dynamic"` declaration is retained and still
+ * necessary. Its original reason (a GET with no request input can be frozen
+ * at build time by Next's caching heuristic, serving a stale ETag that
+ * breaks every subsequent save) applies to a Firestore read exactly as it
+ * did to an fs.readFile. `runtime = "nodejs"` is likewise retained:
+ * firebase-admin cannot run on Edge.
+ *
+ * This file mirrors app/api/local/published/route.ts exactly, differing
+ * only in the DataKind ("candidate"). See that file's header for the full
+ * rationale behind every decision in it -- the gate, the single-transaction
+ * compare-and-swap, the validate-before-guard ordering, and why `dynamic`
+ * and `runtime` are declared explicitly. Keep the two in step.
  */
 
+import { assertSession } from "@/lib/server/local-session";
 import {
-  assertLocalOnly,
-  readPublishedRaw,
-  writePublishedAtomic,
+  readRaw,
+  saveGuarded,
   readTrackingRecords,
-  writeTrackingRecords,
-} from "@/lib/local-write";
+  DocumentNotFoundError,
+  DocumentTooLargeError,
+} from "@/lib/server/documents";
 import { splitTracking, mergeTracking } from "@/lib/tracking";
 import { hasBlockingError, validateProductRecord } from "@/lib/published-validate";
 
 export const runtime = "nodejs";
-// See app/api/local/vendors/route.ts's header comment on `dynamic` --
-// without this, GET's fs.readFile-only response (body AND ETag) can be
-// frozen at `next build` time under a production build, breaking every save
-// that depends on a fresh ETag.
 export const dynamic = "force-dynamic";
 
-function jsonResponse(body: unknown, status: number, extraHeaders?: Record<string, string>): Response {
+const KIND = "candidate" as const;
+const ARRAY_KEY = "products" as const;
+
+function jsonResponse(
+  body: unknown,
+  status: number,
+  extraHeaders?: Record<string, string>
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...extraHeaders },
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...extraHeaders },
   });
 }
 
 export async function GET(): Promise<Response> {
-  const blocked = assertLocalOnly();
-  if (blocked) return blocked;
+  const gate = await assertSession();
+  if ("response" in gate) return gate.response;
 
-  const { data, etag } = await readPublishedRaw("candidate");
+  let data: string;
+  let etag: string;
+  try {
+    ({ data, etag } = await readRaw(KIND));
+  } catch (err) {
+    if (err instanceof DocumentNotFoundError) {
+      // Distinct from "not authorized" and distinct from a crash: the
+      // document has not been seeded. In practice this means the migration
+      // has not run against this database, which is worth saying plainly
+      // rather than surfacing as a 500 with a stack trace.
+      return jsonResponse(
+        { error: `The "${KIND}" document has not been initialized in this database.` },
+        503
+      );
+    }
+    throw err;
+  }
+
   const parsed = JSON.parse(data) as Record<string, unknown>;
-  // tracking_* fields live in tracking.json (see lib/tracking.ts) -- merged
-  // back into `products` here so this route's shape is unchanged for callers.
-  parsed.products = mergeTracking(
-    Array.isArray(parsed.products) ? (parsed.products as Array<Record<string, unknown>>) : [],
+  parsed[ARRAY_KEY] = mergeTracking(
+    Array.isArray(parsed[ARRAY_KEY]) ? (parsed[ARRAY_KEY] as Array<Record<string, unknown>>) : [],
     await readTrackingRecords()
   );
-  // Echoed into the body as `$etag` too -- see app/api/local/vendors/
-  // route.ts's GET for why (a compressing intermediary can strip the ETag
-  // header without touching the body; every client-side reader must fall
-  // back to this). The ETag still hashes the on-disk bytes, which never
-  // contain tracking, so a later If-Match POST never spuriously 412s.
-  const body = { ...parsed, $etag: etag };
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    // See app/api/local/vendors/route.ts's GET for why no-store is explicit
-    // here rather than left to browser cache heuristics.
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ETag: etag },
-  });
+
+  // The ETag hashes the STORED bytes, which do not contain tracking -- so
+  // the merge above is display-only and a later If-Match POST comparing
+  // against this value can never be spuriously rejected.
+  return jsonResponse({ ...parsed, $etag: etag }, 200, { ETag: etag });
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const blocked = assertLocalOnly();
-  if (blocked) return blocked;
+  const gate = await assertSession();
+  if ("response" in gate) return gate.response;
 
-  const { etag: currentEtag } = await readPublishedRaw("candidate");
   const ifMatch = request.headers.get("If-Match");
-  if (ifMatch !== currentEtag) {
-    return jsonResponse(
-      {
-        error:
-          "ETag mismatch. The file on disk has changed since this copy was read -- re-fetch before saving.",
-      },
-      412
-    );
+  if (!ifMatch) {
+    return jsonResponse({ error: "If-Match header is required." }, 428);
   }
 
   let body: unknown;
@@ -86,21 +126,18 @@ export async function POST(request: Request): Promise<Response> {
     return jsonResponse({ error: "Request body is not valid JSON." }, 400);
   }
 
-  const products = (body as { products?: unknown } | null)?.products;
-  if (!Array.isArray(products)) {
-    return jsonResponse({ error: '"products" must be an array.' }, 400);
+  const records = (body as Record<string, unknown> | null)?.[ARRAY_KEY];
+  if (!Array.isArray(records)) {
+    return jsonResponse({ error: `"${ARRAY_KEY}" must be an array.` }, 400);
   }
 
-  // tracking_* is persisted to tracking.json, never this file -- split it
-  // out before validating and writing (see lib/tracking.ts).
-  const {
-    records: strippedProducts,
-    tracking,
-    scopeNames,
-  } = splitTracking(products as Array<Record<string, unknown>>);
+  // tracking_* is persisted to its own document, never this one.
+  const { records: stripped, tracking, scopeNames } = splitTracking(
+    records as Array<Record<string, unknown>>
+  );
 
-  for (const product of strippedProducts) {
-    const issues = validateProductRecord(product);
+  for (const record of stripped) {
+    const issues = validateProductRecord(record);
     if (hasBlockingError(issues)) {
       return jsonResponse(
         { error: "One or more records failed validation. No changes were written.", issues },
@@ -109,12 +146,37 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  const bytes = `${JSON.stringify({ ...(body as Record<string, unknown>), products: strippedProducts }, null, 2)}\n`;
-  await writePublishedAtomic("candidate", bytes);
-  // After the main document is safely on disk -- a rejected save above must
-  // not leave a half-applied tracking write behind.
-  await writeTrackingRecords(scopeNames, tracking);
+  const bytes = `${JSON.stringify(
+    { ...(body as Record<string, unknown>), [ARRAY_KEY]: stripped },
+    null,
+    2
+  )}\n`;
 
-  const { etag: newEtag } = await readPublishedRaw("candidate");
-  return jsonResponse({ ok: true, etag: newEtag }, 200, { ETag: newEtag });
+  let result;
+  try {
+    result = await saveGuarded({
+      key: KIND,
+      ifMatch,
+      bytes,
+      actor: gate.user.email,
+      tracking: { scopeNames, rows: tracking },
+    });
+  } catch (err) {
+    if (err instanceof DocumentTooLargeError) {
+      return jsonResponse({ error: err.message }, 413);
+    }
+    throw err;
+  }
+
+  if (!result.ok) {
+    return jsonResponse(
+      {
+        error:
+          "ETag mismatch. This document has changed since your copy was read -- re-fetch before saving.",
+      },
+      412
+    );
+  }
+
+  return jsonResponse({ ok: true, etag: result.etag }, 200, { ETag: result.etag });
 }

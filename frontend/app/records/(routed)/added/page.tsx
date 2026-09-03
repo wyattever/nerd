@@ -4,7 +4,7 @@
 // rationale -- identical structure, added.json instead of candidate.json.
 
 import { redirect } from "next/navigation";
-import { getAddedProducts } from "@/lib/local-data";
+import { getAddedProducts } from "@/lib/server/documents-read";
 
 export const dynamic = "force-dynamic";
 

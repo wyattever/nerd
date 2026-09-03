@@ -15,7 +15,7 @@
 // (a fresh/shared link) it matters most for.
 
 import { redirect } from "next/navigation";
-import { getPublishedProducts } from "@/lib/local-data";
+import { getPublishedProducts } from "@/lib/server/documents-read";
 
 export const dynamic = "force-dynamic";
 

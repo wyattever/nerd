@@ -1,5 +1,5 @@
 // frontend/app/editor/(routed)/vendors/[slug]/page.tsx
-import { getVendors } from "@/lib/local-data";
+import { getVendors } from "@/lib/server/documents-read";
 import { VendorEditor } from "./VendorEditor";
 
 interface DetailPageProps {

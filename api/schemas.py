@@ -64,29 +64,8 @@ class CandidateRecord(ListingData):
 
 
 # ---------------------------------------------------------------------------
-# Request models (Unchanged)
-# ---------------------------------------------------------------------------
-
-class InitialResearchRequest(BaseModel):
-    product_url: str
-    timeout_min: int = Field(default=4, ge=1, le=4)
-    save_as_candidate: bool = False
-
-
-# ---------------------------------------------------------------------------
 # Response models (Unchanged)
 # ---------------------------------------------------------------------------
-
-class EnqueueResponse(BaseModel):
-    job_id: str
-
-
-class JobResultPayload(BaseModel):
-    raw_markdown: str
-    parsed_listing: ListingData
-    url_cache: dict[str, str]
-    rejections: list[str] = Field(default_factory=list)
-
 
 class RenderRequest(ListingData):
     pass
@@ -95,42 +74,6 @@ class RenderRequest(ListingData):
 class RenderResponse(BaseModel):
     html: str
 
-
-# ── Link Validation (Unchanged) ──────────────────────────────────────────
-class LinkValidationRequest(BaseModel):
-    urls: list[str]
-
-class LinkValidationDetailedResult(BaseModel):
-    url: str
-    is_valid: bool
-    status_code: Optional[int] = None
-    reason: Optional[str] = None
-    screenshot_path: Optional[str] = None
-    timestamp: Optional[str] = None
-
-class LinkValidationJobStatus(BaseModel):
-    job_id: str
-    status: Literal["queued", "processing", "complete", "error"]
-    results: Optional[dict[str, LinkValidationDetailedResult]] = None
-    error: Optional[str] = None
-
-class LinkValidationResponse(BaseModel):
-    unreachable_urls: list[str]
-
-
-# ── Batch research (Unchanged) ───────────────────────────────────────────
-
-class BatchResearchRequest(BaseModel):
-    urls: list[str] = Field(min_length=1, max_length=50)
-
-
-class BatchResearchJob(BaseModel):
-    url: str
-    job_id: str
-
-
-class BatchResearchResponse(BaseModel):
-    jobs: list[BatchResearchJob]
 
 # ── Draft ingest (Import Data feature) ────────────────────────────────────
 # See nerd-import-data-architecture-v4.md §4.2

@@ -5,7 +5,7 @@
 // candidate.json.
 
 import type { ReactNode } from "react";
-import { getPublishedProducts } from "@/lib/local-data";
+import { getPublishedProducts } from "@/lib/server/documents-read";
 import { IntegratedListPanel } from "@/components/IntegratedListPanel";
 import type { DirectoryRecord } from "@/lib/directory-schema";
 

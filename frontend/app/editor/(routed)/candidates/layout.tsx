@@ -27,7 +27,7 @@
 // would be prerendered once, at build time, under NODE_ENV=production.
 
 import type { ReactNode } from "react";
-import { getCandidates } from "@/lib/local-data";
+import { getCandidates } from "@/lib/server/documents-read";
 import { IntegratedListPanel } from "@/components/IntegratedListPanel";
 import type { DirectoryRecord } from "@/lib/directory-schema";
 

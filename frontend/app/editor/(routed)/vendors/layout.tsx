@@ -9,7 +9,7 @@
 // layouts (still backed by PublishedProductRecord[]).
 
 import type { ReactNode } from "react";
-import { getVendors } from "@/lib/local-data";
+import { getVendors } from "@/lib/server/documents-read";
 import { IntegratedListPanel } from "@/components/IntegratedListPanel";
 
 export const dynamic = "force-dynamic";

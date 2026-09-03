@@ -26,7 +26,7 @@ import { buildNcademiListingHtml } from "@/lib/ncademiPreview";
 import vendorsData from "@/lib/vendors.json";
 import { useMessages } from "@/components/IntegratedListPanel";
 import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
-import type { SnapshotMeta } from "@/lib/local-data";
+import type { SnapshotMeta } from "@/lib/server/documents-read";
 import type {
   PublishedAcrReport,
   PublishedProductRecord,
@@ -201,7 +201,7 @@ export function PublishedEditor({ slug, initialProducts, initialSchemaVersion, i
         });
 
         if (res.status === 412) {
-          setSaveError("Save failed: the file on disk changed since this copy was loaded. Reload the page and re-apply your edits.");
+          setSaveError("Save failed because the data was changed on a different tab or by another user. Reload the page and re-apply your edits.");
           return;
         }
         if (res.status === 400) {

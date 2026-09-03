@@ -147,3 +147,36 @@ export function mergeTracking<T extends Record<string, unknown>>(
     return merged as T;
   });
 }
+
+/**
+ * Reconciles the full tracking row set for one save.
+ *
+ * Within `scopeNames` -- every product_name the incoming batch contained --
+ * `existing` rows are replaced by `rows`, so a record whose tracking was
+ * cleared loses its row and a newly-set one gains it. Rows for
+ * product_names OUTSIDE `scopeNames` (the other editor categories) are
+ * carried through untouched.
+ *
+ * Pure, and deliberately so: this runs inside a Firestore transaction (see
+ * lib/server/documents.ts's saveGuarded), where the transaction callback
+ * may be retried on contention and must therefore have no side effects of
+ * its own. The fs version's writeTrackingRecords() interleaved this logic
+ * with its own read and write; that interleaving is what is being undone.
+ *
+ * Output is sorted by product_name so the serialized document is stable --
+ * two saves producing the same logical rows produce byte-identical
+ * documents, and therefore the same ETag.
+ */
+export function reconcileTrackingRows(
+  existing: TrackingRecord[],
+  scopeNames: string[],
+  rows: TrackingRecord[]
+): TrackingRecord[] {
+  const scope = new Set(scopeNames);
+  const next = existing.filter((r) => !scope.has(r.product_name));
+  for (const row of rows) {
+    if (TRACKING_FIELDS.some((f) => row[f] !== null)) next.push(row);
+  }
+  next.sort((a, b) => a.product_name.localeCompare(b.product_name));
+  return next;
+}

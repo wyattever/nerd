@@ -4,7 +4,7 @@
 // full rationale (independent getVendors() read, inline "Record not found"
 // vs notFound(), why `dynamic = "force-dynamic"` is required).
 
-import { getVendors, getLiveVendors } from "@/lib/local-data";
+import { getVendors, getLiveVendors } from "@/lib/server/documents-read";
 import { RecordsVendorDetail } from "./RecordsVendorDetail";
 
 export const dynamic = "force-dynamic";

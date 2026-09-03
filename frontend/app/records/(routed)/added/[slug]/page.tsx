@@ -9,7 +9,7 @@
 // separate from published-live.json's public-only set), STORED
 // added.json otherwise.
 
-import { getAddedProducts, getAddedLiveProducts } from "@/lib/local-data";
+import { getAddedProducts, getAddedLiveProducts } from "@/lib/server/documents-read";
 import { RecordsAddedDetail } from "../RecordsAddedDetail";
 
 export const dynamic = "force-dynamic";

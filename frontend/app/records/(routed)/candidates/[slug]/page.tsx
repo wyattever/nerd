@@ -5,7 +5,7 @@
 // read, inline "Record not found" vs notFound(), why `dynamic =
 // "force-dynamic"` is required).
 
-import { getCandidates } from "@/lib/local-data";
+import { getCandidates } from "@/lib/server/documents-read";
 import { RecordsCandidateDetail } from "../RecordsCandidateDetail";
 
 export const dynamic = "force-dynamic";
