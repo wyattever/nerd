@@ -11,7 +11,7 @@
  * tracking_* fields are still merged in on read and split back out on
  * write. No client component changes because of this file.
  *
- * TWO THINGS DID CHANGE, plus one deliberate non-change:
+ * THREE THINGS DID CHANGE:
  *
  * 1. Read-compare-write is now ONE transaction. The old sequence read the
  *    ETag, compared it, wrote, then re-read -- four operations, safe only
@@ -26,13 +26,17 @@
  *    validation problems instead of only the 412. That is more useful, and
  *    it is the only behavioral difference a user can observe.
  *
- * 3. The gate is UNCHANGED in effect: local-only (NODE_ENV plus
- *    NEXT_PUBLIC_DISABLE_AUTH), returning a bare 404. This file was
- *    delivered with it swapped for a Phase 3 assertSession() Firebase
- *    session-cookie check; that was reverted because real auth does not
- *    exist yet in this phase. The call site still reads assertSession() --
- *    it now resolves to the local-only shim in lib/server/local-session.ts,
- *    which Phase 3 replaces with the real check.
+ * 3. The gate. `assertLocalOnly()` -- the DECISION_LOG #6 local-only check
+ *    (NODE_ENV plus NEXT_PUBLIC_DISABLE_AUTH), returning a bare 404 --
+ *    becomes `assertSession()` from lib/server/session.ts: a real Firebase
+ *    session-cookie check, verified server-side with firebase-admin and
+ *    gated on the NERD_ALLOWED_EMAILS allowlist, returning 401.
+ *
+ *    404 was the right answer when these routes were never meant to be
+ *    reachable in production -- it leaked nothing about a route that
+ *    officially did not exist. They are now a deployed, intended part of
+ *    the app, and 401 is the honest answer for a client that simply needs
+ *    to sign in.
  *
  * The `dynamic = "force-dynamic"` declaration is retained and still
  * necessary. Its original reason (a GET with no request input can be frozen
@@ -48,7 +52,7 @@
  * and `runtime` are declared explicitly. Keep the two in step.
  */
 
-import { assertSession } from "@/lib/server/local-session";
+import { assertSession } from "@/lib/server/session";
 import {
   readRaw,
   saveGuarded,

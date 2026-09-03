@@ -15,29 +15,32 @@
  * boundary condition that isLocalOnlyAllowed() was extracted to avoid one
  * level up. Same reasoning local-data.ts gave for reusing readPublishedRaw().
  *
- * ONE CHANGE FROM local-data.ts, plus one deliberate non-change:
+ * TWO CHANGES FROM local-data.ts:
  *
- *   1. Missing documents. The three live snapshots return an empty result
+ *   1. The guard. `if (!isLocalOnlyAllowed()) notFound()` becomes
+ *      `await requireSessionUser()`, which redirects to /login. A Server
+ *      Component has no Response to return, which is why it needs its own
+ *      guard shape rather than the Route Handlers' assertSession(); see
+ *      lib/server/session.ts.
+ *
+ *      notFound() was right when these routes were never meant to be
+ *      reachable in production -- a 404 leaked nothing about a route that
+ *      officially did not exist. They are now a deployed, intended part of
+ *      the app, and a visitor who is one sign-in away from the page should be
+ *      sent to sign in, not told the page does not exist.
+ *
+ *   2. Missing documents. The three live snapshots return an empty result
  *      rather than throwing, matching local-data.ts exactly ("no live data
  *      yet" is the normal state). The four stored documents now throw
  *      DocumentNotFoundError instead of ENOENT, which surfaces as a 500 --
  *      correct, because after the migration their absence means the database
  *      was never seeded, and that is not a condition any page should try to
  *      render around.
- *
- *   2. The guard is UNCHANGED from local-data.ts:
- *      `if (!isLocalOnlyAllowed()) notFound()`, the DECISION_LOG #6
- *      local-only boundary (see lib/local-only.ts). This file was delivered
- *      with the guard swapped for a Phase 3 `await requireSessionUser()`
- *      session check; that was reverted here because real auth does not
- *      exist yet in this phase -- see lib/server/local-session.ts for the
- *      matching revert on the Route Handler side.
  */
 
 import "server-only";
-import { notFound } from "next/navigation";
 import { readRaw, tryReadRaw, readTrackingRecords, type DataKind } from "./documents";
-import { isLocalOnlyAllowed } from "../local-only";
+import { requireSessionUser } from "./session";
 import { mergeTracking } from "../tracking";
 import type { PublishedProductRecord } from "../published-tables";
 import type { DirectoryRecord, DirectoryFile } from "../directory-schema";
@@ -58,7 +61,7 @@ export interface LocalDocument {
 }
 
 async function readProductDocument(kind: DataKind): Promise<LocalDocument> {
-  if (!isLocalOnlyAllowed()) notFound();
+  await requireSessionUser();
 
   const { data, etag } = await readRaw(kind);
   const body = JSON.parse(data) as {
@@ -112,7 +115,7 @@ export interface VendorsDocument {
  * type or adding a generic parameter for one caller.
  */
 export async function getVendors(): Promise<VendorsDocument> {
-  if (!isLocalOnlyAllowed()) notFound();
+  await requireSessionUser();
 
   const { data, etag } = await readRaw("vendors");
   const body = JSON.parse(data) as {
@@ -165,7 +168,7 @@ export function deriveLiveVendorSlug(vendorDirectoryUrl: string): string {
 async function readLiveProducts(
   key: "published-live" | "added-live"
 ): Promise<{ products: PublishedProductRecord[] }> {
-  if (!isLocalOnlyAllowed()) notFound();
+  await requireSessionUser();
 
   const found = await tryReadRaw(key);
   if (!found) return { products: [] };
@@ -196,7 +199,7 @@ export function getAddedLiveProducts(): Promise<{ products: PublishedProductReco
 }
 
 export async function getLiveVendors(): Promise<{ vendors: DirectoryRecord[] }> {
-  if (!isLocalOnlyAllowed()) notFound();
+  await requireSessionUser();
 
   const found = await tryReadRaw("vendors-live");
   if (!found) return { vendors: [] };

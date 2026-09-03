@@ -27,7 +27,7 @@
  * which slug derivation they apply.
  */
 
-import { assertSession } from "@/lib/server/local-session";
+import { assertSession } from "@/lib/server/session";
 import { tryReadRaw, readTrackingRecords } from "@/lib/server/documents";
 import { deriveLiveProductSlug } from "@/lib/server/documents-read";
 import { mergeTracking } from "@/lib/tracking";

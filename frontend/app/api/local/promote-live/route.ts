@@ -37,7 +37,7 @@
  * back onto the promoted records at read time.
  */
 
-import { assertSession } from "@/lib/server/local-session";
+import { assertSession } from "@/lib/server/session";
 import {
   tryReadRaw,
   promoteLive,

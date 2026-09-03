@@ -494,3 +494,73 @@ is only caught by exercising the actual write path live, not by static
 verification — worth treating "builds and typechecks" as necessary but
 not sufficient evidence a persistence-layer migration is complete going
 forward.
+
+### 61. PHASE 3 COMPLETE — real Firebase session-cookie auth replaces the local-only gate.
+
+**Date:** 2026-09-02
+**Status:** Done, verified live
+**Commits:** e1851b6 (implementation), b173c13 (supporting research doc)
+**Branch:** cloud-migration-phase-3
+
+Decision #54's proposed Phase 3 is now implemented. The enforcement point
+moves into the Node runtime, co-located with the data access it protects.
+
+**What replaced what.** The previous design set an unsigned
+`document.cookie = "__session=true"` client-side and checked for its presence
+in the proxy. That cookie was script-readable, settable by any visitor from
+devtools, and checked nowhere else — the gate was decorative. It is replaced
+by a session cookie minted server-side by `firebase-admin` from a Firebase ID
+token, HttpOnly, and verified on every request. `lib/server/session.ts`
+provides `mintSessionCookie` / `getSessionUser` / `assertSession` (Route
+Handlers, returns 401) / `requireSessionUser` (Server Components, redirects to
+/login). `app/api/auth/session/route.ts` is the exchange endpoint.
+
+**Why the proxy is not the boundary.** `proxy.ts` runs on the Edge runtime,
+where `firebase-admin` cannot run — no Node crypto, no gRPC. It therefore
+*cannot* verify a session cookie, only observe that one is present, which a
+forged cookie also satisfies. The file documents this in its own header and
+keeps a presence-only check as UX (redirect an obviously-signed-out visitor to
+/login rather than into a page that 401s its own data fetch). A request that
+slips past it still cannot read or write anything. Recording this explicitly
+because a naive "just verify the cookie in middleware" change would reintroduce
+exactly the flaw being removed.
+
+**Access control.** An `NERD_ALLOWED_EMAILS` comma-separated allowlist, checked
+both at session mint and on every subsequent request — re-checking per request
+is what makes removing someone take effect immediately rather than at session
+expiry. **Fails closed:** an empty or unset list denies everyone. Verified live
+with an unlisted Google account, which was correctly rejected with "This
+account is not authorized for N.E.R.D."
+
+`NEXT_PUBLIC_DISABLE_AUTH` is deleted from the codebase, not merely unset — a
+"skip all auth" branch existing anywhere in the tree is a standing invitation,
+and its `LOCAL_MODE` sibling is what reached production in the 2026-07-08
+incident (Decision #27).
+
+**Deliberately NOT removed, contrary to the original Phase 3 plan:**
+`lib/local-only.ts` and `lib/local-write.ts`'s `assertLocalOnly`. The plan
+assumed both would be dead after the guard swap. They are not:
+`lib/local-data.ts` still carries five live `isLocalOnlyAllowed()` guards on
+the vendors and candidates editor read path, and `app/api/local/scrape/route.ts`
+(Phase 5) still calls `assertLocalOnly`. Deleting the module would have broken
+the build. Migrating `local-data.ts` off the local-only gate is deferred to its
+own scoped pass — bolting it onto a security-boundary change would have been
+the same mistake Decision #60 documents, in the opposite direction.
+
+**Local development model** (per `docs/nerd-local-dev-08-28-26.md`): emulate
+Firestore, use **real** Firebase Auth. Firestore is where local work is
+dangerous — a stray write corrupts real directory data. Auth has nothing local
+to corrupt, and signing in for real exercises the exact code path production
+uses while sidestepping the Auth emulator's documented `no "kid" claim`
+friction.
+
+**Verification.** `tsc --noEmit`, build, and lint all clean. Exercised live
+against the Firestore emulator with real Google sign-in: sign-in succeeds for
+an allowlisted account, data loads through `requireSessionUser()`, edits save
+through `assertSession()` with the ETag path intact, and an unlisted account is
+denied. Two anticipated failure modes did not materialize — `localhost` was
+already an authorized domain on this project, and `createSessionCookie`
+succeeded without an explicit `roles/iam.serviceAccountTokenCreator` grant to
+the ADC user identity. Both remain plausible on a fresh environment; see
+`docs/firebase-nextjs-auth-configuration-09-02-26.md`.
+

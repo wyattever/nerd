@@ -29,7 +29,7 @@
  * publicly-visible pages. /records/added's live view reads this one.
  */
 
-import { assertSession } from "@/lib/server/local-session";
+import { assertSession } from "@/lib/server/session";
 import { tryReadRaw, readTrackingRecords } from "@/lib/server/documents";
 import { deriveLiveProductSlug } from "@/lib/server/documents-read";
 import { mergeTracking } from "@/lib/tracking";
