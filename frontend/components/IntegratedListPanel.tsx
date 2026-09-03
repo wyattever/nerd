@@ -98,13 +98,6 @@ interface MessagesContextValue {
    *  so a screen-reader/keyboard user lands on the log as it begins
    *  updating instead of it silently changing off-screen. */
   focusMessages: () => void;
-  /** Whether a live scrape is currently streaming -- lifted up from
-   *  SourceToggle.tsx (rather than kept as that component's own local
-   *  state) so this panel's liveLog render below can tell which entry, if
-   *  any, is still "in progress" and should carry the ellipsis-animation
-   *  class (globals.css) instead of every entry animating forever. */
-  isRetrievingLive: boolean;
-  setIsRetrievingLive: (value: boolean) => void;
 }
 
 const MessagesContext = createContext<MessagesContextValue | null>(null);
@@ -136,7 +129,6 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
   const [saveError, setSaveError] = useState("");
   const [createAction, setCreateAction] = useState<(() => void) | null>(null);
   const [liveLog, setLiveLog] = useState<LiveLogEntry[]>([]);
-  const [isRetrievingLive, setIsRetrievingLive] = useState(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const focusMessages = () => messagesRef.current?.focus();
 
@@ -150,10 +142,8 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
       liveLog,
       setLiveLog,
       focusMessages,
-      isRetrievingLive,
-      setIsRetrievingLive,
     }),
-    [statusMessage, saveError, liveLog, isRetrievingLive]
+    [statusMessage, saveError, liveLog]
   );
 
   const filtered = useMemo(() => {
@@ -350,14 +340,11 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
                 <p className="text-sm text-gray-600">Displaying {items.length} records.</p>
                 <p role="status" aria-live="polite" className="text-sm text-gray-600 min-h-[1.25rem]">{statusMessage}</p>
                 <p role="alert" className="text-sm font-semibold text-red-700 min-h-[1.25rem]">{saveError}</p>
-                {liveLog.map((entry, index) => {
-                  const isActive = isRetrievingLive && index === liveLog.length - 1;
-                  return (
-                    <p key={entry.stage} className={`text-sm text-gray-600${isActive ? " ellipsis-animation" : ""}`}>
-                      {entry.message}
-                    </p>
-                  );
-                })}
+                {liveLog.map((entry) => (
+                  <p key={entry.stage} className="text-sm text-gray-600">
+                    {entry.message}
+                  </p>
+                ))}
               </div>
             </div>
           </footer>

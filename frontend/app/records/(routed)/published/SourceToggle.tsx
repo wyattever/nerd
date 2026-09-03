@@ -72,7 +72,7 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
   const searchParams = useSearchParams();
   const router = useRouter();
   const source: "stored" | "live" = searchParams.get("source") === "live" ? "live" : "stored";
-  const { setLiveLog, focusMessages, isRetrievingLive, setIsRetrievingLive } = useMessages();
+  const { setLiveLog, focusMessages } = useMessages();
   const [isPromoting, setIsPromoting] = useState(false);
 
   async function handleUpdateStoredData() {
@@ -133,67 +133,6 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
     }
   }
 
-  async function handleRetrieveLiveData() {
-    focusMessages();
-    setLiveLog([]);
-    setIsRetrievingLive(true);
-    try {
-      const response = await fetch("/api/local/scrape", {
-        method: "POST",
-        body: JSON.stringify({ target: category }),
-      });
-      const reader = response.body?.getReader();
-      if (!reader) return;
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      readLoop: while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let separatorIndex: number;
-        while ((separatorIndex = buffer.indexOf("\n\n")) !== -1) {
-          const rawEvent = buffer.slice(0, separatorIndex);
-          buffer = buffer.slice(separatorIndex + 2);
-
-          let eventName = "message";
-          let dataLine = "";
-          for (const line of rawEvent.split("\n")) {
-            if (line.startsWith("event: ")) eventName = line.slice("event: ".length);
-            else if (line.startsWith("data: ")) dataLine = line.slice("data: ".length);
-          }
-          if (!dataLine) continue;
-
-          if (eventName === "progress") {
-            const payload = JSON.parse(dataLine) as { stage: string; message: string };
-            setLiveLog((prev) => {
-              const index = prev.findIndex((entry) => entry.stage === payload.stage);
-              if (index === -1) return [...prev, payload];
-              const next = [...prev];
-              next[index] = payload;
-              return next;
-            });
-          } else if (eventName === "error") {
-            const payload = JSON.parse(dataLine) as { error: string };
-            setLiveLog((prev) => [...prev, { stage: "error", message: payload.error }]);
-            break readLoop;
-          } else if (eventName === "done" || eventName === "end") {
-            break readLoop;
-          }
-        }
-      }
-    } finally {
-      setIsRetrievingLive(false);
-      // Re-runs the Server Component tree for this route so the
-      // `hasLiveScrapeData` prop (a fresh getLiveVendors()/
-      // getPublishedLiveProducts() read in page.tsx) reflects the file this
-      // run just wrote, un-disabling "Live Data" without a manual reload.
-      router.refresh();
-    }
-  }
-
   return (
     <div className="w-full rounded-md border border-gray-300 bg-white">
       <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">
@@ -209,7 +148,7 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
         </button>
         <button
           type="button"
-          disabled={!hasLiveScrapeData || isPromoting || isRetrievingLive}
+          disabled={!hasLiveScrapeData || isPromoting}
           onClick={handleUpdateStoredData}
           className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -222,14 +161,6 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
           className={`rounded border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${source === "live" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"}`}
         >
           Live Data
-        </button>
-        <button
-          type="button"
-          disabled={isRetrievingLive || isPromoting}
-          onClick={handleRetrieveLiveData}
-          className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isRetrievingLive ? "Retrieving..." : "Retrieve Live Data"}
         </button>
 
         <div className="ml-auto flex gap-3">
