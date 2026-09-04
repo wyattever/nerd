@@ -246,7 +246,7 @@ gcloud run deploy nerd-frontend \
   --region "${REGION}" \
   --service-account "${FRONTEND_SA}" \
   --allow-unauthenticated \
-  --update-env-vars="NERD_FIREBASE_PROJECT_ID=${PROJECT_ID},NERD_ALLOWED_EMAILS=${NERD_ALLOWED_EMAILS},NERD_PY_SERVICE_URL=${API_URL},NERD_PY_SERVICE_AUDIENCE=${API_URL}" \
+  --update-env-vars="^;^NERD_FIREBASE_PROJECT_ID=${PROJECT_ID};NERD_ALLOWED_EMAILS=${NERD_ALLOWED_EMAILS};NERD_PY_SERVICE_URL=${API_URL};NERD_PY_SERVICE_AUDIENCE=${API_URL}" \
   --no-traffic \
   --tag=candidate
 
