@@ -43,7 +43,7 @@ interface PasswordsFile {
 
 const EMPTY: PasswordsFile = { $schema_version: 1, $meta: {}, passwords: [] };
 
-async function readPasswordsFile(): Promise<PasswordsFile> {
+export async function readPasswordsFile(): Promise<PasswordsFile> {
   const found = await tryReadRaw("passwords");
   if (!found) return { ...EMPTY };
   const body = JSON.parse(found.data) as Partial<PasswordsFile>;
@@ -54,7 +54,7 @@ async function readPasswordsFile(): Promise<PasswordsFile> {
   };
 }
 
-async function writePasswordsFile(file: PasswordsFile, actor: string): Promise<void> {
+export async function writePasswordsFile(file: PasswordsFile, actor: string): Promise<void> {
   await saveUnguarded({
     key: "passwords",
     bytes: `${JSON.stringify(file, null, 2)}\n`,

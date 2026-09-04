@@ -98,6 +98,8 @@ export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMod
         keptFromStored?: number;
         addedNew?: number;
         addedProducts?: string[];
+        stubsCreated?: number;
+        stubProducts?: string[];
         total?: number;
         error?: string;
       };
@@ -133,6 +135,20 @@ export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMod
           {
             stage: "promote-added",
             message: `New records created for the following products: ${result.addedProducts!.join(", ")}.`,
+          },
+        ]);
+      }
+      // Distinct stage again, same reasoning as promote-added above -- a
+      // third, separate line rather than folding into either of the other
+      // two. Only pushed when there's something to say.
+      if (result.stubProducts && result.stubProducts.length > 0) {
+        setLiveLog((prev) => [
+          ...prev,
+          {
+            stage: "promote-stubs",
+            message:
+              `New products discovered on the live site, added for tracking with a generated ` +
+              `password: ${result.stubProducts!.join(", ")}. Set each one's real password on WordPress to match.`,
           },
         ]);
       }

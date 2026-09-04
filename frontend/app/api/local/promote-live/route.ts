@@ -47,6 +47,8 @@ import {
   type DataKind,
 } from "@/lib/server/documents";
 import { deriveLiveProductSlug, deriveLiveVendorSlug } from "@/lib/server/documents-read";
+import { readPasswordsFile, writePasswordsFile } from "@/app/api/local/passwords/route";
+import { getOrCreatePassword } from "@/lib/passwords";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -126,6 +128,11 @@ export async function POST(request: Request): Promise<Response> {
     return jsonResponse({ error: "The stored live snapshot is not valid JSON." }, 500);
   }
 
+  const liveMeta = (live.$meta && typeof live.$meta === "object" ? live.$meta : {}) as Record<
+    string,
+    unknown
+  >;
+
   const liveRecords = Array.isArray(live[arrayKey])
     ? (live[arrayKey] as Array<Record<string, unknown>>)
     : [];
@@ -197,10 +204,66 @@ export async function POST(request: Request): Promise<Response> {
   }
   const keptFromStored = storedRecords.length - updated;
 
-  const liveMeta = (live.$meta && typeof live.$meta === "object" ? live.$meta : {}) as Record<
-    string,
-    unknown
-  >;
+  // A protected page the scraper found but has never been tracked before
+  // (added-live's $meta.missing, reason: "not_tracked") gets created here as
+  // a stub record + a generated password, rather than staying an invisible
+  // gap only visible in scrape stdout. Strictly scoped to "not_tracked" --
+  // "no_password" and "password_rejected" entries are existing admin-owned
+  // records this feature must never touch, and are never read here.
+  let stubsCreated = 0;
+  const stubProducts: string[] = [];
+  if (kind === "added") {
+    const missingEntries = Array.isArray(liveMeta.missing)
+      ? (liveMeta.missing as Array<Record<string, unknown>>)
+      : [];
+    const notTracked = missingEntries.filter((entry) => entry.reason === "not_tracked");
+
+    if (notTracked.length > 0) {
+      // Idempotency guard: every URL this run already has a record for --
+      // stored-and-kept, stored-and-replaced, or this run's own addedNew
+      // pushes -- so a repeated promote with no new scrape in between never
+      // creates a duplicate stub.
+      const existingUrls = new Set<string>();
+      for (const record of merged) {
+        const id = record[idKey];
+        if (typeof id === "string" && id) existingUrls.add(id);
+      }
+
+      // Lazy, read once: most promotes have zero not_tracked entries, and
+      // this avoids a passwords-document read for the common case. Updated
+      // in place across iterations so a second new product in the SAME run
+      // sees the first one's freshly-created password when checking for a
+      // base collision, matching getOrCreatePassword()'s own semantics.
+      let passwordsFile: Awaited<ReturnType<typeof readPasswordsFile>> | null = null;
+
+      for (const entry of notTracked) {
+        const url = entry.ncademi_product_url;
+        const name = entry.product_name;
+        if (typeof url !== "string" || !url || typeof name !== "string" || !name) continue;
+        if (existingUrls.has(url)) continue;
+
+        const stub: Record<string, unknown> = {
+          ...PRODUCT_FIELD_DEFAULTS,
+          product_name: name,
+          ncademi_product_url: url,
+          slug: deriveLiveProductSlug(url),
+        };
+
+        if (passwordsFile === null) passwordsFile = await readPasswordsFile();
+        const { records, created } = getOrCreatePassword(passwordsFile.passwords, name, null);
+        if (created) {
+          passwordsFile = { ...passwordsFile, passwords: records };
+          await writePasswordsFile(passwordsFile, gate.user.email);
+        }
+
+        merged.push(stub);
+        existingUrls.add(url);
+        stubsCreated += 1;
+        stubProducts.push(name);
+      }
+    }
+  }
+
   const nextStored = {
     $schema_version: storedSchemaVersion,
     $meta: {
@@ -226,7 +289,17 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return jsonResponse(
-    { ok: true, category: kind, updated, keptFromStored, addedNew, addedProducts, total: merged.length },
+    {
+      ok: true,
+      category: kind,
+      updated,
+      keptFromStored,
+      addedNew,
+      addedProducts,
+      stubsCreated,
+      stubProducts,
+      total: merged.length,
+    },
     200
   );
 }
