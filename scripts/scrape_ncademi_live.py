@@ -70,22 +70,20 @@ Output:
         into a no-op.
 Both overwritten unconditionally on a successful run.
 
-Progress streaming: alongside the existing human-readable prints (unchanged,
-still meant for a person running this directly from a terminal), main()
+Progress milestones: alongside the ordinary human-readable prints, main()
 also calls emit_progress() at up to seven milestones -- "start",
 "published", "added", "added_passwords_failed", "vendors",
 "vendors_missing", "complete" -- each printing ONE line of the form
-`PROGRESS_JSON:{...}`. frontend/app/api/local/scrape/route.ts spawns
-this script (not execFile -- spawn's stdout is a live stream, execFile only
-returns output after the process exits) and forwards each such line to the
-browser as an SSE event, which is what makes /records' Messages log update
-live instead of only after the whole ~1-2 minute run finishes. The
-PYTHONUNBUFFERED=1 that route.ts sets when spawning is load-bearing here:
-Python fully block-buffers stdout when it isn't a TTY, so without it every
-print() -- progress lines included -- would sit in a buffer and only reach
-Node in one lump at process exit, silently defeating the whole point of
-streaming. emit_progress() also flushes explicitly, as defense in depth for
-anyone invoking this script under a runner that doesn't set that env var.
+`PROGRESS_JSON:{...}`.
+
+These lines have no frontend consumer. They used to be parsed by
+frontend/app/api/local/scrape/route.ts, which spawned this script and
+forwarded each one to the browser as an SSE event; that route was deleted
+with the in-app scrape trigger (DECISION_LOG.md #66). The milestones are
+kept because they mark the run's shape legibly for whoever is watching the
+terminal, which is now the only place this output goes. emit_progress()
+still flushes explicitly, so the ordering stays honest even when stdout is
+piped somewhere that block-buffers it.
 """
 
 from __future__ import annotations
@@ -115,10 +113,17 @@ REST_PAGE_DELAY_SECONDS = 0.1
 PAGE_FETCH_DELAY_SECONDS = 0.3
 REQUEST_TIMEOUT_SECONDS = 15
 
-# Must match PROGRESS_PREFIX in frontend/app/api/local/scrape/route.ts --
-# the one thing that ties this script's stdout protocol to that route's
-# parser. Anything printed on a line that doesn't start with this prefix is
-# just the normal human-readable log and is not forwarded as an SSE event.
+# Prefix for the machine-readable milestone lines emit_progress() prints:
+# one line of the form `PROGRESS_JSON:{"stage": ..., "message": ...}`.
+# Anything printed on a line that doesn't start with this prefix is just the
+# normal human-readable log.
+#
+# This protocol now has NO frontend consumer. It used to be parsed by
+# frontend/app/api/local/scrape/route.ts and forwarded to the browser as SSE
+# events; that route was deleted with the in-app scrape trigger (see
+# DECISION_LOG.md #66). The lines are kept because they mark the run's
+# progress legibly for a person watching the terminal, which is now the only
+# place this output goes.
 PROGRESS_PREFIX = "PROGRESS_JSON:"
 
 # --- Firestore ---------------------------------------------------------------
@@ -681,7 +686,7 @@ def parse_args() -> argparse.Namespace:
         default="all",
         help="Which category to scrape (default: all). 'published' scrapes only publicly-visible "
         "product pages; 'added' scrapes only password-protected product pages, unlocking each with its "
-        "vendor-review password. Each single-category run writes only that category's output file and "
+        "vendor-review password. Each single-category run writes only that category's output document and "
         "skips the cross-category vendor-resource dedup step, which requires all datasets loaded.",
     )
     parser.add_argument(

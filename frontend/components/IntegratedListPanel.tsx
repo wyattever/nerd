@@ -88,15 +88,18 @@ interface MessagesContextValue {
    *  render below. Pass `null` to unregister (e.g. on unmount) so a
    *  stale handler from a previous record can't linger. */
   setCreateAction: (action: (() => void) | null) => void;
-  /** SSE progress log for a live scrape (SourceToggle.tsx) -- one entry per
-   *  stage, replaced in place by stage as new progress lines arrive rather
-   *  than appended, matching scrape_ncademi_live.py's own "replace this
-   *  stage's row" progress protocol (see that script's emit_progress). */
+  /** Promote-live confirmations, rendered in the Messages footer below. One
+   *  entry per "Update Stored Data" press: a `promote` entry carrying the
+   *  merge counts, or a `promote-error` entry. SourceToggle.tsx's
+   *  handleUpdateStoredData is the only writer. This used to also carry
+   *  streamed scrape progress; the in-app scrape trigger was removed
+   *  (DECISION_LOG.md #66), so these confirmations are all that is left in
+   *  it -- and they are the only user-visible outcome of a promote. */
   liveLog: LiveLogEntry[];
   setLiveLog: (log: LiveLogEntry[] | ((prev: LiveLogEntry[]) => LiveLogEntry[])) => void;
-  /** Moves focus to the Messages footer -- called when a live scrape starts
-   *  so a screen-reader/keyboard user lands on the log as it begins
-   *  updating instead of it silently changing off-screen. */
+  /** Moves focus to the Messages footer -- called when a promote starts, so
+   *  a screen-reader/keyboard user lands on the log as its result arrives
+   *  instead of it changing silently off-screen. */
   focusMessages: () => void;
 }
 

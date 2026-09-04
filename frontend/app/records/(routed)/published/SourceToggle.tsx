@@ -3,11 +3,11 @@
 
 /**
  * VIEWER widget for the published record view -- bordered panel with a
- * "VIEWER" header bar, holding the Stored/Live data-source toggle plus two
- * action buttons (Update Stored Data, Retrieve Live Data) on the left, and
- * the HTML/JSON view-mode toggle right-aligned on the same row (Phase
- * 4.9 -- previously a separate standalone button row above the viewer in
- * RecordsPublishedDetail.tsx, now folded into this one widget).
+ * "VIEWER" header bar, holding the Stored/Live data-source toggle and the
+ * "Update Stored Data" action on the left, and the HTML/JSON view-mode
+ * toggle right-aligned on the same row (Phase 4.9 -- previously a separate
+ * standalone button row above the viewer in RecordsPublishedDetail.tsx, now
+ * folded into this one widget).
  *
  * This widget markup used to live in the now-deleted
  * RecordsPublishedListPanel.tsx (Phase 3 removed it in favor of
@@ -15,32 +15,31 @@
  * the two bare Stored/Live buttons before Phase 4.5 moved the rest of the
  * widget markup in.
  *
+ * There is no "Retrieve Live Data" button here any more. The scrape runs
+ * locally, from a terminal (DECISION_LOG.md #66), so this component only
+ * consumes live snapshots something else produced -- it never starts one.
+ *
  * "Update Stored Data" (enabled only while `hasLiveScrapeData`, the same
- * gate as "Live Data") POSTs `{ category }` to /api/local/promote-live,
- * which backs up the stored file, MERGES the live snapshot into it (live
- * records update their stored counterparts, stored-only records are kept --
- * see that route's header for why merge, not replace), and deletes the
- * snapshot. On success this leaves the live view (`router.replace("?")`)
- * and refreshes, so both it and "Live Data" fall back to disabled until the
- * next retrieve.
+ * gate as "Live Data") confirms first, then POSTs `{ category }` to
+ * /api/local/promote-live, which backs up the stored document, MERGES the
+ * live snapshot into it (live records update their stored counterparts,
+ * stored-only records are kept -- see that route's header for why merge,
+ * not replace), and deletes the snapshot. On success this leaves the live
+ * view (`router.replace("?")`); either way `router.refresh()` runs in the
+ * finally block, so both it and "Live Data" fall back to disabled once the
+ * snapshot is gone.
  *
- * "Retrieve Live Data" POSTs to /api/local/scrape with
- * `{ target: category }` and reads the SSE stream that route returns (see
- * that route's own header for the event framing), pushing each `progress`
- * event into IntegratedListPanel's shared `liveLog` state (via
- * useMessages()) rather than a placeholder alert -- restoring the log UI
- * RecordsPublishedListPanel.tsx's handleRetrieveLiveData used to render,
- * now hosted in the panel's persisting Messages footer instead of locally.
- * Once the stream ends (success or error), `router.refresh()` re-runs the
- * enclosing Server Component so `hasLiveScrapeData` (computed server-side
- * in page.tsx) picks up the file this run just wrote, without which "Live
- * Data" would stay disabled until a manual page reload.
+ * Its outcome -- one `promote` entry, or one `promote-error` entry -- is
+ * pushed into IntegratedListPanel's shared `liveLog` via useMessages(),
+ * because the Messages footer (not this component) is what renders that
+ * log. Those two are now `liveLog`'s only writer, and they are the only
+ * user-visible confirmation that "Update Stored Data" did anything.
+ * focusMessages() moves focus there first, so the result is not announced
+ * somewhere the user is not looking.
  *
- * `isRetrievingLive` lives in IntegratedListPanel's MessagesContext, not as
- * local state here -- the Messages footer (not this component) is what
- * renders `liveLog`, and it needs to know whether a scrape is still running
- * to animate only the newest/in-progress row (globals.css's
- * ellipsis-animation) instead of every past row animating forever.
+ * `hasLiveScrapeData` is a prop, computed server-side in page.tsx. With no
+ * in-app trigger left, nothing flips it mid-session: a scrape run in a
+ * terminal is picked up only on the next load or refresh of this route.
  *
  * useSearchParams()/router.replace() for the Stored/Live toggle itself --
  * see git history (or an earlier revision of this file) for the full

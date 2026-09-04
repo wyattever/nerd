@@ -205,13 +205,14 @@ export default function RecordsPage() {
     };
   }, [dataSource, upsertLogEntry]);
 
-  // Checks once on mount whether frontend/lib/published-live.json exists yet
-  // (it won't until "Retrieve Live Data" -- see handleRetrieveLiveData
-  // below -- has been run at least once). This is what makes the Live Data
-  // toggle correctly disabled/enabled on a fresh page load without the user
-  // touching "Retrieve Live Data" first; that button also flips
-  // hasLiveScrapeData true directly on a successful scrape, same effect,
-  // just without waiting for a remount.
+  // Checks once on mount whether a published live snapshot exists yet (it
+  // won't until a scrape has been run at least once). This is what makes the
+  // Live Data toggle correctly disabled/enabled on a fresh page load.
+  //
+  // On mount is now the ONLY time hasLiveScrapeData is set. The scrape runs
+  // locally, from a terminal (DECISION_LOG.md #66), so nothing in the page
+  // can flip this mid-session the way the old in-app trigger did: after a
+  // scrape, this page needs a reload before Live Data becomes available.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -551,15 +552,16 @@ export default function RecordsPage() {
                 time given this p-4 padding; overflow-y-scroll (not -auto)
                 keeps the scrollbar gutter permanently visible even with
                 zero/one-line content, rather than only appearing once
-                there's enough to actually scroll. tabIndex={-1} makes this
-                programmatically focusable (see handleRetrieveLiveData's
-                messagesLogRef.current?.focus()) without adding it to the
-                normal Tab order. */}
+                there's enough to actually scroll. tabIndex={-1} keeps this
+                out of the normal Tab order while leaving it programmatically
+                focusable through messagesLogRef; the ref is still bound, but
+                nothing calls .focus() on it now that the in-app scrape
+                trigger that used to is gone. */}
             <div
               ref={messagesLogRef}
               role="log"
               aria-live="polite"
-              aria-label="Retrieve data progress and status messages"
+              aria-label="Status messages"
               tabIndex={-1}
               className="flex h-28 flex-col gap-1 overflow-y-scroll p-4 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             >
