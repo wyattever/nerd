@@ -165,7 +165,7 @@ export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMod
           Live Data
         </button>
         {formattedLastScraped && (
-          <span className="text-xs text-gray-500">Live data: {formattedLastScraped}</span>
+          <span className="text-base" style={{ color: "#333" }}>Last update: {formattedLastScraped}</span>
         )}
 
         <div className="ml-auto flex gap-3">
