@@ -54,6 +54,7 @@
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMessages } from "@/components/IntegratedListPanel";
+import { formatLocalTimestamp } from "@/lib/format";
 
 const PRIMARY_BUTTON_CLASSES =
   "rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500";
@@ -63,11 +64,13 @@ const SECONDARY_BUTTON_CLASSES =
 interface SourceToggleProps {
   category: "published" | "added" | "vendors";
   hasLiveScrapeData: boolean;
+  lastScraped: string | null;
   viewMode: "html" | "json";
   onViewModeChange: (mode: "html" | "json") => void;
 }
 
-export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewModeChange }: SourceToggleProps) {
+export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMode, onViewModeChange }: SourceToggleProps) {
+  const formattedLastScraped = formatLocalTimestamp(lastScraped);
   const searchParams = useSearchParams();
   const router = useRouter();
   const source: "stored" | "live" = searchParams.get("source") === "live" ? "live" : "stored";
@@ -161,6 +164,9 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
         >
           Live Data
         </button>
+        {formattedLastScraped && (
+          <span className="text-xs text-gray-500">Live data: {formattedLastScraped}</span>
+        )}
 
         <div className="ml-auto flex gap-3">
           <button

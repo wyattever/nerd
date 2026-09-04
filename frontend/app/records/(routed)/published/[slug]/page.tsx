@@ -28,7 +28,7 @@ export default async function RecordsPublishedDetailPage({ params, searchParams 
   const { source } = await searchParams;
   const isLive = source === "live";
 
-  const { products: liveProducts } = await getPublishedLiveProducts();
+  const { products: liveProducts, lastScraped } = await getPublishedLiveProducts();
   const hasLiveScrapeData = liveProducts.length > 0;
 
   const products = isLive ? liveProducts : (await getPublishedProducts()).products;
@@ -42,5 +42,5 @@ export default async function RecordsPublishedDetailPage({ params, searchParams 
     );
   }
 
-  return <RecordsPublishedDetail record={record} hasLiveScrapeData={hasLiveScrapeData} />;
+  return <RecordsPublishedDetail record={record} hasLiveScrapeData={hasLiveScrapeData} lastScraped={lastScraped} />;
 }

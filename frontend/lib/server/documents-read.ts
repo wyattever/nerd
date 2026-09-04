@@ -165,15 +165,24 @@ export function deriveLiveVendorSlug(vendorDirectoryUrl: string): string {
   return segments[segments.length - 1] ?? vendorDirectoryUrl;
 }
 
+/** `$meta.last_scraped` is absent for a live document that predates Decision
+ * #66's timestamp field, or that was hand-edited -- null in either case, not
+ * an error. The caller (SourceToggle) decides what null renders as. */
+function extractLastScraped(meta: unknown): string | null {
+  if (!meta || typeof meta !== "object") return null;
+  const value = (meta as { last_scraped?: unknown }).last_scraped;
+  return typeof value === "string" ? value : null;
+}
+
 async function readLiveProducts(
   key: "published-live" | "added-live"
-): Promise<{ products: PublishedProductRecord[] }> {
+): Promise<{ products: PublishedProductRecord[]; lastScraped: string | null }> {
   await requireSessionUser();
 
   const found = await tryReadRaw(key);
-  if (!found) return { products: [] };
+  if (!found) return { products: [], lastScraped: null };
 
-  const body = JSON.parse(found.data) as { products?: unknown };
+  const body = JSON.parse(found.data) as { products?: unknown; $meta?: unknown };
   const raw = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
   const withSlug = raw.map((record) => ({
     ...record,
@@ -187,24 +196,33 @@ async function readLiveProducts(
     await readTrackingRecords()
   ) as unknown as PublishedProductRecord[];
 
-  return { products };
+  return { products, lastScraped: extractLastScraped(body.$meta) };
 }
 
-export function getPublishedLiveProducts(): Promise<{ products: PublishedProductRecord[] }> {
+export function getPublishedLiveProducts(): Promise<{
+  products: PublishedProductRecord[];
+  lastScraped: string | null;
+}> {
   return readLiveProducts("published-live");
 }
 
-export function getAddedLiveProducts(): Promise<{ products: PublishedProductRecord[] }> {
+export function getAddedLiveProducts(): Promise<{
+  products: PublishedProductRecord[];
+  lastScraped: string | null;
+}> {
   return readLiveProducts("added-live");
 }
 
-export async function getLiveVendors(): Promise<{ vendors: DirectoryRecord[] }> {
+export async function getLiveVendors(): Promise<{
+  vendors: DirectoryRecord[];
+  lastScraped: string | null;
+}> {
   await requireSessionUser();
 
   const found = await tryReadRaw("vendors-live");
-  if (!found) return { vendors: [] };
+  if (!found) return { vendors: [], lastScraped: null };
 
-  const body = JSON.parse(found.data) as { vendors?: unknown };
+  const body = JSON.parse(found.data) as { vendors?: unknown; $meta?: unknown };
   const raw = Array.isArray(body.vendors) ? (body.vendors as Array<Record<string, unknown>>) : [];
 
   // scrape_ncademi_live.py's map_vendor_to_directory_record() already writes
@@ -223,5 +241,5 @@ export async function getLiveVendors(): Promise<{ vendors: DirectoryRecord[] }> 
     await readTrackingRecords()
   ) as unknown as DirectoryRecord[];
 
-  return { vendors };
+  return { vendors, lastScraped: extractLastScraped(body.$meta) };
 }

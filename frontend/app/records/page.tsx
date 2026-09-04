@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { EditorSidebar, type SourceTab } from "@/components/EditorSidebar";
 import { USERS, fullName } from "@/lib/users";
 import type { PublishedProductRecord } from "@/lib/published-tables";
+import { formatLocalTimestamp } from "@/lib/format";
 
 /** One row in the Messages log. `id` is a stable key -- upsertLogEntry
  *  below replaces the row with a matching id in place (used for the
@@ -48,6 +49,7 @@ export default function RecordsPage() {
   const [activeTab, setActiveTab] = useState<SourceTab>("candidate");
   const [dataSource, setDataSource] = useState<"stored" | "live">("stored");
   const [hasLiveScrapeData, setHasLiveScrapeData] = useState(false);
+  const [lastScraped, setLastScraped] = useState<string | null>(null);
 
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [addedProducts, setAddedProducts] = useState<ProductRecord[]>([]);
@@ -220,6 +222,10 @@ export default function RecordsPage() {
         const res = await fetch("/api/local/published-live");
         if (!cancelled && res.ok) {
           setHasLiveScrapeData(true);
+          const body = await res.json().catch(() => null);
+          const meta = body?.$meta;
+          const scraped = meta && typeof meta.last_scraped === "string" ? meta.last_scraped : null;
+          setLastScraped(scraped);
         }
       } catch {
         // Network failure -- leave hasLiveScrapeData at its default false.
@@ -231,6 +237,8 @@ export default function RecordsPage() {
       cancelled = true;
     };
   }, []);
+
+  const formattedLastScraped = formatLocalTimestamp(lastScraped);
 
   const activeProducts = useMemo(() => {
     switch (activeTab) {
@@ -403,6 +411,9 @@ export default function RecordsPage() {
               >
                 Live Data
               </button>
+              {formattedLastScraped && (
+                <span className="text-xs text-gray-500">Live data: {formattedLastScraped}</span>
+              )}
             </div>
           </div>
         ) : null}

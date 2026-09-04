@@ -23,9 +23,10 @@ import { SourceToggle } from "../published/SourceToggle";
 interface RecordsAddedDetailProps {
   record: PublishedProductRecord;
   hasLiveScrapeData: boolean;
+  lastScraped: string | null;
 }
 
-export function RecordsAddedDetail({ record, hasLiveScrapeData }: RecordsAddedDetailProps) {
+export function RecordsAddedDetail({ record, hasLiveScrapeData, lastScraped }: RecordsAddedDetailProps) {
   const [viewMode, setViewMode] = useState<"html" | "json">("html");
 
   return (
@@ -59,7 +60,7 @@ export function RecordsAddedDetail({ record, hasLiveScrapeData }: RecordsAddedDe
       </div>
 
       <Suspense fallback={<div className="h-[74px] w-full animate-pulse rounded-md border border-gray-300 bg-gray-100" />}>
-        <SourceToggle category="added" hasLiveScrapeData={hasLiveScrapeData} viewMode={viewMode} onViewModeChange={setViewMode} />
+        <SourceToggle category="added" hasLiveScrapeData={hasLiveScrapeData} lastScraped={lastScraped} viewMode={viewMode} onViewModeChange={setViewMode} />
       </Suspense>
 
       <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4 w-full min-w-0">
