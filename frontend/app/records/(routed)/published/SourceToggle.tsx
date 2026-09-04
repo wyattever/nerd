@@ -76,9 +76,9 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
 
   async function handleUpdateStoredData() {
     const confirmed = window.confirm(
-      `Merge the retrieved live ${category} data into stored ${category}.json?\n\n` +
+      `Merge the retrieved live ${category} data into your stored ${category} records?\n\n` +
         `Live records update their stored counterparts; stored records not in the live ` +
-        `snapshot are kept. ${category}.json is backed up to ${category}.json.bak first, ` +
+        `snapshot are kept. The previous stored version is saved as a backup first, ` +
         `then the live snapshot is cleared.`
     );
     if (!confirmed) return;
@@ -114,9 +114,9 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
         {
           stage: "promote",
           message:
-            `Merged live ${category} data into stored ${category}.json ` +
+            `Merged live ${category} data into your stored ${category} records ` +
             `(${result.updated ?? 0} updated, ${result.keptFromStored ?? 0} kept, ${result.addedNew ?? 0} new; ` +
-            `${result.total ?? 0} total). Backup saved to ${category}.json.bak; live data cleared.`,
+            `${result.total ?? 0} total). Previous version backed up; live snapshot cleared.`,
         },
       ]);
       // The live snapshot is gone -- leave the live view so the refresh
