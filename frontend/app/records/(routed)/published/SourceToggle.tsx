@@ -120,7 +120,7 @@ export function SourceToggle({ category, hasLiveScrapeData, viewMode, onViewMode
         },
       ]);
       // The live snapshot is gone -- leave the live view so the refresh
-      // below doesn't try to render a record from a file that no longer
+      // below doesn't try to render a record from a document that no longer
       // exists.
       router.replace("?", { scroll: false });
     } finally {
