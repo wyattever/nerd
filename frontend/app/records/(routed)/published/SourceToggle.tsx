@@ -97,6 +97,7 @@ export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMod
         updated?: number;
         keptFromStored?: number;
         addedNew?: number;
+        addedProducts?: string[];
         total?: number;
         error?: string;
       };
@@ -122,6 +123,19 @@ export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMod
             `${result.total ?? 0} total). Previous version backed up; live snapshot cleared.`,
         },
       ]);
+      // Separate entry (distinct `stage`, since LiveLogEntry.stage doubles as
+      // this list's React key) so the count summary above and the name list
+      // read as two distinct lines, not one runon. Only pushed when there's
+      // something to say -- no "no new products" noise line.
+      if (result.addedProducts && result.addedProducts.length > 0) {
+        setLiveLog((prev) => [
+          ...prev,
+          {
+            stage: "promote-added",
+            message: `New records created for the following products: ${result.addedProducts!.join(", ")}.`,
+          },
+        ]);
+      }
       // The live snapshot is gone -- leave the live view so the refresh
       // below doesn't try to render a record from a document that no longer
       // exists.

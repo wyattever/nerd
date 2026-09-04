@@ -179,12 +179,20 @@ export async function POST(request: Request): Promise<Response> {
       merged.push(stored);
     }
   }
+  // Products returned by the scrape have already passed NCADEMI's own
+  // vetting, so a live record with no stored counterpart is promoted
+  // automatically (pushed into `merged` above) rather than routed through
+  // Candidate review. `addedProducts` is built in this SAME pass as
+  // `addedNew` so the count and the name list can never disagree.
   let addedNew = 0;
+  const addedProducts: string[] = [];
   for (const record of liveShaped) {
     const id = record[idKey];
     if (typeof id === "string" && !consumed.has(id)) {
       merged.push(record);
       addedNew += 1;
+      const name = record.product_name;
+      if (typeof name === "string" && name) addedProducts.push(name);
     }
   }
   const keptFromStored = storedRecords.length - updated;
@@ -218,7 +226,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return jsonResponse(
-    { ok: true, category: kind, updated, keptFromStored, addedNew, total: merged.length },
+    { ok: true, category: kind, updated, keptFromStored, addedNew, addedProducts, total: merged.length },
     200
   );
 }
