@@ -188,3 +188,4 @@ CLAUDE_TESTING_PROMPT.md
 repomix-output.xml
 .claude/
 JSON-viewer-editor/
+frontend/emulator-data/
