@@ -1,0 +1,53 @@
+#!/bin/bash
+# scrape_products — root-level convenience wrapper for
+# scripts/scrape_ncademi_live.py --target published.
+#
+# Matches run_nerd()'s pattern (~/.zshrc) of a short command runnable from
+# anywhere. Defaults to the Firestore EMULATOR: production is now live
+# (Decision #67), so a bare invocation must never touch it by accident. Pass
+# --prod to target production -- forwarded verbatim to
+# scrape_ncademi_live.py, which owns the actual production guard; this
+# wrapper does not re-implement or duplicate that check.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+PROD=0
+for arg in "$@"; do
+  case "${arg}" in
+    --prod) PROD=1 ;;
+    *)
+      echo "Unknown argument: ${arg}" >&2
+      echo "Usage: ./scrape_products [--prod]" >&2
+      exit 2
+      ;;
+  esac
+done
+
+# Activate the project venv unless one is already active.
+if [ -z "${VIRTUAL_ENV:-}" ]; then
+  source "${SCRIPT_DIR}/venv312/bin/activate"
+fi
+
+# Default to the emulator UNLESS --prod was passed or the caller already set
+# FIRESTORE_EMULATOR_HOST -- an explicit --prod with no emulator host set is
+# how production is actually reached; forcing the emulator here regardless
+# of --prod would silently no-op that flag.
+if [ "${PROD}" -eq 0 ] && [ -z "${FIRESTORE_EMULATOR_HOST:-}" ]; then
+  export FIRESTORE_EMULATOR_HOST=localhost:8080
+fi
+
+if [ -n "${FIRESTORE_EMULATOR_HOST:-}" ]; then
+  FS_TARGET="${FIRESTORE_EMULATOR_HOST}"
+else
+  FS_TARGET="PRODUCTION"
+fi
+echo "[scrape_products] target=published  firestore=${FS_TARGET}"
+
+ARGS=(--target published)
+if [ "${PROD}" -eq 1 ]; then
+  ARGS+=(--prod)
+fi
+
+exec python3 "${SCRIPT_DIR}/scripts/scrape_ncademi_live.py" "${ARGS[@]}"
