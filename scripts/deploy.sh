@@ -126,6 +126,17 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --condition=None \
   --quiet >/dev/null
 
+# Session-cookie minting (verifyIdToken / createSessionCookie in
+# lib/server/session.ts) requires this role. Without it, sign-in fails with
+# a generic 403 that gives no indication IAM is the cause -- hit live on the
+# first production deploy of a fresh nerd-frontend-sa. See Decision #67.
+echo "  Granting roles/firebaseauth.admin to nerd-frontend-sa..."
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${FRONTEND_SA}" \
+  --role="roles/firebaseauth.admin" \
+  --condition=None \
+  --quiet >/dev/null
+
 # NOTE, if sign-in breaks after this change: Decision #61 recorded
 # createSessionCookie() working under ADC WITHOUT an explicit
 # roles/iam.serviceAccountTokenCreator grant -- and flagged that it might not

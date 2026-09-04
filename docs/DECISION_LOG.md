@@ -1100,3 +1100,101 @@ the `nerd_scrape_jobs` section, and more. Every one is enumerated with line numb
 the recon artifact (Task 5). That correction pass is deliberately **not** folded into
 this entry; it is its own dispatch against `nerd-cloud-migration.md`.
 
+---
+
+### 67. FIRST PRODUCTION DEPLOYMENT — `nerd-api` and `nerd-frontend` live on `edtech-agent-2026`; sign-in and a real Firestore save verified end-to-end.
+
+**Date:** 2026-09-04
+**Status:** Done, verified live
+**Commits:** 1fcded7 (env-var delimiter fix, already committed); this entry's own commit
+(decision log + `scripts/deploy.sh` `firebaseauth.admin` grant)
+**Branch:** main
+
+Tonight was the first real deployment of Decision #66's local-scrape architecture via the
+repaired `scripts/deploy.sh` (`3911eb8`). Two live incidents were hit and fixed during the
+deploy; this entry is the record of the full session and closes the one gap the script
+itself still had.
+
+**Timeline.**
+
+1. **First deploy attempt failed.** `nerd-api`'s deploy hit `Permission denied on secret:
+   gemini-api-key`. Root cause: a **stale, pre-migration `nerd-api` Cloud Run service**
+   still existed from before this migration, carrying dead Cloud Tasks-era env vars
+   (`WORKER_URL`, `TASKS_SA`, `QUEUE_NAME`) and a `GEMINI_API_KEY` Secret Manager mount
+   that no code in `api/` or `nerd_core/` reads. Fixed by deleting the old service
+   (`gcloud run services delete nerd-api`) and letting `deploy.sh` recreate it clean —
+   confirmed via `gcloud run services describe` before and after.
+2. **Second failure**, `NERD_ALLOWED_EMAILS`' commas colliding with `--update-env-vars`'
+   default comma pair-separator (`Bad syntax for dict arg: [r.carr@usu.edu]`). Fixed in
+   `1fcded7` using gcloud's `^;^` custom-delimiter syntax. Already committed; not redone
+   here.
+3. **Full deploy succeeded**: `nerd-api` private (`--no-allow-unauthenticated`,
+   `roles/run.invoker` granted to `nerd-frontend-sa`), `nerd-frontend` public. Firestore
+   rules and the `nerd_documents.bytes` index exemption both deployed successfully via
+   `firebase deploy --only firestore:rules,firestore:indexes` — the hard precondition
+   flagged repeatedly across #65/#66 is now confirmed applied in **production**, not just
+   the emulator.
+4. **Sign-in failed** with a generic 403 ("This account is not authorized") even for an
+   address on `NERD_ALLOWED_EMAILS`. Root cause: `nerd-frontend-sa` had only
+   `roles/datastore.user` — nothing granting it permission to call the Firebase Admin
+   SDK's `verifyIdToken`/`createSessionCookie` (`lib/server/session.ts`). Fixed by hand:
+   ```
+   gcloud projects add-iam-policy-binding edtech-agent-2026 \
+     --member="serviceAccount:nerd-frontend-sa@edtech-agent-2026.iam.gserviceaccount.com" \
+     --role="roles/firebaseauth.admin"
+   ```
+   Sign-in worked immediately after, no redeploy needed.
+5. **Production Firestore was empty** (confirmed via `nerd_documents.py list` returning 0
+   documents before this session touched it). Seeded via `nerd_documents.py push --yes`
+   against `edtech-agent-2026`, verified byte-identical against all 9 documents.
+6. **End-to-end proof:** a real candidate edit was saved through the deployed frontend
+   against production Firestore. The full stack — Cloud Run IAM, Firebase session-cookie
+   auth, Firestore ETag writes — is confirmed working in production, not just the
+   emulator.
+
+**CORRECTION to Decision #61's flagged prediction.** #61's verification section recorded
+that `createSessionCookie` succeeded under ADC **without** an explicit
+`roles/iam.serviceAccountTokenCreator` grant, and flagged that this "remain[ed] plausible
+on a fresh environment" — echoed in `scripts/deploy.sh`'s own comment above the
+`datastore.user` grant, which names `roles/iam.serviceAccountTokenCreator` as "the first
+thing to try" if session-cookie minting breaks on a dedicated service account. Tonight's
+incident (item 4 above) is that exact scenario: a fresh, dedicated `nerd-frontend-sa`, no
+prior grant, session-cookie minting failing.
+
+The **prediction that a grant would be needed was correct.** The **specific role named was
+not.** `roles/iam.serviceAccountTokenCreator` grants permission to *impersonate another
+identity / mint OAuth tokens on its behalf* — a distinct capability from what
+`verifyIdToken`/`createSessionCookie` actually require. The role that was actually missing,
+and that fixed sign-in immediately, is `roles/firebaseauth.admin`, which grants
+`verifyIdToken` and `createSessionCookie` directly. A future reader should not assume #61's
+speculative role name was confirmed correct — it was a reasonable guess in the right
+direction (some grant was needed), but the wrong specific role.
+
+**FINDING — stale pre-migration Cloud Run services/IAM can persist silently.** Item 1
+above is a general finding, not just this incident's root cause: a pre-migration resource
+can sit live in a project, undiscovered, until something forces its discovery (here, an
+unreadable secret on a fresh deploy). This session's IAM audit, prompted by that discovery,
+found the following **still live at the project level** on `edtech-agent-2026`:
+
+- `nerd-tasks-invoker` (a service account): `roles/cloudtasks.enqueuer`,
+  `roles/cloudtasks.serviceAgent`, `roles/aiplatform.user`
+- The default Compute Engine service account: `roles/cloudtasks.enqueuer`,
+  `roles/bigquery.dataEditor`, `roles/storage.admin`
+
+These are **NOT cleaned up by this entry.** They are pre-migration, Cloud Tasks-era
+grants with no runtime consumer left in this codebase (matching Decision #59/#62's
+"Cloud Tasks deploy plumbing" removal), but project-level IAM cleanup is out of scope for
+a single deploy session. Flagged here as a future cleanup item.
+
+**`scripts/deploy.sh` updated in this same pass.** The script now grants
+`roles/firebaseauth.admin` to `nerd-frontend-sa`, immediately after the existing
+`roles/datastore.user` grant, following the same direct `add-iam-policy-binding` pattern
+(no describe-first check — the file's existing grant doesn't use one, and
+`add-iam-policy-binding` is itself idempotent). A future fresh-service-account deploy now
+reproduces tonight's manual fix automatically rather than requiring it to be rediscovered
+via a generic 403.
+
+**Production Firestore is seeded** (9 documents, byte-verified against
+`frontend/lib/*.json` — item 5 above) and a real save through the deployed app against
+production Firestore has been confirmed (item 6 above).
+
