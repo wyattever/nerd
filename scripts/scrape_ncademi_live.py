@@ -92,6 +92,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -203,9 +204,10 @@ SESSION.headers.update({"User-Agent": USER_AGENT})
 
 
 # --- 1. REST API URL discovery (from build_live_index.py) ---
-def get_rest_urls(post_type: str) -> tuple[set[str], set[str]]:
+def get_rest_urls(post_type: str) -> tuple[set[str], set[str], dict[str, str]]:
     """Dynamically finds the REST endpoint for a post type and paginates to
-    get every URL of that type. Returns (all_urls, protected_urls).
+    get every URL of that type. Returns (all_urls, protected_urls,
+    protected_titles).
 
     protected_urls is read from each item's own `class_list` -- WordPress
     core appends the literal string "post-password-required" there
@@ -218,9 +220,19 @@ def get_rest_urls(post_type: str) -> tuple[set[str], set[str]]:
     protected product's class_list carries post-password-required AND its
     rendered page carries form.pw_form; a known-public product's carries
     neither. See DECISION_LOG.md for the recon this enabled (--target added
-    now fetches only the protected subset, see main())."""
+    now fetches only the protected subset, see main()).
+
+    protected_titles maps each protected_urls entry to its `title.rendered`
+    -- also free from this same response, and also confirmed empirically:
+    unlike content/excerpt (which this site's REST list view omits for
+    EVERY item, protected or not), title.rendered stays populated with the
+    real product name even for a password-protected, untracked item (e.g.
+    "Nearpod", "Grammarly"). Only collected for protected items -- it is
+    only ever needed to name a newly-discovered protected page with no
+    tracked password (see generate_candidate_password() / main())."""
     urls: set[str] = set()
     protected: set[str] = set()
+    protected_titles: dict[str, str] = {}
     try:
         type_info = SESSION.get(f"{API_BASE}/types/{post_type}").json()
 
@@ -249,6 +261,9 @@ def get_rest_urls(post_type: str) -> tuple[set[str], set[str]]:
                 urls.add(link)
                 if "post-password-required" in item.get("class_list", []):
                     protected.add(link)
+                    title = (item.get("title") or {}).get("rendered")
+                    if title:
+                        protected_titles[link] = title
 
             page += 1
             time.sleep(REST_PAGE_DELAY_SECONDS)
@@ -257,7 +272,7 @@ def get_rest_urls(post_type: str) -> tuple[set[str], set[str]]:
         print(f"Error fetching {post_type}s via REST API: {e}")
 
     print(f"Found {len(urls)} {post_type} URLs.")
-    return urls, protected
+    return urls, protected, protected_titles
 
 
 # --- 2. Single-fetch classification (protected / public / missing / error) ---
@@ -287,8 +302,8 @@ def fetch_page(url: str) -> tuple[str, str | None]:
 
 def load_added_passwords(
     client: firestore.Client,
-) -> tuple[dict[str, dict], dict[str, str]]:
-    """Returns (by_url, names_by_url):
+) -> tuple[dict[str, dict], dict[str, str], set[str]]:
+    """Returns (by_url, names_by_url, all_passwords):
 
       by_url: {ncademi_product_url: {"product_name", "password"}} -- the
         `added` document (which carries product_name<->ncademi_product_url)
@@ -303,6 +318,13 @@ def load_added_passwords(
         file (it's excluded from by_url precisely because it has none), so
         the caller uses this to label that case in added-live.json's
         $meta.missing.
+      all_passwords: every password STRING on file in the `passwords`
+        document, regardless of which product it belongs to -- the exact
+        collision universe frontend/lib/passwords.ts's getOrCreatePassword()
+        checks against (`existingPasswords = new Set(records.map(r =>
+        r.password))`). Used by generate_candidate_password() so a freshly
+        generated password for an untracked protected page can never
+        collide with one already assigned to ANY product.
 
     Both documents are required. A missing one raises DocumentMissingError
     naming the key rather than returning an empty index -- scraping on with no
@@ -311,11 +333,13 @@ def load_added_passwords(
     passwords now come from the document the editor actually writes, not from
     frontend/lib/passwords.json, which has had no writer since Phase 2."""
     added = read_document(client, DOC_ADDED).get("products", [])
+    password_records = read_document(client, DOC_PASSWORDS).get("passwords", [])
     pw_by_name = {
         r["product_name"]: r["password"]
-        for r in read_document(client, DOC_PASSWORDS).get("passwords", [])
+        for r in password_records
         if r.get("product_name") and r.get("password")
     }
+    all_passwords = {r["password"] for r in password_records if r.get("password")}
 
     by_url: dict[str, dict] = {}
     names_by_url: dict[str, str] = {}
@@ -327,7 +351,44 @@ def load_added_passwords(
         names_by_url[url] = name
         if name in pw_by_name:
             by_url[url] = {"product_name": name, "password": pw_by_name[name]}
-    return by_url, names_by_url
+    return by_url, names_by_url, all_passwords
+
+
+def base_slug(product_name: str) -> str:
+    """First four characters of `product_name` with all whitespace runs
+    stripped, lowercased -- e.g. "MLC Number Chart" -> "mlcn". Ports
+    frontend/lib/passwords.ts's baseSlug() exactly: non-space characters
+    only are counted toward the four, so punctuation/digits in a product
+    name still consume a slot (e.g. "CK-12" -> "ck-1", confirmed against
+    the real tracked password "ck-126")."""
+    return re.sub(r"\s+", "", product_name).lower()[:4]
+
+
+def two_digit_year() -> str:
+    """Current calendar year, two digits, zero-padded. Ports
+    frontend/lib/passwords.ts's twoDigitYear(now) exactly, where `now`
+    defaults to `new Date()` -- the CURRENT year at generation time (local
+    clock, matching JS Date's local-time getFullYear()), not a stored or
+    candidate-import year."""
+    return f"{datetime.now().year % 100:02d}"
+
+
+def generate_candidate_password(product_name: str, existing_passwords: set[str]) -> str:
+    """Ports frontend/lib/passwords.ts's getOrCreatePassword() generation
+    logic exactly (the string it would assign a brand-new product_name):
+    base_slug + two_digit_year, with a numeric suffix ("-1", "-2", ...) if
+    that exact string already belongs to another tracked password.
+    `existing_passwords` must be the set of every currently stored password
+    STRING (see load_added_passwords()'s all_passwords) -- a collision is
+    against the literal password value, not the base, matching
+    nextAvailablePassword()'s exact behavior."""
+    base = f"{base_slug(product_name)}{two_digit_year()}"
+    if base not in existing_passwords:
+        return base
+    suffix = 1
+    while f"{base}-{suffix}" in existing_passwords:
+        suffix += 1
+    return f"{base}-{suffix}"
 
 
 def fetch_protected_page(url: str, password: str) -> tuple[str, str | None]:
@@ -802,10 +863,10 @@ def main() -> None:
     # published_out, protected -> an unlock attempt for added_out), so there
     # is no URL it can skip without losing coverage of one output or the
     # other.
-    all_product_urls, protected_product_urls = (
-        get_rest_urls("product") if scrape_products else (set(), set())
+    all_product_urls, protected_product_urls, protected_product_titles = (
+        get_rest_urls("product") if scrape_products else (set(), set(), {})
     )
-    all_vendor_urls, _ = get_rest_urls("vendor") if scrape_vendors else (set(), set())
+    all_vendor_urls, _, _ = get_rest_urls("vendor") if scrape_vendors else (set(), set(), {})
     if target == "added":
         product_urls = sorted(protected_product_urls)
     elif target == "published":
@@ -832,8 +893,8 @@ def main() -> None:
     missing_added: list[dict] = []
     if scrape_products:
         print("\n--- 2. Scraping product pages ---")
-        added_passwords, added_names_by_url = (
-            load_added_passwords(client) if scrape_added else ({}, {})
+        added_passwords, added_names_by_url, existing_password_strings = (
+            load_added_passwords(client) if scrape_added else ({}, {}, set())
         )
         published_count = 0
         added_count = 0
@@ -855,21 +916,69 @@ def main() -> None:
                     print(f"    ERROR parsing {url}: {e}")
             elif status == "protected" and scrape_added:
                 entry = added_passwords.get(url)
-                if not entry:
+                tracked_name = added_names_by_url.get(url) if not entry else None
+                if not entry and tracked_name:
+                    # Tracked Added Product (present in the `added` document)
+                    # that simply lacks a password on file -- a human already
+                    # deliberately added this product to tracking, so this
+                    # stays a report-only gap, unchanged: no generation here.
                     print(f"    SKIP protected page with no vendor-review password on file: {url}")
-                    # Only record it if it's a tracked Added Product (present
-                    # in the `added` document) that simply lacks a password --
-                    # a protected page with no added.json entry at all is not
-                    # our concern to unlock and stays stdout-only, unchanged.
-                    tracked_name = added_names_by_url.get(url)
-                    if tracked_name:
-                        missing_added.append(
-                            {
-                                "product_name": tracked_name,
-                                "ncademi_product_url": url,
-                                "reason": "no_password",
-                            }
-                        )
+                    missing_added.append(
+                        {
+                            "product_name": tracked_name,
+                            "ncademi_product_url": url,
+                            "reason": "no_password",
+                        }
+                    )
+                elif not entry:
+                    # Genuinely untracked: no `added` document entry at all
+                    # (e.g. Grammarly, Nearpod). Per the new convention, NERD
+                    # generates the password a newly-discovered protected page
+                    # should use -- an admin configures WordPress to match,
+                    # going forward -- rather than only reporting the gap.
+                    # Same formula as Candidate import (frontend/lib/
+                    # passwords.ts), same unlock path as a tracked password.
+                    title = protected_product_titles.get(url)
+                    if not title:
+                        print(f"    SKIP untracked protected page with no title available: {url}")
+                    else:
+                        generated_password = generate_candidate_password(title, existing_password_strings)
+                        # Claimed immediately so a second untracked page in
+                        # this SAME run whose title collides on the same
+                        # base never generates the identical string twice.
+                        existing_password_strings.add(generated_password)
+                        unlocked_status, unlocked_html = fetch_protected_page(url, generated_password)
+                        if unlocked_status == "public":
+                            try:
+                                added_out.append(parse_public_product(unlocked_html, url, is_protected=True))
+                                added_count += 1
+                                print(
+                                    f"    UNTRACKED protected page {url}: generated password "
+                                    f"{generated_password!r} and unlocked successfully."
+                                )
+                            except Exception as e:
+                                print(f"    ERROR parsing {url}: {e}")
+                                missing_added.append(
+                                    {
+                                        "product_name": title,
+                                        "ncademi_product_url": url,
+                                        "reason": "not_tracked",
+                                        "generated_password": generated_password,
+                                    }
+                                )
+                        else:
+                            print(
+                                f"    UNTRACKED protected page {url}: generated password "
+                                f"{generated_password!r} did not unlock it."
+                            )
+                            missing_added.append(
+                                {
+                                    "product_name": title,
+                                    "ncademi_product_url": url,
+                                    "reason": "not_tracked",
+                                    "generated_password": generated_password,
+                                }
+                            )
                 else:
                     unlocked_status, unlocked_html = fetch_protected_page(url, entry["password"])
                     if unlocked_status == "public":
