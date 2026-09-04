@@ -184,6 +184,11 @@ rm Dockerfile
 # server) and sends it as a Bearer token. Cloud Run IAM is therefore the
 # authentication boundary, and the frontend SA's roles/run.invoker below is
 # what makes that call succeed.
+#
+# NERD_FIREBASE_PROJECT_ID is REQUIRED: api/store.py raises at import if it is
+# unset, so the container will not start without it. It pins the Firestore
+# client explicitly rather than letting AsyncClient() resolve from
+# GOOGLE_CLOUD_PROJECT -- see that file and DECISION_LOG.md #66.
 gcloud run deploy nerd-api \
   --image "${REPO}/nerd-api" \
   --platform managed \
@@ -192,7 +197,7 @@ gcloud run deploy nerd-api \
   --no-allow-unauthenticated \
   --memory 2Gi \
   --max-instances 1 \
-  --update-env-vars="GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
+  --update-env-vars="GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},NERD_FIREBASE_PROJECT_ID=${PROJECT_ID}"
 
 API_URL=$(gcloud run services describe nerd-api \
   --platform managed --region "${REGION}" \
