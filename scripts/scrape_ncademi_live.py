@@ -203,10 +203,24 @@ SESSION.headers.update({"User-Agent": USER_AGENT})
 
 
 # --- 1. REST API URL discovery (from build_live_index.py) ---
-def get_rest_urls(post_type: str) -> set[str]:
+def get_rest_urls(post_type: str) -> tuple[set[str], set[str]]:
     """Dynamically finds the REST endpoint for a post type and paginates to
-    get every URL of that type."""
+    get every URL of that type. Returns (all_urls, protected_urls).
+
+    protected_urls is read from each item's own `class_list` -- WordPress
+    core appends the literal string "post-password-required" there
+    (get_post_class() / post_password_required()) whenever a post has a
+    password set, the exact same condition fetch_page() re-derives later
+    from form.pw_form on the rendered page. Classifying protection at
+    discovery time this way costs ZERO extra requests: class_list is
+    already present in the same paginated item list this function fetches
+    to build all_urls. Confirmed empirically against the real API: a known-
+    protected product's class_list carries post-password-required AND its
+    rendered page carries form.pw_form; a known-public product's carries
+    neither. See DECISION_LOG.md for the recon this enabled (--target added
+    now fetches only the protected subset, see main())."""
     urls: set[str] = set()
+    protected: set[str] = set()
     try:
         type_info = SESSION.get(f"{API_BASE}/types/{post_type}").json()
 
@@ -229,8 +243,12 @@ def get_rest_urls(post_type: str) -> set[str]:
                 break
 
             for item in items:
-                if "link" in item:
-                    urls.add(item["link"])
+                link = item.get("link")
+                if not link:
+                    continue
+                urls.add(link)
+                if "post-password-required" in item.get("class_list", []):
+                    protected.add(link)
 
             page += 1
             time.sleep(REST_PAGE_DELAY_SECONDS)
@@ -239,7 +257,7 @@ def get_rest_urls(post_type: str) -> set[str]:
         print(f"Error fetching {post_type}s via REST API: {e}")
 
     print(f"Found {len(urls)} {post_type} URLs.")
-    return urls
+    return urls, protected
 
 
 # --- 2. Single-fetch classification (protected / public / missing / error) ---
@@ -267,15 +285,24 @@ def fetch_page(url: str) -> tuple[str, str | None]:
     return "public", resp.text
 
 
-def load_added_passwords(client: firestore.Client) -> dict[str, dict]:
-    """{ncademi_product_url: {"product_name", "password"}} -- the `added`
-    document (which carries product_name<->ncademi_product_url) joined to the
-    `passwords` document (product_name<->password) on exact product_name, the
-    same matching convention the rest of the app uses to cross-reference a
-    product (see lib/passwords.ts's own header). A page in `added` with no
-    `passwords` entry is simply absent from the result -- the caller treats
-    "no password on file" the same as a rejected password (both land in the
-    added_passwords_failed milestone).
+def load_added_passwords(
+    client: firestore.Client,
+) -> tuple[dict[str, dict], dict[str, str]]:
+    """Returns (by_url, names_by_url):
+
+      by_url: {ncademi_product_url: {"product_name", "password"}} -- the
+        `added` document (which carries product_name<->ncademi_product_url)
+        joined to the `passwords` document (product_name<->password) on
+        exact product_name, the same matching convention the rest of the app
+        uses to cross-reference a product (see lib/passwords.ts's own
+        header). Only entries with a password on file. This is what the
+        caller attempts to unlock.
+      names_by_url: {ncademi_product_url: product_name} for EVERY tracked
+        Added Product regardless of whether it has a password -- by_url
+        alone cannot name a product that turns out to have NO password on
+        file (it's excluded from by_url precisely because it has none), so
+        the caller uses this to label that case in added-live.json's
+        $meta.missing.
 
     Both documents are required. A missing one raises DocumentMissingError
     naming the key rather than returning an empty index -- scraping on with no
@@ -290,13 +317,17 @@ def load_added_passwords(client: firestore.Client) -> dict[str, dict]:
         if r.get("product_name") and r.get("password")
     }
 
-    index: dict[str, dict] = {}
+    by_url: dict[str, dict] = {}
+    names_by_url: dict[str, str] = {}
     for product in added:
         name = product.get("product_name")
         url = product.get("ncademi_product_url")
-        if name and url and name in pw_by_name:
-            index[url] = {"product_name": name, "password": pw_by_name[name]}
-    return index
+        if not (name and url):
+            continue
+        names_by_url[url] = name
+        if name in pw_by_name:
+            by_url[url] = {"product_name": name, "password": pw_by_name[name]}
+    return by_url, names_by_url
 
 
 def fetch_protected_page(url: str, password: str) -> tuple[str, str | None]:
@@ -641,12 +672,20 @@ def save_live_document(
     key: str,
     records: list[dict],
     last_scraped: str,
+    missing: list[dict] | None = None,
 ) -> None:
     """Writes one live snapshot to `nerd_documents/{doc_key}`.
 
     `doc_key` is always supplied by the caller as a literal -- see the DOC_*
     constants' comment above for why this must never become a computed or
     iterated lookup.
+
+    `missing`, when not None, is added to $meta as `$meta.missing` -- used
+    only by the added-live call site, for the Added Products this run could
+    not put in `records` (no password on file, or the password on file
+    failed to unlock the page; see main()'s scrape_added branch). The other
+    two call sites (published-live, vendors-live) pass nothing, leaving
+    $meta exactly as before -- see BYTE AND ETAG CONVENTION below.
 
     BYTE AND ETAG CONVENTION, load-bearing. The stored string is
     byte-identical to what scripts/nerd_documents.py's `push` would have
@@ -656,13 +695,18 @@ def save_live_document(
     encoding of precisely those bytes, hex-encoded, matching
     nerd_documents.py's etag_of() and lib/server/documents.ts's etagOf().
     Diverging on either would surface in the editor as spurious 412s that look
-    like concurrency conflicts."""
+    like concurrency conflicts. `missing` defaulting to None (omitted from
+    $meta entirely, not written as null/[]) is what keeps this convention
+    byte-identical for the two call sites that never pass it."""
+    meta = {
+        "last_scraped": last_scraped,
+        "total_records": len(records),
+        "generated_by": "scrape_ncademi_live.py",
+    }
+    if missing is not None:
+        meta["missing"] = missing
     payload = {
-        "$meta": {
-            "last_scraped": last_scraped,
-            "total_records": len(records),
-            "generated_by": "scrape_ncademi_live.py",
-        },
+        "$meta": meta,
         key: records,
     }
     text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
@@ -746,11 +790,22 @@ def main() -> None:
     emit_progress("start", "Retrieving data." if target == "all" else f"Retrieving {target} data.")
 
     print("--- 1. REST API URL Discovery ---")
-    # Both "published" and "added" scrape from the single product post type
-    # -- the only difference is which protection status each keeps -- so one
-    # URL discovery + one fetch per URL serves both.
-    product_urls = sorted(get_rest_urls("product")) if scrape_products else []
-    vendor_urls = sorted(get_rest_urls("vendor")) if scrape_vendors else []
+    # Both "published" and "added" scrape from the single product post type.
+    # get_rest_urls() also classifies protection status for free from the
+    # same discovery response (see its own docstring) -- a target=="added"
+    # run uses that to fetch ONLY the protected subset below, since public
+    # pages are never relevant to it. target=="published"/"all" still fetch
+    # every URL: "all" needs both public and protected pages from the same
+    # single pass, and this optimization is scoped to added-only per this
+    # pass's own recon (the same filtering would apply symmetrically to
+    # published -- skipping protected pages without fetching them -- but
+    # that is not implemented here).
+    all_product_urls, protected_product_urls = (
+        get_rest_urls("product") if scrape_products else (set(), set())
+    )
+    all_vendor_urls, _ = get_rest_urls("vendor") if scrape_vendors else (set(), set())
+    product_urls = sorted(protected_product_urls if target == "added" else all_product_urls)
+    vendor_urls = sorted(all_vendor_urls)
     print(f"\nTotal: {len(product_urls)} product URL(s), {len(vendor_urls)} vendor URL(s).")
 
     published_out: list[dict] = []
@@ -759,12 +814,20 @@ def main() -> None:
     # file but did not unlock its page (rejected by WordPress, or the page
     # errored/failed to parse). Reported once, after the loop, as the
     # added_passwords_failed milestone; those pages are omitted from
-    # added-live.json. Protected pages with NO password on file are not
-    # Added Products we track and don't count here (stdout note only).
+    # added-live.json.
     failed_added: list[str] = []
+    # Every tracked Added Product that does NOT end up in added_out this run
+    # -- both the "no password on file" and "password on file failed to
+    # unlock" cases -- written into added-live.json's $meta.missing so these
+    # products survive past the run instead of being visible only in stdout
+    # (see the SKIP print and the failed_added.append() calls below, which
+    # both also feed this list).
+    missing_added: list[dict] = []
     if scrape_products:
         print("\n--- 2. Scraping product pages ---")
-        added_passwords = load_added_passwords(client) if scrape_added else {}
+        added_passwords, added_names_by_url = (
+            load_added_passwords(client) if scrape_added else ({}, {})
+        )
         published_count = 0
         added_count = 0
         for i, url in enumerate(product_urls, start=1):
@@ -786,12 +849,20 @@ def main() -> None:
             elif status == "protected" and scrape_added:
                 entry = added_passwords.get(url)
                 if not entry:
-                    # Protected, but not an Added Product we track (no
-                    # added.json + passwords.json entry) -- e.g. a page still
-                    # gated for reasons outside this workflow. Not our
-                    # concern to unlock; note it on stdout only, keep it out
-                    # of the added_passwords_failed milestone.
                     print(f"    SKIP protected page with no vendor-review password on file: {url}")
+                    # Only record it if it's a tracked Added Product (present
+                    # in the `added` document) that simply lacks a password --
+                    # a protected page with no added.json entry at all is not
+                    # our concern to unlock and stays stdout-only, unchanged.
+                    tracked_name = added_names_by_url.get(url)
+                    if tracked_name:
+                        missing_added.append(
+                            {
+                                "product_name": tracked_name,
+                                "ncademi_product_url": url,
+                                "reason": "no_password",
+                            }
+                        )
                 else:
                     unlocked_status, unlocked_html = fetch_protected_page(url, entry["password"])
                     if unlocked_status == "public":
@@ -801,10 +872,24 @@ def main() -> None:
                         except Exception as e:
                             print(f"    ERROR parsing {url}: {e}")
                             failed_added.append(entry["product_name"])
+                            missing_added.append(
+                                {
+                                    "product_name": entry["product_name"],
+                                    "ncademi_product_url": url,
+                                    "reason": "password_rejected",
+                                }
+                            )
                     else:
                         # "protected" (password rejected) or "error" -- either
                         # way this page did not yield content.
                         failed_added.append(entry["product_name"])
+                        missing_added.append(
+                            {
+                                "product_name": entry["product_name"],
+                                "ncademi_product_url": url,
+                                "reason": "password_rejected",
+                            }
+                        )
             # Every other combination -- a public page on an added-only run,
             # a protected page on a published-only run, or "missing"/"error"
             # from fetch_page (already logged there) -- is skipped.
@@ -895,8 +980,12 @@ def main() -> None:
         save_live_document(client, DOC_PUBLISHED_LIVE, "products", published_out, last_scraped)
         print(f"Saved {len(published_out)} published products to {COLLECTION}/{DOC_PUBLISHED_LIVE}")
     if scrape_added:
-        save_live_document(client, DOC_ADDED_LIVE, "products", added_out, last_scraped)
+        save_live_document(
+            client, DOC_ADDED_LIVE, "products", added_out, last_scraped, missing=missing_added
+        )
         print(f"Saved {len(added_out)} added products to {COLLECTION}/{DOC_ADDED_LIVE}")
+        if missing_added:
+            print(f"  {len(missing_added)} tracked Added Product(s) missing this run -- see $meta.missing.")
     if scrape_vendors:
         save_live_document(
             client, DOC_VENDORS_LIVE, "vendors", [map_vendor_to_directory_record(v) for v in vendors_out], last_scraped
