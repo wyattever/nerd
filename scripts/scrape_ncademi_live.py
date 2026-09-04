@@ -792,19 +792,26 @@ def main() -> None:
     print("--- 1. REST API URL Discovery ---")
     # Both "published" and "added" scrape from the single product post type.
     # get_rest_urls() also classifies protection status for free from the
-    # same discovery response (see its own docstring) -- a target=="added"
-    # run uses that to fetch ONLY the protected subset below, since public
-    # pages are never relevant to it. target=="published"/"all" still fetch
-    # every URL: "all" needs both public and protected pages from the same
-    # single pass, and this optimization is scoped to added-only per this
-    # pass's own recon (the same filtering would apply symmetrically to
-    # published -- skipping protected pages without fetching them -- but
-    # that is not implemented here).
+    # same discovery response (see its own docstring), so each single-
+    # category run fetches only the subset it can use: target=="added" gets
+    # ONLY protected_product_urls, target=="published" gets ONLY the public
+    # ones (all_product_urls minus the protected ones) -- neither one spends
+    # a request on a page it would just discard. target=="all" is
+    # unchanged and still fetches every URL: its single combined loop below
+    # needs both subsets from the SAME fetch_page() call per URL (public ->
+    # published_out, protected -> an unlock attempt for added_out), so there
+    # is no URL it can skip without losing coverage of one output or the
+    # other.
     all_product_urls, protected_product_urls = (
         get_rest_urls("product") if scrape_products else (set(), set())
     )
     all_vendor_urls, _ = get_rest_urls("vendor") if scrape_vendors else (set(), set())
-    product_urls = sorted(protected_product_urls if target == "added" else all_product_urls)
+    if target == "added":
+        product_urls = sorted(protected_product_urls)
+    elif target == "published":
+        product_urls = sorted(all_product_urls - protected_product_urls)
+    else:
+        product_urls = sorted(all_product_urls)
     vendor_urls = sorted(all_vendor_urls)
     print(f"\nTotal: {len(product_urls)} product URL(s), {len(vendor_urls)} vendor URL(s).")
 
