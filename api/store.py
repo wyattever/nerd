@@ -66,9 +66,30 @@ if LOCAL_MODE:
 # ── Firestore client (production only) ────────────────────────────────────────
 # Relocated from api/job_store.py (deleted in the cloud-migration cleanup); this
 # is a move of the client initialization only, no behavior change.
+#
+# PROJECT ID IS EXPLICIT AND REQUIRED. It is read from NERD_FIREBASE_PROJECT_ID
+# and nothing else -- deliberately NOT from GOOGLE_CLOUD_PROJECT, which a bare
+# AsyncClient() would otherwise pick up silently. The developer machine this
+# project is built on exports GOOGLE_CLOUD_PROJECT="acp-vertex-core" globally
+# for unrelated tooling, and that account HAS write access to it -- so the
+# usual "a wrong-project call just fails with 403" reassurance does not hold
+# here. A leaked client would SUCCEED SILENTLY against the wrong database.
+# See docs/DECISION_LOG.md #66. This mirrors
+# frontend/lib/server/firebase-admin.ts, which throws for the same reason.
+#
+# The check runs at import, not at first use: a service that starts clean and
+# then fails on its first request is harder to diagnose than one that refuses
+# to start at all.
 if not LOCAL_MODE:
     from google.cloud.firestore_v1.async_client import AsyncClient
-    db = AsyncClient()
+
+    _project_id = os.environ.get("NERD_FIREBASE_PROJECT_ID")
+    if not _project_id:
+        raise RuntimeError(
+            "NERD_FIREBASE_PROJECT_ID is not set. This is required and is "
+            "deliberately not defaulted to GOOGLE_CLOUD_PROJECT -- see api/store.py."
+        )
+    db = AsyncClient(project=_project_id)
 else:
     db = None
 

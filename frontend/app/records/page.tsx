@@ -48,7 +48,6 @@ export default function RecordsPage() {
   const [activeTab, setActiveTab] = useState<SourceTab>("candidate");
   const [dataSource, setDataSource] = useState<"stored" | "live">("stored");
   const [hasLiveScrapeData, setHasLiveScrapeData] = useState(false);
-  const [isRetrievingLive, setIsRetrievingLive] = useState(false);
 
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [addedProducts, setAddedProducts] = useState<ProductRecord[]>([]);
@@ -206,13 +205,14 @@ export default function RecordsPage() {
     };
   }, [dataSource, upsertLogEntry]);
 
-  // Checks once on mount whether frontend/lib/published-live.json exists yet
-  // (it won't until "Retrieve Live Data" -- see handleRetrieveLiveData
-  // below -- has been run at least once). This is what makes the Live Data
-  // toggle correctly disabled/enabled on a fresh page load without the user
-  // touching "Retrieve Live Data" first; that button also flips
-  // hasLiveScrapeData true directly on a successful scrape, same effect,
-  // just without waiting for a remount.
+  // Checks once on mount whether a published live snapshot exists yet (it
+  // won't until a scrape has been run at least once). This is what makes the
+  // Live Data toggle correctly disabled/enabled on a fresh page load.
+  //
+  // On mount is now the ONLY time hasLiveScrapeData is set. The scrape runs
+  // locally, from a terminal (DECISION_LOG.md #66), so nothing in the page
+  // can flip this mid-session the way the old in-app trigger did: after a
+  // scrape, this page needs a reload before Live Data becomes available.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -231,79 +231,6 @@ export default function RecordsPage() {
       cancelled = true;
     };
   }, []);
-
-  // Triggers scripts/scrape_ncademi_live.py via a POST /api/local/scrape
-  // SSE stream (see that route's header comment for the full protocol).
-  // Focus moves to the Messages log synchronously, before the first
-  // `await`, so it happens in the same tick as the click rather than after
-  // the fetch settles. The log is cleared first so a fresh run starts as a
-  // clean A-E progression rather than mixing in whatever the page-load
-  // effect above last wrote to the "load" row.
-  const handleRetrieveLiveData = useCallback(async () => {
-    setIsRetrievingLive(true);
-    setMessagesLog([]);
-    messagesLogRef.current?.focus();
-
-    try {
-      const res = await fetch("/api/local/scrape", { method: "POST" });
-      if (!res.ok || !res.body) {
-        upsertLogEntry(
-          "scrape-error",
-          `Retrieve live data failed: unexpected server response (${res.status}).`
-        );
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      // SSE framing: events are separated by a blank line ("\n\n"); each
-      // event is one or more "field: value" lines. Only `event:`/`data:`
-      // are used here. A chunk from the reader can contain zero, one, or
-      // several complete events, and can also end mid-event -- the while
-      // loop drains every complete event currently in `buffer`, leaving any
-      // trailing partial event for the next chunk to complete.
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let boundary: number;
-        while ((boundary = buffer.indexOf("\n\n")) !== -1) {
-          const rawEvent = buffer.slice(0, boundary);
-          buffer = buffer.slice(boundary + 2);
-
-          let eventType = "message";
-          let dataLine: string | null = null;
-          for (const line of rawEvent.split("\n")) {
-            if (line.startsWith("event: ")) eventType = line.slice("event: ".length);
-            else if (line.startsWith("data: ")) dataLine = line.slice("data: ".length);
-          }
-          if (dataLine === null) continue;
-
-          let data: { stage?: string; message?: string; error?: string };
-          try {
-            data = JSON.parse(dataLine);
-          } catch {
-            continue;
-          }
-
-          if (eventType === "progress" && data.stage && data.message) {
-            upsertLogEntry(data.stage, data.message);
-          } else if (eventType === "done") {
-            setHasLiveScrapeData(true);
-          } else if (eventType === "error") {
-            upsertLogEntry("scrape-error", `Retrieve live data failed: ${data.error ?? "unknown error"}.`);
-          }
-        }
-      }
-    } catch {
-      upsertLogEntry("scrape-error", "Retrieve live data failed: could not reach the local write API.");
-    } finally {
-      setIsRetrievingLive(false);
-    }
-  }, [upsertLogEntry]);
 
   const activeProducts = useMemo(() => {
     switch (activeTab) {
@@ -476,15 +403,6 @@ export default function RecordsPage() {
               >
                 Live Data
               </button>
-
-              <button
-                type="button"
-                disabled={isRetrievingLive}
-                onClick={handleRetrieveLiveData}
-                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isRetrievingLive ? "Retrieving…" : "Retrieve Live Data"}
-              </button>
             </div>
           </div>
         ) : null}
@@ -634,15 +552,16 @@ export default function RecordsPage() {
                 time given this p-4 padding; overflow-y-scroll (not -auto)
                 keeps the scrollbar gutter permanently visible even with
                 zero/one-line content, rather than only appearing once
-                there's enough to actually scroll. tabIndex={-1} makes this
-                programmatically focusable (see handleRetrieveLiveData's
-                messagesLogRef.current?.focus()) without adding it to the
-                normal Tab order. */}
+                there's enough to actually scroll. tabIndex={-1} keeps this
+                out of the normal Tab order while leaving it programmatically
+                focusable through messagesLogRef; the ref is still bound, but
+                nothing calls .focus() on it now that the in-app scrape
+                trigger that used to is gone. */}
             <div
               ref={messagesLogRef}
               role="log"
               aria-live="polite"
-              aria-label="Retrieve data progress and status messages"
+              aria-label="Status messages"
               tabIndex={-1}
               className="flex h-28 flex-col gap-1 overflow-y-scroll p-4 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             >

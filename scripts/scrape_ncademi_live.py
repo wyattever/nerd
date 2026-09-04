@@ -24,22 +24,34 @@ immediately on protection status -- the sole exception is a protected
 page on an "added" run, which takes a second fetch to re-load it with the
 wp-postpass cookie once its password has been POSTed.
 
+Reads and writes Firestore, never the filesystem (DECISION_LOG.md #66). All
+documents live in the `nerd_documents` collection, the same store the editor
+uses via lib/server/documents.ts and scripts/nerd_documents.py.
+
 Usage:
-    python3 scripts/scrape_ncademi_live.py
+    # local, against the Firestore emulator
+    FIRESTORE_EMULATOR_HOST=localhost:8080 python3 scripts/scrape_ncademi_live.py
+    # against the real project -- --prod is required, never the default
+    python3 scripts/scrape_ncademi_live.py --prod
+
+Input:
+    nerd_documents/added and nerd_documents/passwords -- joined on exact
+        product_name to build the Added-product unlock index. Both are
+        required; a missing one aborts the run naming the key.
 
 Output:
-    frontend/lib/published-live.json -- full product detail (same shape as
+    nerd_documents/published-live -- full product detail (same shape as
         published.json's records). No tracking_* keys: editor workflow
         metadata is decoupled into frontend/lib/tracking.json (see
         frontend/lib/tracking.ts) and merged onto records at read time, so
         a scrape neither carries nor needs an opinion on it. Publicly-
         visible product pages ONLY: a password-protected page is skipped
-        entirely here (it belongs in added-live.json instead).
-    frontend/lib/added-live.json -- same shape as published-live.json, but
+        entirely here (it belongs in added-live instead).
+    nerd_documents/added-live -- same shape as published-live, but
         for the password-protected ("Added to Site", pending vendor
         review) product pages. Each is unlocked with its vendor-review
-        password (frontend/lib/passwords.json, matched to a page via
-        frontend/lib/added.json's product_name<->ncademi_product_url) by
+        password (nerd_documents/passwords, matched to a page via
+        nerd_documents/added's product_name<->ncademi_product_url) by
         POSTing that password to WordPress's wp-login.php?action=postpass
         endpoint and re-fetching with the resulting wp-postpass cookie,
         then parsed by the SAME parse_public_product() the public pages
@@ -47,7 +59,7 @@ Output:
         reported via the "added_passwords_failed" progress milestone and
         omitted; a protected page with no password on file at all is
         skipped with a stdout note (not an Added Product this tracks).
-    frontend/lib/vendors-live.json -- full vendor detail, shaped to match
+    nerd_documents/vendors-live -- full vendor detail, shaped to match
         DirectoryRecord (frontend/lib/directory-schema.ts) via
         map_vendor_to_directory_record(), the same field mapping
         scripts/migrate_vendors_to_unified.py used to produce the
@@ -58,22 +70,20 @@ Output:
         into a no-op.
 Both overwritten unconditionally on a successful run.
 
-Progress streaming: alongside the existing human-readable prints (unchanged,
-still meant for a person running this directly from a terminal), main()
+Progress milestones: alongside the ordinary human-readable prints, main()
 also calls emit_progress() at up to seven milestones -- "start",
 "published", "added", "added_passwords_failed", "vendors",
 "vendors_missing", "complete" -- each printing ONE line of the form
-`PROGRESS_JSON:{...}`. frontend/app/api/local/scrape/route.ts spawns
-this script (not execFile -- spawn's stdout is a live stream, execFile only
-returns output after the process exits) and forwards each such line to the
-browser as an SSE event, which is what makes /records' Messages log update
-live instead of only after the whole ~1-2 minute run finishes. The
-PYTHONUNBUFFERED=1 that route.ts sets when spawning is load-bearing here:
-Python fully block-buffers stdout when it isn't a TTY, so without it every
-print() -- progress lines included -- would sit in a buffer and only reach
-Node in one lump at process exit, silently defeating the whole point of
-streaming. emit_progress() also flushes explicitly, as defense in depth for
-anyone invoking this script under a runner that doesn't set that env var.
+`PROGRESS_JSON:{...}`.
+
+These lines have no frontend consumer. They used to be parsed by
+frontend/app/api/local/scrape/route.ts, which spawned this script and
+forwarded each one to the browser as an SSE event; that route was deleted
+with the in-app scrape trigger (DECISION_LOG.md #66). The milestones are
+kept because they mark the run's shape legibly for whoever is watching the
+terminal, which is now the only place this output goes. emit_progress()
+still flushes explicitly, so the ordering stays honest even when stdout is
+piped somewhere that block-buffers it.
 """
 
 from __future__ import annotations
@@ -81,13 +91,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import sys
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
+from google.cloud import firestore
 
 # --- Configuration ---
 USER_AGENT = "Mozilla/5.0 (compatible; NCADEMI-directory-audit/5.0)"
@@ -101,18 +113,90 @@ REST_PAGE_DELAY_SECONDS = 0.1
 PAGE_FETCH_DELAY_SECONDS = 0.3
 REQUEST_TIMEOUT_SECONDS = 15
 
-# Must match PROGRESS_PREFIX in frontend/app/api/local/scrape/route.ts --
-# the one thing that ties this script's stdout protocol to that route's
-# parser. Anything printed on a line that doesn't start with this prefix is
-# just the normal human-readable log and is not forwarded as an SSE event.
+# Prefix for the machine-readable milestone lines emit_progress() prints:
+# one line of the form `PROGRESS_JSON:{"stage": ..., "message": ...}`.
+# Anything printed on a line that doesn't start with this prefix is just the
+# normal human-readable log.
+#
+# This protocol now has NO frontend consumer. It used to be parsed by
+# frontend/app/api/local/scrape/route.ts and forwarded to the browser as SSE
+# events; that route was deleted with the in-app scrape trigger (see
+# DECISION_LOG.md #66). The lines are kept because they mark the run's
+# progress legibly for a person watching the terminal, which is now the only
+# place this output goes.
 PROGRESS_PREFIX = "PROGRESS_JSON:"
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-OUT_PRODUCTS = REPO_ROOT / "frontend" / "lib" / "published-live.json"
-OUT_ADDED = REPO_ROOT / "frontend" / "lib" / "added-live.json"
-OUT_VENDORS = REPO_ROOT / "frontend" / "lib" / "vendors-live.json"
-ADDED_PATH = REPO_ROOT / "frontend" / "lib" / "added.json"
-PASSWORDS_PATH = REPO_ROOT / "frontend" / "lib" / "passwords.json"
+# --- Firestore ---------------------------------------------------------------
+# The scrape reads and writes documents in the `nerd_documents` collection --
+# the same store lib/server/documents.ts and scripts/nerd_documents.py use.
+# There is no filesystem I/O; see DECISION_LOG.md #66.
+COLLECTION = "nerd_documents"
+
+# THE PROJECT IS PINNED HERE, IN CODE, ON PURPOSE.
+#
+# GOOGLE_CLOUD_PROJECT is NEVER consulted. This machine exports it globally as
+# "acp-vertex-core" for unrelated tooling, and an explicit constructor argument
+# is the only resolution layer that outranks it (see
+# docs/firestore-local-auth-09-03-26.md section 2). Without this pin, that
+# variable would win and every read and write here would target the wrong
+# database.
+#
+# The usual reassurance -- "a wrong-project write just fails with 403" --
+# does NOT apply. It assumes the caller has no permissions on the leaked
+# project. The developer running this script DOES have write access to
+# acp-vertex-core, so a leaked write would SUCCEED SILENTLY into the wrong
+# Firestore: no error, no prompt, wrong data written. Same reasoning as
+# scripts/nerd_documents.py's docstring and lib/server/firebase-admin.ts.
+PROJECT_ID = "edtech-agent-2026"
+
+# Read by load_added_passwords(); written by save_live_document(). Named as
+# literals at every call site -- never computed, never iterated. IAM cannot
+# scope Firestore below the database level and Security Rules do not apply to
+# a service-account/ADC client, so a wrong key computed at runtime would
+# silently overwrite `published`, `vendors`, `passwords`, or `tracking` with
+# scrape output, with no ETag guard in the way (DECISION_LOG.md #66).
+DOC_ADDED = "added"
+DOC_PASSWORDS = "passwords"
+DOC_PUBLISHED_LIVE = "published-live"
+DOC_ADDED_LIVE = "added-live"
+DOC_VENDORS_LIVE = "vendors-live"
+
+
+class DocumentMissingError(RuntimeError):
+    """A `nerd_documents` document the scrape requires does not exist."""
+
+
+def firestore_client() -> firestore.Client:
+    """The one Firestore client for this run, pinned to PROJECT_ID.
+
+    FIRESTORE_EMULATOR_HOST, when set, redirects the client to the emulator and
+    makes the project id nominal -- that is the local development path and it
+    is honored automatically by the client library."""
+    client = firestore.Client(project=PROJECT_ID)
+    if client.project != PROJECT_ID:
+        raise RuntimeError(
+            f"Firestore client resolved project {client.project!r}, expected "
+            f"{PROJECT_ID!r}. Refusing to continue -- see the PROJECT_ID comment "
+            "above for why a wrong project here fails silently rather than loudly."
+        )
+    return client
+
+
+def read_document(client: firestore.Client, key: str) -> dict:
+    """Parsed contents of `nerd_documents/{key}`.
+
+    The document stores the JSON verbatim in a `bytes` string field, exactly as
+    scripts/nerd_documents.py writes it. Raises DocumentMissingError naming the
+    key when the document does not exist -- an absent input is a hard failure,
+    never a silent empty result."""
+    snap = client.collection(COLLECTION).document(key).get()
+    if not snap.exists:
+        raise DocumentMissingError(
+            f"{COLLECTION}/{key} does not exist. Seed it first: "
+            f"python3 scripts/nerd_documents.py push --project {PROJECT_ID}"
+        )
+    return json.loads(snap.get("bytes"))
+
 
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": USER_AGENT})
@@ -183,25 +267,28 @@ def fetch_page(url: str) -> tuple[str, str | None]:
     return "public", resp.text
 
 
-def load_added_passwords() -> dict[str, dict]:
-    """{ncademi_product_url: {"product_name", "password"}} -- frontend/lib/
-    added.json (which carries product_name<->ncademi_product_url) joined to
-    frontend/lib/passwords.json (product_name<->password) on exact
-    product_name, the same matching convention the rest of the app uses to
-    cross-reference a product (see lib/passwords.ts's own header). A page in
-    added.json with no passwords.json entry is simply absent from the
-    result -- the caller treats "no password on file" the same as a
-    rejected password (both land in the added_passwords_failed milestone)."""
-    try:
-        added = json.loads(ADDED_PATH.read_text(encoding="utf-8")).get("products", [])
-        pw_by_name = {
-            r["product_name"]: r["password"]
-            for r in json.loads(PASSWORDS_PATH.read_text(encoding="utf-8")).get("passwords", [])
-            if r.get("product_name") and r.get("password")
-        }
-    except (OSError, json.JSONDecodeError, KeyError) as e:
-        print(f"    ERROR loading Added-product passwords: {e}")
-        return {}
+def load_added_passwords(client: firestore.Client) -> dict[str, dict]:
+    """{ncademi_product_url: {"product_name", "password"}} -- the `added`
+    document (which carries product_name<->ncademi_product_url) joined to the
+    `passwords` document (product_name<->password) on exact product_name, the
+    same matching convention the rest of the app uses to cross-reference a
+    product (see lib/passwords.ts's own header). A page in `added` with no
+    `passwords` entry is simply absent from the result -- the caller treats
+    "no password on file" the same as a rejected password (both land in the
+    added_passwords_failed milestone).
+
+    Both documents are required. A missing one raises DocumentMissingError
+    naming the key rather than returning an empty index -- scraping on with no
+    passwords would silently skip every Added page and look like a clean run.
+    This is also the fix for the staleness bug in DECISION_LOG.md #65: the
+    passwords now come from the document the editor actually writes, not from
+    frontend/lib/passwords.json, which has had no writer since Phase 2."""
+    added = read_document(client, DOC_ADDED).get("products", [])
+    pw_by_name = {
+        r["product_name"]: r["password"]
+        for r in read_document(client, DOC_PASSWORDS).get("passwords", [])
+        if r.get("product_name") and r.get("password")
+    }
 
     index: dict[str, dict] = {}
     for product in added:
@@ -548,7 +635,28 @@ def map_vendor_to_directory_record(vendor: dict) -> dict:
     }
 
 
-def write_output(path: Path, key: str, records: list[dict], last_scraped: str) -> None:
+def save_live_document(
+    client: firestore.Client,
+    doc_key: str,
+    key: str,
+    records: list[dict],
+    last_scraped: str,
+) -> None:
+    """Writes one live snapshot to `nerd_documents/{doc_key}`.
+
+    `doc_key` is always supplied by the caller as a literal -- see the DOC_*
+    constants' comment above for why this must never become a computed or
+    iterated lookup.
+
+    BYTE AND ETAG CONVENTION, load-bearing. The stored string is
+    byte-identical to what scripts/nerd_documents.py's `push` would have
+    stored for the same content: json.dumps with indent=2, ensure_ascii=False,
+    plus a trailing newline -- exactly what the previous json.dump(..., f) +
+    f.write("\\n") produced on disk. The etag is SHA-256 over the UTF-8
+    encoding of precisely those bytes, hex-encoded, matching
+    nerd_documents.py's etag_of() and lib/server/documents.ts's etagOf().
+    Diverging on either would surface in the editor as spurious 412s that look
+    like concurrency conflicts."""
     payload = {
         "$meta": {
             "last_scraped": last_scraped,
@@ -557,21 +665,17 @@ def write_output(path: Path, key: str, records: list[dict], last_scraped: str) -
         },
         key: records,
     }
-    path.parent.mkdir(parents=True, exist_ok=True)
-    # open(path, "w") already truncates-and-rewrites, so this unlink is
-    # belt-and-suspenders, not load-bearing -- explicit per request, to
-    # guarantee no lingering file artifact survives an overwrite. Worth
-    # noting the tradeoff: this creates a brief window where `path` does
-    # not exist at all (between the unlink and the new file being written),
-    # unlike a plain truncating write, which never leaves the path missing.
-    # Fine for this local, single-writer dev script; would NOT be the right
-    # call for something like lib/local-write.ts's atomic temp-file+rename
-    # writes, which exist specifically to avoid ever exposing a missing or
-    # partial file to a concurrent reader.
-    path.unlink(missing_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
-        f.write("\n")
+    text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    raw = text.encode("utf-8")
+    client.collection(COLLECTION).document(doc_key).set(
+        {
+            "bytes": text,
+            "etag": hashlib.sha256(raw).hexdigest(),
+            "size_bytes": len(raw),
+            "updated_at": firestore.SERVER_TIMESTAMP,
+            "updated_by": f"scrape_ncademi_live.py:{os.getenv('USER', 'unknown')}",
+        }
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -582,14 +686,54 @@ def parse_args() -> argparse.Namespace:
         default="all",
         help="Which category to scrape (default: all). 'published' scrapes only publicly-visible "
         "product pages; 'added' scrapes only password-protected product pages, unlocking each with its "
-        "vendor-review password. Each single-category run writes only that category's output file and "
+        "vendor-review password. Each single-category run writes only that category's output document and "
         "skips the cross-category vendor-resource dedup step, which requires all datasets loaded.",
+    )
+    parser.add_argument(
+        "--prod",
+        action="store_true",
+        help="Required to read and write the real "
+        f"{PROJECT_ID} Firestore. Ignored when FIRESTORE_EMULATOR_HOST is set, which "
+        "always wins. Without either, the script refuses to run rather than touch "
+        "production by default.",
     )
     return parser.parse_args()
 
 
+def assert_write_target(prod: bool) -> None:
+    """Decides -- and announces -- which Firestore this run will use.
+
+    Called first thing in main(), before any URL discovery: a ten-minute
+    scrape that only then refuses to write is strictly worse than a fast
+    failure, so the decision happens up front.
+
+    FIRESTORE_EMULATOR_HOST wins outright when set, and --prod is ignored in
+    that case -- there is no production target to protect. Without it the run
+    is aimed at real data, and has to say so explicitly."""
+    emulator = os.getenv("FIRESTORE_EMULATOR_HOST")
+    if emulator:
+        print(f"[target] Firestore EMULATOR at {emulator} (project {PROJECT_ID}) -- --prod ignored.")
+        return
+
+    if not prod:
+        print(
+            "Refusing to run: FIRESTORE_EMULATOR_HOST is not set, so this would read "
+            f"and write the REAL {PROJECT_ID} Firestore.\n"
+            "  run locally:          FIRESTORE_EMULATOR_HOST=localhost:8080 "
+            "python3 scripts/scrape_ncademi_live.py\n"
+            "  run against prod:     python3 scripts/scrape_ncademi_live.py --prod",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+
+    print(f"[target] PRODUCTION Firestore, project {PROJECT_ID} -- live snapshots will be overwritten.")
+
+
 def main() -> None:
     args = parse_args()
+    # Before URL discovery, not before the writes -- see assert_write_target.
+    assert_write_target(args.prod)
+    client = firestore_client()
     target = args.target
     scrape_published = target in ("published", "all")
     scrape_added = target in ("added", "all")
@@ -620,7 +764,7 @@ def main() -> None:
     failed_added: list[str] = []
     if scrape_products:
         print("\n--- 2. Scraping product pages ---")
-        added_passwords = load_added_passwords() if scrape_added else {}
+        added_passwords = load_added_passwords(client) if scrape_added else {}
         published_count = 0
         added_count = 0
         for i, url in enumerate(product_urls, start=1):
@@ -746,14 +890,18 @@ def main() -> None:
     print("\n--- 5. Saving Results ---")
     last_scraped = datetime.now(timezone.utc).isoformat()
     if scrape_published:
-        write_output(OUT_PRODUCTS, "products", published_out, last_scraped)
-        print(f"Saved {len(published_out)} published products to {OUT_PRODUCTS.relative_to(REPO_ROOT)}")
+        # Each document key is a literal, one per call site. Never a variable,
+        # never a lookup -- see the DOC_* constants' comment.
+        save_live_document(client, DOC_PUBLISHED_LIVE, "products", published_out, last_scraped)
+        print(f"Saved {len(published_out)} published products to {COLLECTION}/{DOC_PUBLISHED_LIVE}")
     if scrape_added:
-        write_output(OUT_ADDED, "products", added_out, last_scraped)
-        print(f"Saved {len(added_out)} added products to {OUT_ADDED.relative_to(REPO_ROOT)}")
+        save_live_document(client, DOC_ADDED_LIVE, "products", added_out, last_scraped)
+        print(f"Saved {len(added_out)} added products to {COLLECTION}/{DOC_ADDED_LIVE}")
     if scrape_vendors:
-        write_output(OUT_VENDORS, "vendors", [map_vendor_to_directory_record(v) for v in vendors_out], last_scraped)
-        print(f"Saved {len(vendors_out)} vendors to {OUT_VENDORS.relative_to(REPO_ROOT)}")
+        save_live_document(
+            client, DOC_VENDORS_LIVE, "vendors", [map_vendor_to_directory_record(v) for v in vendors_out], last_scraped
+        )
+        print(f"Saved {len(vendors_out)} vendors to {COLLECTION}/{DOC_VENDORS_LIVE}")
 
     # Milestone E. Last line of the run -- only reports counts for the
     # category/categories actually scraped this run, so a targeted run never
