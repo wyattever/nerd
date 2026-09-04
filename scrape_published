@@ -1,6 +1,6 @@
 #!/bin/bash
-# scrape_added — root-level convenience wrapper for
-# scripts/scrape_ncademi_live.py --target added.
+# scrape_published — root-level convenience wrapper for
+# scripts/scrape_ncademi_live.py --target published.
 #
 # Matches run_nerd()'s pattern (~/.zshrc) of a short command runnable from
 # anywhere. Defaults to PRODUCTION: scraping now routinely targets real
@@ -20,7 +20,7 @@ for arg in "$@"; do
     --emulator) EMULATOR=1 ;;
     *)
       echo "Unknown argument: ${arg}" >&2
-      echo "Usage: ./scrape_added [--emulator]" >&2
+      echo "Usage: ./scrape_published [--emulator]" >&2
       exit 2
       ;;
   esac
@@ -45,9 +45,9 @@ if [ -n "${FIRESTORE_EMULATOR_HOST:-}" ]; then
 else
   FS_TARGET="PRODUCTION"
 fi
-echo "[scrape_added] target=added  firestore=${FS_TARGET}"
+echo "[scrape_published] target=published  firestore=${FS_TARGET}"
 
-ARGS=(--target added)
+ARGS=(--target published)
 if [ "${EMULATOR}" -eq 0 ]; then
   ARGS+=(--prod)
 fi
