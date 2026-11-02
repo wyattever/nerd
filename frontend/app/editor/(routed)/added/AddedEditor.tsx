@@ -23,6 +23,7 @@ import { PublishedSupportEditor } from "@/components/PublishedSupportEditor";
 import { PublishedAcrEditor } from "@/components/PublishedAcrEditor";
 import { DeleteAddedModal } from "@/components/DeleteAddedModal";
 import { CodeViewModal } from "@/components/CodeViewModal";
+import { PasswordField } from "@/components/PasswordField";
 import { toListingData } from "@/lib/editor-preview";
 import { buildNcademiListingHtml } from "@/lib/ncademiPreview";
 import type { PasswordRecord } from "@/lib/passwords";
@@ -85,16 +86,21 @@ export function AddedEditor({ slug, initialProducts, initialSchemaVersion, initi
   const [meta] = useState(initialMeta);
   const [etag, setEtag] = useState<string | null>(initialEtag);
 
-  // Read-only lookup only -- passwords are generated once, at Import
-  // Candidate time (CandidateEditor.tsx's handleImport), never from here.
-  // See that file's identical fetch-once-on-mount comment.
+  // Fetched once on mount; edited in place via PasswordField (which reports
+  // each save back through onSaved below).
   const [passwordRecords, setPasswordRecords] = useState<PasswordRecord[]>([]);
+  // Stays false if the fetch fails: now that the field is editable, an
+  // unknown stored value must not be overwritable blind.
+  const [passwordsLoaded, setPasswordsLoaded] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch("/api/local/passwords")
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`GET failed with ${res.status}`))))
       .then((body: { passwords?: PasswordRecord[] }) => {
-        if (!cancelled) setPasswordRecords(Array.isArray(body.passwords) ? body.passwords : []);
+        if (!cancelled) {
+          setPasswordRecords(Array.isArray(body.passwords) ? body.passwords : []);
+          setPasswordsLoaded(true);
+        }
       })
       .catch(() => {
         // No password data is a display-only degradation -- not worth
@@ -402,19 +408,23 @@ export function AddedEditor({ slug, initialProducts, initialSchemaVersion, initi
             </select>
           </label>
 
-          <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Password
-            {/* Read-only display only -- see CandidateEditor.tsx's
-                identical field for the full rationale (generated once at
-                Import Candidate time, never from here). */}
-            <input
-              type="text"
-              readOnly
-              size={9}
-              value={password?.password ?? ""}
-              className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700 cursor-default focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </label>
+          {/* Editable vendor-review password -- see PasswordField.tsx. The
+              key includes passwordsLoaded so the field re-initializes from
+              the stored value once the fetch above resolves. */}
+          <PasswordField
+            key={`${selected.product_name}:${passwordsLoaded}`}
+            productName={selected.product_name}
+            vendorName={selected.vendor_name}
+            storedPassword={password?.password ?? ""}
+            editable={passwordsLoaded}
+            onSaved={(record) =>
+              setPasswordRecords((prev) =>
+                prev.some((p) => p.product_name === record.product_name)
+                  ? prev.map((p) => (p.product_name === record.product_name ? record : p))
+                  : [...prev, record]
+              )
+            }
+          />
 
           <div className="ml-auto">
             <button
