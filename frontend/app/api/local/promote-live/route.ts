@@ -104,6 +104,22 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  // TEMPORARY (added 2026-11-02): the Added branch currently auto-creates
+  // not_tracked stubs with generated passwords (626c556), which is being
+  // replaced by mirror-promote rules (see DECISION_LOG, forthcoming). Remove
+  // this guard when that lands. Compared via `as string` so TypeScript does
+  // not narrow `category`/`kind` and flag the (now unreachable) Added
+  // branch below as a no-overlap comparison.
+  if ((category as string) === "added") {
+    return jsonResponse(
+      {
+        error:
+          "Updating stored Added data is temporarily disabled while the promote rules are being reworked. Published and Vendors are unaffected",
+      },
+      409
+    );
+  }
+
   const kind = category;
   const isVendors = kind === "vendors";
   const arrayKey = isVendors ? "vendors" : "products";
