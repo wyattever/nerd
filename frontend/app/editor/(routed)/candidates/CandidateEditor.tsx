@@ -41,6 +41,7 @@ import { PublishedAcrEditor } from "@/components/PublishedAcrEditor";
 import { ImportJsonModal } from "@/components/ImportJsonModal";
 import { DeleteCandidateModal } from "@/components/DeleteCandidateModal";
 import { CodeViewModal } from "@/components/CodeViewModal";
+import { PasswordField } from "@/components/PasswordField";
 import { toListingData } from "@/lib/editor-preview";
 import { buildNcademiListingHtml } from "@/lib/ncademiPreview";
 import type { PasswordRecord } from "@/lib/passwords";
@@ -117,17 +118,21 @@ export function CandidateEditor({
   const [meta] = useState(initialMeta);
   const [etag, setEtag] = useState<string | null>(initialEtag);
 
-  // Fetched once per mount, not per record -- passwords.json only grows via
-  // handleImport's own POST below (which appends the new record locally
-  // too, see there), so there's nothing else that would make an existing
-  // entry go stale during this component's lifetime.
+  // Fetched once per mount, not per record. Kept current locally by
+  // handleImport's POST and PasswordField's onSaved (see both below).
   const [passwordRecords, setPasswordRecords] = useState<PasswordRecord[]>([]);
+  // Stays false if the fetch fails: now that the field is editable, an
+  // unknown stored value must not be overwritable blind.
+  const [passwordsLoaded, setPasswordsLoaded] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch("/api/local/passwords")
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`GET failed with ${res.status}`))))
       .then((body: { passwords?: PasswordRecord[] }) => {
-        if (!cancelled) setPasswordRecords(Array.isArray(body.passwords) ? body.passwords : []);
+        if (!cancelled) {
+          setPasswordRecords(Array.isArray(body.passwords) ? body.passwords : []);
+          setPasswordsLoaded(true);
+        }
       })
       .catch(() => {
         // No password data is a display-only degradation (the field just
@@ -541,25 +546,24 @@ export function CandidateEditor({
             </select>
           </label>
 
-          <label className="flex flex-col items-start gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Password
-            {/* size=9 (roughly "Password"'s own 8 characters, plus a hair
-                of room) rather than a fixed Tailwind width, so the field
-                stays sized to its label regardless of the actual password
-                string's length. readOnly (not disabled): the value stays
-                focusable/selectable/copyable, matching the whole point of
-                displaying it. Generated once at Import Candidate time (see
-                handleImport) -- blank here for anything imported before
-                this feature shipped, until the one-off backfill script
-                runs. */}
-            <input
-              type="text"
-              readOnly
-              size={9}
-              value={password?.password ?? ""}
-              className="rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700 cursor-default focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </label>
+          {/* Editable vendor-review password -- see PasswordField.tsx. The
+              key includes product_name, so a record switch via activeSlug
+              (handleImport) remounts it, and passwordsLoaded, so it
+              re-initializes from the stored value once the fetch resolves. */}
+          <PasswordField
+            key={`${selected.product_name}:${passwordsLoaded}`}
+            productName={selected.product_name}
+            vendorName={selected.vendor_name}
+            storedPassword={password?.password ?? ""}
+            editable={passwordsLoaded}
+            onSaved={(record) =>
+              setPasswordRecords((prev) =>
+                prev.some((p) => p.product_name === record.product_name)
+                  ? prev.map((p) => (p.product_name === record.product_name ? record : p))
+                  : [...prev, record]
+              )
+            }
+          />
 
           <div className="ml-auto">
             <button
