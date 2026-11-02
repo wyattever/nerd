@@ -1,9 +1,9 @@
 # N.E.R.D. — Mirror-Promote Rework, Password Editing, and Deploy Plan
 
-**Date:** 2026-11-02
+**Date:** 2026-11-02 (revised the same day after the mirror recon)
 **Status:** Decisions settled; rework not yet implemented. Password editing and the temporary Added guard are deployed (2026-11-02, revision `nerd-frontend-00018-vad`).
-**Suggested location:** `docs/mirror-promote-plan-11-02-26.md`
-**Relationship to DECISION_LOG:** #68 records the password-editing work. The mirror-promote rework will need its own entry (#69 or next free number) when it lands, because it reverses the promote merge rule described in §3.1. This document is the working plan; the log entries are the record.
+**Location:** `docs/mirror-promote-plan-11-02-26.md`
+**Relationship to DECISION_LOG:** #68 records the password-editing work. The mirror-promote rework needs its own entry (#69 or the next free number) when it lands, because it reverses the promote merge rule (§3.1). This document is the working plan; the log entries are the record.
 
 ---
 
@@ -14,206 +14,304 @@ N.E.R.D. is not in regular use right now, so its stored records drift out of ste
 - Stored Added held records with no counterpart on the site. ABCmouse is not among the 100 product pages. CommonLit 360 and the three Lexia products are now public pages, so they appear in the published snapshot rather than the added one.
 - 21 password-protected product pages on the site are not tracked by N.E.R.D. at all. 7 of them already exist as candidates.
 - Grammarly's and Nearpod's stored passwords failed to unlock their pages.
-- Stored Vendors contains two test records ("Another Test", "Test Vendor") that survive every promote.
+- Stored Vendors held two test records. They have since been removed by hand.
 
-The current "Update Stored Data" (promote-live) behaviour is a conservative merge. Live records update their stored counterparts, stored records with no live counterpart are kept, and live-only records are appended. For Added, commit `626c556` additionally auto-creates a stub record, with a generated password, for every untracked protected page. Both behaviours let stored data accumulate records that no longer reflect the site.
+Published and Vendors were promoted later on 2026-11-02 under the current merge rule, so their live snapshots have been consumed. The Added snapshot remains, because the temporary guard (D13) refuses Added promotes.
 
-**Recon sources** (all in `.scratch/verification/`):
-- `live-data-check-20261102-1045.md`
-- `scrape-anomalies-20261102-1101.md`
-- `promote-preservation-20261102-1104.md`
-- `published-diff-20261102-1106.md`
-- `be-my-eyes-deletion-audit-20261102-1114.md`
-- `orphan-reconciliation-20261102-1121.md`
-- `password-edit-recon-20261102-1137.md`
-- `deploy-recon-20261102-1314.md`
+The current "Update Stored Data" (promote-live) behaviour is a conservative merge. Live records update their stored counterparts, stored records with no live counterpart are kept, and live-only records are appended. For Added, commit `626c556` also auto-creates a stub record, with a generated password, for every untracked protected page. Both behaviours let stored data accumulate records that no longer reflect the site.
+
+The mirror recon (`.scratch/verification/mirror-recon-20261102-1444.md`) then found that **the scraper cannot currently distinguish "not on the site" from "we failed to look"**. URL discovery can fail silently and partially. Most fetch failures are never recorded. Several different failures share the `password_rejected` reason. A mirror rule built on today's snapshots would therefore propose deleting records that were never checked. Decisions D15–D18 exist to close that gap before anything is deleted.
+
+**Recon sources** (all in `.scratch/`):
+- `verification/live-data-check-20261102-1045.md`
+- `verification/scrape-anomalies-20261102-1101.md`
+- `verification/promote-preservation-20261102-1104.md`
+- `verification/published-diff-20261102-1106.md`
+- `verification/be-my-eyes-deletion-audit-20261102-1114.md`
+- `verification/orphan-reconciliation-20261102-1121.md`
+- `verification/password-edit-recon-20261102-1137.md`
+- `verification/deploy-recon-20261102-1314.md`
+- `verification/deploy-candidate-20261102-1412.md`
+- `verification/mirror-recon-20261102-1444.md`
+- `fixtures/planner-inputs-20261102-1444.md` — reflects the **current** snapshot format. Superseded for planner work by the format in §3.9.
 
 ---
 
-## 2. Completed today: editable vendor-review passwords
+## 2. Completed: editable vendor-review passwords
 
 Recorded in full as DECISION_LOG #68. In summary:
 
 - **The API.** `PUT /api/local/passwords` sets a product's password. The value is trimmed and must be 1–255 characters, matching WordPress's `varchar(255)` `post_password`. The row is created if absent, and nothing is written when the value is unchanged.
-- **The write path.** Every app write to the `passwords` document goes through `mutatePasswords`, built on `mutateDocument` in `lib/server/documents.ts`, as one Firestore transaction. Writers: POST (candidate import), PUT, DELETE (Promote to Published), and promote-live's stub step.
-- **The UI.** `components/PasswordField.tsx` replaces the read-only Password inputs in both the Added and Candidate editors. The Save button appears only when the value has changed. Enter saves and Escape reverts. Focus returns to the input after a save. Outcomes are announced through the shared status and alert regions, with "Saving password…" set first so repeated saves are re-announced.
-- **Verified** by typecheck, lint, a pure-function test, and manual browser and VoiceOver checks against the Firestore emulator covering every write path.
+- **The write path.** Every app write to the `passwords` document goes through `mutatePasswords`, built on `mutateDocument` in `lib/server/documents.ts`, as one Firestore transaction.
+- **The UI.** `components/PasswordField.tsx` replaces the read-only Password inputs in both the Added and Candidate editors.
+- **Verified** by typecheck, lint, a pure-function test, and manual browser and VoiceOver checks against the Firestore emulator covering every write path. Production edits were confirmed working after deploy.
 
-**Commits, local only:**
+**Commits:**
 - `09daa31` — backend
 - `e1329f7` — Added editor
 - `ab98bd3` — Candidate editor
 - `2fdbc4d` — documentation and #68
-- `a82da29` — `frontend/.gcloudignore`; see §5
+- `a82da29` — `frontend/.gcloudignore`
+- `543d481` — first version of this plan
+- `7134bfc` — the D13 guard
+- `e1eccd8` — D14 and §8
 
 ---
 
 ## 3. Decisions for the mirror-promote rework
 
-### 3.1 The mirror rule (applies to Added, Published, and Vendors)
+### 3.1 The mirror rule (applies to Added, Published and Vendors)
 
-**D1. Stored data mirrors the website.** After a promote, each stored category contains only records the scrape positively identified, plus records the scrape could not check. A stored record that the scrape positively shows is no longer present in that category is deleted, with its reason reported.
+**D1. Stored data mirrors the website.** After a promote, each stored category contains only records the scrape positively identified, plus records the scrape could not check. A stored record is deleted only when the scrape *positively shows* it is no longer present in that category. The reason is reported with each deletion.
 
-This reverses the keep-unmatched merge rule introduced with "Update Stored Data" (commit `0a7849f`; see the DECISION_LOG entry that introduced `promote-live/route.ts`). That rule was conservative on purpose, because some Added pages could not yet be unlocked. The mirror rule replaces it with explicit handling of each case below, so nothing is deleted merely because it could not be checked.
+This reverses the keep-unmatched merge rule introduced with "Update Stored Data" (commit `0a7849f`; see the DECISION_LOG entry that introduced `promote-live/route.ts`). That rule was conservative because the scraper could not prove absence. D15–D18 make absence provable; where it isn't, nothing is deleted.
 
-**D2. One shared planner for all three categories.** The decision logic lives in one pure planning function used by all three categories. It is testable without Firestore, and it implements the case tables in §3.2–3.4.
+**D2. One shared planner for all three categories.** The decision logic lives in one pure planning function used by all three categories. It is testable without Firestore. It takes the stored documents and the live snapshot (including the run record, §3.9) as input, and returns a plan of per-record actions with reasons.
 
-**D14. Deleting a record also deletes its tracking row.** This applies in all three categories and matches D7 for password rows. Tracking rows are keyed by `product_name` (a vendor record's `product_name` is its vendor name), so a row left behind would be an orphan, like today's "Amplify Change" row.
+**D14. Deleting a record also deletes its tracking row**, subject to D20. This applies in all three categories.
+
+**D15. Deletions require complete discovery.** For each post type (`product`, `vendor`), the run record states whether URL discovery completed:
+- every REST page was fetched successfully;
+- no exception occurred;
+- the number of URLs discovered equals WordPress's `X-WP-Total` header.
+
+If discovery for a post type was not complete, the planner proposes **no deletions** in the categories that depend on it, and the modal states why. Added and Published depend on `product`; Vendors depends on `vendor`. Updates, additions and password changes still proceed.
+
+**D16. Every snapshot carries the full run record** (format in §3.9):
+- the run's ID, start and finish times, and target;
+- discovery completeness per post type;
+- one outcome entry for **every discovered URL** of both post types.
+
+Each category's promote is therefore self-contained. For example, deciding that an Added product is "now public" uses the outcome list in the Added snapshot itself, even after the Published snapshot has been consumed. The scraper writes all three snapshots in **one atomic batch**, so a crash can never leave snapshots from different runs.
+
+**D17. The confirmation must match the preview.** The dry run (D9) returns the current version tokens (etags) of every document the promote would change. The real promote passes them back and is refused if any has changed, asking the operator to review again. Planning and applying happen inside one transaction (D8). This also closes a lost-edit window in the *current* promote: it reads stored data outside a transaction and writes without checking, so an editor save landing in between is silently overwritten.
+
+**D18. Full runs only.** The mirror promote accepts only a snapshot whose run record shows target `all`. The scraper's targeted runs (`--target published` / `--target added`) are removed, because Vendor-resource deduplication and the mirror rule both require all categories from the same run.
+
+**D20. Shared-name rows.** Password and tracking rows are keyed by `product_name` across every category: a vendor record's `product_name` is its vendor name, and candidates use the same keys. Some names occur in more than one category; for example, "BrainPOP" and "Kami" are each both a product and a vendor, and a product moving from Added to Published keeps its name. A password or tracking row is therefore deleted only if, after the plan is applied, **no remaining record in any category (published, added, candidate, vendors) has that `product_name`**.
 
 ### 3.2 Added — case table
 
-Records are matched to scrape results by `ncademi_product_url`.
+Records are matched by `ncademi_product_url` to the snapshot's outcome entries (§3.9).
 
-| Scrape result for the stored record | Outcome | Reported as |
+| Outcome for the stored record's URL | Action | Reported as |
 |---|---|---|
-| Page unlocked with the password on file | Keep, updated from the live page | Updated |
-| Password on file rejected (WordPress returned the password form again) | Keep the stored record; **delete the password row** | Needs correct password |
-| Protected page, but no password on file | Keep the stored record | Needs password |
-| Page fetch failed (network or server error) | **Untouched**: record and password unchanged | Could not check |
-| Not found as a protected page: absent from the site, or now public | **Delete the record, its password row and its tracking row** | Removed, with reason ("not on site" / "now public") |
-| *(Not a stored record)* Protected page on the site that N.E.R.D. does not track | **Create nothing** | Listed as an untracked protected page |
+| `protected_unlocked` | Keep, updated from the live page | Updated |
+| `password_rejected` (a valid unlock request returned the password form again) | Keep the stored record; delete the password row (D20 does not apply: the row belongs to this record) | Needs correct password |
+| `no_password` | Keep the stored record | Needs password |
+| `fetch_error` or `parse_error` | Untouched: record and password unchanged | Could not check |
+| `public_ok` | Delete the record, its password row and its tracking row (subject to D20) | Removed: now public |
+| No outcome entry, and product discovery complete | Delete the record, its password row and its tracking row (subject to D20) | Removed: not on site |
+| No outcome entry, and product discovery incomplete | Untouched | Could not check: discovery incomplete |
+| *(No stored record)* `not_tracked` | Create nothing | Listed as an untracked protected page |
 
-**D3. Fetch errors leave the record untouched, and the rest of the promote proceeds.** Only the affected record is skipped. The run-wide alternative, where any fetch error blocks all deletions, was considered and not adopted, because the confirmation modal (D9) shows every proposed change before anything is written.
+**D3. Fetch and parse errors leave the record untouched**, and the rest of the promote proceeds.
 
-**D4. "No password on file" is treated like "wrong password."** The record is kept and flagged. This prevents a two-cycle trap: D5 clears a wrong password; on the next scrape the record has no password; without D4 it would be deleted as unidentified before anyone had a chance to enter the correct password.
+**D4. "No password on file" is treated like "wrong password":** the record is kept and flagged. This prevents a two-cycle trap: D5 clears a wrong password, and on the next scrape the record would otherwise be deleted as unidentified before anyone could enter the correct one.
 
-**D5. A rejected password is deleted, and the record is flagged.** The editable Password field (DECISION_LOG #68) is where the correct WordPress password is then entered.
+**D5. A rejected password is deleted, and the record is flagged.** The correct WordPress password is then entered through the editable Password field (#68).
 
-**D6. No auto-stubs.** Untracked protected pages no longer become records with generated passwords. This replaces `626c556`'s auto-stub behaviour. The 21 untracked pages, including the 7 that are already candidates, are reported for a person to act on, through the normal candidate workflow if wanted. It also removes the HTML-entity problem for stub names (§3.5, D10).
+**D6. No auto-stubs.** Untracked protected pages no longer become records with generated passwords; this replaces `626c556`'s behaviour. They are reported for a person to act on, through the normal candidate workflow if wanted. Generated passwords remain correct for products that *start* in N.E.R.D. (see D19). They were wrong only for pages discovered already protected on the site, whose real password exists in WordPress.
 
-**Rationale for D6.** A generated password made sense when N.E.R.D. assigned passwords that someone then set on WordPress. For pages already protected on the site, the real password exists on WordPress, so a generated one is wrong by construction and would fail to unlock on every future scrape.
-
-**D7. Deleting a record also deletes its password row** (and its tracking row, per D14). This avoids the orphaned-row pattern found today; see §7.
+**D7. Deleting a record also deletes its password row** (and its tracking row, per D14), subject to D20.
 
 ### 3.3 Published — case table
 
 Records are matched by `ncademi_product_url`.
 
-| Scrape result | Outcome | Reported as |
+| Outcome for the stored record's URL | Action | Reported as |
 |---|---|---|
-| Public page scraped | Keep, updated from the live page | Updated |
-| Page fetch failed | Untouched | Could not check |
-| Not found as a public page: absent from the site, or now protected | Delete the record and its tracking row | Removed, with reason ("not on site" / "now protected") |
-| *(Not a stored record)* New public page | Append | Added |
+| `public_ok` | Keep, updated from the live page | Updated |
+| `fetch_error` or `parse_error` | Untouched | Could not check |
+| `protected_unlocked`, `password_rejected`, `no_password` or `not_tracked` | Delete the record and its tracking row (subject to D20) | Removed: now protected |
+| No outcome entry, and product discovery complete | Delete the record and its tracking row (subject to D20) | Removed: not on site |
+| No outcome entry, and product discovery incomplete | Untouched | Could not check: discovery incomplete |
+| *(No stored record)* `public_ok` | Append | Added |
 
-**D12. Current workflow assumption.** "Promote to Published" in the Added editor is used only after the product page has been manually made public on the website. Under that workflow, stored Published never runs ahead of the site, so the mirror rule never deletes a legitimate in-flight record.
+**D12. Workflow assumption, Published.** "Promote to Published" in the Added editor is used only after the product page has been made public on the website. Under that workflow, stored Published never runs ahead of the site.
+
+**D19. Workflow assumption, Added.** "Added to Site" in the Candidate editor is used only after the webmaster has manually built the protected page on the website. The webmaster either uses the N.E.R.D.-generated password or sets their own; in the latter case the operator enters the real one through the Password field. Under that workflow, stored Added never runs ahead of the site.
 
 ### 3.4 Vendors — case table
 
 Records are matched by `vendor_directory_url`.
 
-| Scrape result | Outcome | Reported as |
+| Outcome for the stored record's URL | Action | Reported as |
 |---|---|---|
-| Vendor page scraped | Keep, updated from the live page | Updated |
-| Page fetch failed | Untouched | Could not check |
-| Not found on the site | Delete the record and its tracking row | Removed ("not on site") |
-| *(Not a stored record)* New vendor page | Append | Added |
+| `public_ok` | Keep, updated from the live page | Updated |
+| `protected_vendor` | Untouched; the scraper's stub is **never** used to update the stored record (its name is derived from the URL slug) | Could not check: protected vendor page |
+| `fetch_error` or `parse_error` | Untouched | Could not check |
+| No outcome entry, and vendor discovery complete | Delete the record and its tracking row (subject to D20) | Removed: not on site |
+| No outcome entry, and vendor discovery incomplete | Untouched | Could not check: discovery incomplete |
+| *(No stored record)* `public_ok` | Append | Added |
+| *(No stored record)* `protected_vendor` | Append nothing | Listed as an unscraped protected vendor page |
 
-**Expected effect on first run:** the two test vendors ("Another Test", "Test Vendor") are proposed for deletion and appear in the confirmation modal.
+**D22. Protected vendor pages are "exists, could not check."** The stored vendor is left as it is, and the slug-derived stub is never appended or used as an update.
 
-**UNVERIFIED, for recon.** The scraper has a protected-vendor stub path (`make_protected_vendor_stub`) and a `vendors_missing` progress milestone. How protected or missing vendor pages appear in `vendors-live` needs confirming before the Vendors planner is written.
+**D23. Workflow assumption, Vendors.** New vendors are added with "add vendor" in the Vendor editor only after the vendor page has been manually added to the website. Under that workflow, stored Vendors never runs ahead of the site. The confirmation modal (D9) remains the backstop if a record ever does.
 
 ### 3.5 Scraper changes
 
-**D10. The scraper reports distinct outcomes.**
-
-- **Separate reasons** in `$meta.missing`: `fetch_error`, `password_rejected` (the password form was returned again), `no_password`, and `not_tracked`. Today `password_rejected` covers both a re-shown password form and a request failure (`scrape_ncademi_live.py` approx. :920–928). Under D5 that conflation would delete correct passwords after a timeout, so splitting it is a prerequisite.
-- **Published and vendor fetch errors** are recorded, not only Added ones, so D3 can apply to every category. How the scraper currently handles a failed public-page fetch is **UNVERIFIED**; confirm in recon.
-- **Decode names at the source.** WordPress REST `title.rendered` values are HTML-encoded (for example `Kate&#8217;s Math Lessons`). Decode them with Python's `html.unescape`, so names agree with names parsed from page HTML.
+**D10. The scraper records what actually happened for every URL**, as outcome entries in the run record (§3.9):
+- **Discovery** (`get_rest_urls`):
+  - set an explicit timeout on every request;
+  - read `X-WP-Total` / `X-WP-TotalPages`;
+  - treat any exception, any non-200 page, or a count mismatch as incomplete discovery, recorded per post type (D15) rather than swallowed;
+  - keep a non-200 response from silently ending paging.
+- **Product pages:** a failed fetch is `fetch_error`, and a page that fetches but fails to parse is `parse_error`, for public and protected pages alike.
+- **Protected pages:** `password_rejected` is reserved for one case only — the unlock request succeeded and WordPress returned the password form again. A request error or non-200 during unlock is `fetch_error`; a parse failure after unlocking is `parse_error`.
+- **Vendor pages:** fetch and parse failures are recorded as outcomes, not only printed. A protected vendor page is recorded as `protected_vendor`.
+- **Names:** apply Python's `html.unescape` to WordPress REST `title.rendered` wherever it is used for a name (today, `not_tracked` entries). Slug-derived names are never presented as real names.
+- **Writes:** all three snapshots are written in one Firestore batch (D16). The three document keys remain named explicitly, preserving #66's write boundary.
+- **Targets:** remove `--target published` and `--target added`; every run scrapes all categories (D18).
+- **Interim compatibility:** the run record replaces `$meta.missing`. Until the new promote route ships, nothing reads `missing` except the guarded Added stub block (D13), so dropping it is safe.
 
 ### 3.6 Promote route and confirmation
 
-**D8. One transaction.** The stored-document write, the password-row changes, and the live-snapshot deletion happen in one Firestore transaction. A failed promote leaves nothing half-applied.
+**D8. One transaction.** The stored-document write, password-row changes, tracking-row changes and the live-snapshot deletion happen in one Firestore transaction. All four documents are read first, then planned (the pure planner of D2, called inside the transaction), then written. This follows the read-then-pure-function pattern of `mutateDocument`, extended to four documents. A failed promote leaves nothing half-applied.
 
 **D9. Dry run, then an all-or-nothing confirmation modal.**
+- **The dry run.** The route accepts a dry-run request that returns the complete plan and the version tokens of D17, and writes nothing.
+- **The modal** lists every proposed deletion with its reason, every password to be cleared, every record that could not be checked (and why), every untracked or unscraped protected page, and the counts of updates and additions. It also shows the snapshot's run time. The operator confirms or cancels the whole promote. Per-record keep checkboxes were considered and not adopted: under D12, D19 and D23, every deletion should be legitimate, so anything unexpected is a signal to cancel and investigate.
+- **Accessibility requirements.** The modal follows the native `<dialog>`/`showModal()` pattern of `DeleteAddedModal.tsx`:
+  - `aria-labelledby` and `aria-describedby`;
+  - focus moved into the dialog on open, and returned to the "Update Stored Data" button on close;
+  - native Escape to cancel;
+  - real list markup for the lists;
+  - a confirm button with a specific accessible name, such as "Delete 6 records and update".
 
-- **The dry run.** The route accepts a dry-run request that returns the complete plan and writes nothing.
-- **The modal.** "Update Stored Data" opens a modal listing every proposed deletion with its reason, every password to be cleared, every record that could not be checked, and the counts of updates and additions. The operator confirms or cancels the whole promote. Per-record keep checkboxes were considered and not adopted: under D12 every deletion should be legitimate, so anything unexpected in the list is a signal to cancel and investigate rather than to proceed selectively.
-- **Accessibility requirements.** The modal follows the existing `<dialog>`/`showModal()` pattern used by `DeleteAddedModal.tsx`. It has a programmatically labelled heading, and focus moves into the dialog on open. Escape cancels, and focus returns to the "Update Stored Data" button on close. The lists use real list markup, and the confirm button has a specific accessible name, such as "Delete 6 records and update". This is a destructive data action, so error prevention under SC 3.3.4 applies: the action is checked and confirmed before it happens.
-- **Results.** After the promote, the outcome lines go to the existing Messages log, through `liveLog` and `role="log"`: updated, removed with reasons, needs correct password, needs password, could not check, and untracked protected pages.
+  This is a destructive data action, so SC 3.3.4 error prevention applies.
+- **Results** go to the existing Messages log (`liveLog`, `role="log"`). Each result line needs a **unique `stage`** value, because the log uses it as the React key.
 
-### 3.7 Future: WordPress publishing
+### 3.7 Future: WordPress page creation and publishing
 
-**D11. Ordering principle for the planned WordPress-publishing version of "Promote to Published".** Write the record to stored Published only after WordPress confirms the publish succeeded. If the publish fails or is pending, the record stays where it was. This keeps stored Published from ever containing a page the site lacks, so the mirror rule remains safe without special cases. Nothing to build now.
+**D11. Ordering principle for future WordPress integration.** N.E.R.D. writes a stored record only after WordPress confirms the corresponding page change:
+- **Publishing:** "Promote to Published" writes the record to stored Published only after WordPress confirms the publish succeeded.
+- **Page creation:** the planned flow for Added, where N.E.R.D. creates the protected page in WordPress and sets the N.E.R.D.-generated password, writes the record to stored Added only after WordPress confirms the page exists with that password set.
+- **Vendor saves:** the planned flow where saving a vendor in the Vendor editor pushes the change to the vendor page through WordPress writes the record to stored Vendors only after WordPress confirms the change. This covers both creating a new vendor and editing an existing one.
 
-### 3.8 Temporary guard (ships with today's deploy)
+If either fails or is pending, the record stays where it was. Stored data then never contains a page the site lacks, and the mirror rule stays safe without special cases. Nothing to build now.
 
-**D13.** Until the rework lands, `POST /api/local/promote-live` refuses `category: "added"` with HTTP 409 and this message: "Updating stored Added data is temporarily disabled while the promote rules are being reworked. Published and Vendors are unaffected." Published and Vendors promotes keep their current merge behaviour in the meantime. Remove the guard when the rework ships.
+### 3.8 Temporary guard (deployed)
+
+**D13.** Until the rework lands, `POST /api/local/promote-live` refuses `category: "added"` with HTTP 409 and a message explaining the temporary block. Published and Vendors promotes keep the current merge rule meanwhile. Remove the guard in step 5 of §4.
+
+### 3.9 Snapshot run record (format)
+
+Every `*-live` snapshot's `$meta` carries the same `run` block from the run that produced it:
+
+```
+$meta: {
+  last_scraped: <ISO-8601 UTC>,        // retained, = run.finished_at
+  total_records: <int>,                // retained; records in THIS snapshot
+  generated_by: "scrape_ncademi_live.py",
+  run: {
+    run_id: <string, uuid4>,
+    started_at: <ISO-8601 UTC>,
+    finished_at: <ISO-8601 UTC>,
+    target: "all",
+    discovery: {
+      product: { complete: <bool>, expected_total: <int|null>, discovered: <int>, error: <string|null> },
+      vendor:  { complete: <bool>, expected_total: <int|null>, discovered: <int>, error: <string|null> }
+    },
+    outcomes: [
+      {
+        url: <string>,                 // the match key: ncademi_product_url or vendor_directory_url
+        post_type: "product" | "vendor",
+        status: "public_ok" | "protected_unlocked" | "password_rejected" | "no_password"
+              | "not_tracked" | "protected_vendor" | "fetch_error" | "parse_error",
+        name: <string|null>,           // decoded real name where known; null when only a slug is available
+        detail: <string|null>          // short diagnostic, e.g. "HTTP 503", "timeout", "no <article>"
+      }
+    ]
+  }
+}
+```
+
+Rules:
+- **One entry per discovered URL.** `outcomes` contains exactly one entry for every URL discovered for either post type, so its length equals the sum of `discovery.*.discovered`.
+- **Statuses by post type.** `protected_unlocked`, `password_rejected`, `no_password` and `not_tracked` occur only for `product`; `protected_vendor` only for `vendor`.
+- **Snapshot contents.** A record appears in `published-live` only with outcome `public_ok`; in `added-live` only with `protected_unlocked`; in `vendors-live` only with `public_ok`.
+- **Same run.** All three snapshots of one run carry identical `run` blocks.
+- **`$meta.missing` is removed.**
+
+### 3.10 Retire the legacy editor
+
+**D21.** The old `/editor` page (`frontend/app/editor/page.tsx`) is unused, and still reachable by URL with its own copies of the promote and import actions. It is retired, after a grep-confirmed zero-reference check. This is independent of the mirror rework and can ship separately.
 
 ---
 
 ## 4. Implementation plan
 
-Each step is one Claude CLI dispatch with stop-and-report gates. Claude validates each report before the next dispatch is written. Claude CLI commits when its checks pass, never pushes, and commits UI and persistence changes only after the developer's browser check.
+Each step is one dispatch with stop-and-report gates, validated before the next is written. Claude CLI commits when its checks pass and never pushes. UI and persistence changes commit only after the developer's browser check.
 
-1. **Recon.** How the scraper handles fetch failures per target (products, protected products, vendors); what `$meta.missing` and `vendors_missing` contain today; how protected-vendor stubs appear in `vendors-live`; every code path that creates records in stored Added, Published and Vendors (to confirm nothing runs ahead of the site beyond D12); promote-live's current structure; and the `DeleteAddedModal.tsx` pattern to reuse.
-2. **Scraper.** Distinct `$meta.missing` reasons; fetch errors recorded for all targets; `html.unescape` on REST titles. Verify with `py_compile`/pytest and an emulator run.
-3. **Planner.** A pure function implementing §3.2–3.4 for all three categories, returning a plan with per-record actions and reasons. Test it standalone against fixtures for every row of every table.
-4. **Promote route.** A dry-run mode returning the plan, and the real promote applying it in one transaction (D8), including password-row and tracking-row deletions (D5, D7, D14). Remove the D13 guard here.
-5. **Modal and messages.** The confirmation modal (D9) and the result lines in the Messages log.
-6. **Emulator end-to-end test.** Fixtures covering every case (unlocked, rejected, no password, fetch error, not on site, now public, untracked, appended), across all three categories. Developer browser and screen-reader check of the modal.
-7. **DECISION_LOG entry** recording D1–D13, with a forward pointer on the merge-rule entry it reverses.
+1. **Recon** — done (`mirror-recon-20261102-1444.md`).
+2. **Plan update** — this revision.
+3. **Scraper** (Claude CLI). Implement D10, D16 and D18 and the §3.9 format.
+   - Verify with `py_compile` and new pytest tests for discovery completeness and outcome classification, using stubbed HTTP responses (no network).
+   - Then one emulator run, and one production run read back to confirm the format.
+4. **Planner** (external model, Claude Fable, from an upload bundle). A pure TypeScript function implementing §3.2–3.4, D15, D20 and D22 against the §3.9 format, with a `node:test` test for every row of every table.
+   - Node 25 runs `.ts` test files directly; the tests live outside `frontend/`, because `tsconfig.json` does not allow `.ts`-extension imports.
+   - Claude CLI places the files on a branch and runs the tests and the typecheck.
+5. **Promote route and document layer** (Claude CLI).
+   - A four-document transaction variant of `promoteLive` that calls the planner inside the transaction (D8).
+   - The dry run with version tokens (D17).
+   - Password and tracking row changes (D5, D7, D14, D20). Tracking removal can reuse `reconcileTrackingRows`.
+   - Remove the D13 guard.
+6. **Modal and messages** (Claude CLI): D9.
+7. **Emulator end-to-end test.** Fixtures covering every row of §3.2–3.4, plus incomplete discovery. Developer browser and screen-reader check of the modal.
+8. **Retire the legacy editor** (D21). Independent; any time.
+9. **DECISION_LOG entry** recording D1–D23, with a forward pointer on the merge-rule entry it reverses.
 
 ---
 
-## 5. Today's deploy plan (before the rework)
+## 5. Deploy record (2026-11-02)
 
-**What ships.** Ten local commits ahead of `origin/main` (`6dd8921`):
+**What shipped.** Eleven commits, `97fd4d9` through `7134bfc`:
 - four from 2026-09-04: `97fd4d9`, `723510a`, `74df9c7`, `626c556`;
-- today's password and `.gcloudignore` commits: `09daa31`, `e1329f7`, `ab98bd3`, `2fdbc4d`, `a82da29`;
-- the D13 guard commit, once made.
+- `09daa31`, `e1329f7`, `ab98bd3`, `2fdbc4d`, `a82da29`, `543d481`, `7134bfc`.
 
-Only `nerd-frontend` needs a new revision. Nothing under `api/` or `Dockerfile.api` changed.
+Only `nerd-frontend` needed a new revision.
 
-**Production state at recon time:**
-- `nerd-frontend-00016-beq`, created 2026-09-04T19:32:36Z, serves 100% of traffic and also carries the `candidate` tag.
-- No label records its source commit. By timestamp it was most likely built from `1fcded7`; this is inferred, not verified.
+**Procedure used.** Manual and frontend-only; `scripts/deploy.sh` was not used, because it redeploys `nerd-api`, runs `gcloud config set project`, and auto-promotes with `--to-latest`.
+1. Build from `frontend/` with `gcloud builds submit --config cloudbuild.yaml`, with explicit `--project`.
+2. Deploy by digest with `--no-traffic --tag=candidate` and no env-var flags.
+3. Check at the candidate URL.
+4. Promote with `update-traffic --to-revisions=<revision>=100`.
 
-**Procedure.** Manual, frontend-only. `scripts/deploy.sh` is not used, because it redeploys `nerd-api`, runs `gcloud config set project`, and auto-promotes with `--to-latest`. Every command carries `--project=edtech-agent-2026` and, where applicable, `--region=us-central1`.
-
-1. **Guard.** Add D13; emulator check that an Added promote is refused and a Published promote still works; commit.
-2. **Push.** The developer pushes `main` to origin, so production does not run code that exists only locally.
-3. **Build.** From `frontend/`, `gcloud builds submit --config cloudbuild.yaml` with the same substitutions `deploy.sh` uses (the two `NEXT_PUBLIC_FIREBASE_*` values plus `_REPO`). Record the image digest. `frontend/.gcloudignore` (`a82da29`) keeps `emulator-data/`, debug logs and `test-results/` out of the upload. `.env.local` was already excluded and remains so.
-4. **Deploy with no traffic.** `gcloud run deploy nerd-frontend --image <repo>/nerd-frontend@sha256:<digest> --no-traffic --tag=candidate`, with **no env-var flags**: the six existing variables, the service account and public access are retained. Confirm immediately with `describe` that `00016-beq` still serves 100%.
-5. **Check the candidate.** The developer tests at `https://candidate---nerd-frontend-meomhj23xq-uc.a.run.app`. That host is already a Firebase Auth authorized domain. Suggested first real use: enter Grammarly's and Nearpod's correct WordPress passwords.
-6. **Promote.** `gcloud run services update-traffic nerd-frontend --to-revisions=<new revision>=100`, run only after the developer's OK.
-7. **Rollback, if needed.** `gcloud run services update-traffic nerd-frontend --to-revisions=nerd-frontend-00016-beq=100`.
-
-**After deploy:**
-- Re-scrape (`scrape_ncademi_live.py --prod`) to confirm Grammarly and Nearpod unlock.
-- Promoting Vendors and Published under the current merge rule remains safe; see the recon reports. Added stays blocked by the guard.
-
-**Outcome (2026-11-02):** deployed as planned.
-- Eleven commits shipped, `97fd4d9` through `7134bfc`, including this document's commit and the guard. `origin/main` = `7134bfc`.
+**Outcome:**
 - Cloud Build `630f60fc`; image digest `sha256:76c01acb21eb8bfb5423b17adf36384042285158110fc5147b9c2635c1fcfaa6`.
-- Revision `nerd-frontend-00018-vad` was deployed with no traffic, checked at the candidate URL, and then promoted to 100%. Environment variable names and the service account are unchanged.
-- Rollback target: `nerd-frontend-00016-beq`.
-- Password edits were confirmed working in production. Grammarly's and Nearpod's correct WordPress passwords are still to be obtained from whoever manages the protected pages on ncademi.org.
+- Revision `nerd-frontend-00018-vad` was promoted to 100%, with environment variable names and the service account unchanged.
+- **Rollback:** `gcloud run services update-traffic nerd-frontend --project=edtech-agent-2026 --region=us-central1 --to-revisions=nerd-frontend-00016-beq=100`.
+- Password edits were confirmed working in production.
+- Grammarly's and Nearpod's correct WordPress passwords are still to be obtained from whoever manages the protected pages on ncademi.org.
+
+**Repeatable procedure.** The same four steps above, run from a clean, pushed `main`.
 
 ---
 
 ## 6. Open questions
 
-- **Message wording and ordering** in the Messages log for promote results: to be settled in step 5.
-- **Promote order across categories.** Promoting Added before Published deletes the four now-public products from Added before Published holds them. Nothing is lost, since they remain in the published snapshot, but the modal should say "now public" so the order is understandable. *Proposed: no enforced order; rely on the reason text.*
+- **Message wording and ordering** in the Messages log for promote results: to be settled in step 6.
 
 ---
 
 ## 7. Known, not addressed (carried forward)
 
-**From the password work (DECISION_LOG #68):**
-- **"Delete" leaves password rows behind** in the Added and Candidate editors. Today's orphaned "Be My Eyes" row, and the 12 password rows for products that are now only in Published, are cleanup candidates. The mirror rework's D7 covers deletions made by promote only.
-- **Rows are keyed by `product_name`**, so renaming a product orphans its password and tracking rows.
+**From the password work (#68):**
+- **"Delete" in the Added and Candidate editors leaves password rows behind.** The orphaned "Be My Eyes" row and the password rows for products now only in Published are cleanup candidates. The mirror rework covers deletions made by promote only.
+- **Renaming a product** orphans its password and tracking rows.
 - **`useUnsavedChangesGuard` does not cover the Password field.**
 - **Pressing Escape while a password save is in flight** reverts the field, but the save still completes.
 - **`frontend/lib/passwords.json` `$meta` text is stale.** It is local seed data.
 
 **Elsewhere:**
-- **`scripts/nerd_documents.py push` overwrites all 9 Firestore documents wholesale** from local files dated late August, with no backup. A production push would revert every edit since. It needs a safety guard (refuse when Firestore is newer, or require an explicit override), or retirement.
-- **`nerd_documents.py`'s docstring usage text** shows `--project` after the subcommand. The script requires it before.
+- **`scripts/nerd_documents.py push` overwrites all 9 Firestore documents wholesale** from local files dated late August, with no backup. It needs a safety guard, or retirement. `scripts/write_single_document.py` also writes directly.
+- **`nerd_documents.py`'s usage text** shows `--project` after the subcommand. The script requires it before.
 - **CLAUDE.md and AGENTS.md describe Next.js 15**; the repo runs Next 16.2.9.
-- **Earlier Cloud Build source uploads may contain `emulator-data/`** (a Firestore export including passwords) and debug logs, if those existed at the time. The bucket is private to the project. This needs a read-only check of retained source archives (**UNVERIFIED**).
-- **The `"Amplify Change"` tracking row matches no record.** Delete it, or rename it to the intended product.
+- **Earlier Cloud Build source uploads may contain `emulator-data/`** and debug logs (**UNVERIFIED**). The bucket is private to the project.
+- **The `"Amplify Change"` tracking row matches no record.**
+- **The current promote's lost-edit window** (D17) remains until step 5 ships. It is low risk with one operator.
 
 ---
 
@@ -221,7 +319,7 @@ Only `nerd-frontend` needs a new revision. Nothing under `api/` or `Dockerfile.a
 
 **Goal.** Keep the live snapshots current without anyone running the scraper from a terminal, so N.E.R.D. stays in step with the site while it is not in regular use. Promotes remain manual and reviewed through the D9 modal; a scrape only ever writes the three `*-live` snapshots.
 
-**Sequencing.** After the mirror-promote rework (§4). The rework changes the scraper (D10), and the mirror rule's reviewed promote is what makes unattended snapshots safe to act on. The feasibility probe (§8.3) runs first, independently of the rework.
+**Sequencing.** After the mirror-promote rework (§4). The rework changes the scraper (D10, D16, D18), and the reviewed promote is what makes unattended snapshots safe to act on. The feasibility probe (§8.3) runs first, independently of the rework.
 
 ### 8.1 Options
 
@@ -244,10 +342,10 @@ Only `nerd-frontend` needs a new revision. Nothing under `api/` or `Dockerfile.a
 - Preferred only if colleagues without GitHub access must be able to trigger scrapes.
 
 **Common to both:**
-- **Each run scrapes all three categories together; there are no per-category runs.** Vendor-resource deduplication requires vendors in the same run, and the mirror rule needs one consistent snapshot. For example, deciding an Added product is "now public" requires a Published snapshot from the same run.
+- **Full runs only (D18)**, written as one atomic batch (D16).
 - **#66's write boundary still applies.** The script names its three output documents explicitly.
 - **Any identity that runs the scraper can write any document in the database** (#66), so its credentials must be scoped and protected accordingly.
-- **Running from colleagues' own machines (Mac or Windows) was considered and not preferred.** It works, and WSL2 makes Windows behave like the Mac setup, but each person would need a Google login with Firestore write access to the project. That widens the exposure #66 describes.
+- **Running from colleagues' own machines (Mac or Windows) was considered and not preferred.** WSL2 makes Windows behave like the Mac setup, but each person would need a Google login with Firestore write access to the project, which widens the exposure #66 describes.
 
 ### 8.2 Why not GitHub Pages
 
@@ -258,7 +356,7 @@ GitHub Pages serves static files only, so the scraper would have to run in a bro
 
 ### 8.3 Feasibility probe (first step)
 
-**The unknown (UNVERIFIED):** whether ncademi.org, or a security plugin protecting `wp-login.php`, blocks or challenges requests from cloud datacenter addresses. The scraper works from a developer laptop, which says nothing about cloud addresses. GitHub Actions runners and Cloud Run both use datacenter addresses, so the answer applies to both options.
+**The unknown (UNVERIFIED):** whether ncademi.org, or a security plugin protecting `wp-login.php`, blocks or challenges requests from cloud datacenter addresses. GitHub Actions runners and Cloud Run both use datacenter addresses, so the answer applies to both options.
 
 **The probe:** a one-off, manually triggered workflow with no Google Cloud access. It:
 - fetches the WordPress REST product list;
