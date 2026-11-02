@@ -4,9 +4,10 @@ scrape_ncademi_live.py — Production live-scrape of the NCADEMI directory
 (products + vendors), consolidating three prototype scripts written during
 Phase 3 exploration:
 
-  - build_live_index.py    -- WordPress REST API URL discovery
-                               (get_rest_urls) and the password-protection
-                               check (form.pw_form).
+  - build_live_index.py    -- WordPress REST API URL discovery (now
+                               discover(), which also reports completeness)
+                               and the password-protection check
+                               (form.pw_form).
   - temp_content_scraper.py -- BeautifulSoup extraction of a public
                                product/vendor page into the frontend's
                                record shape (parse_public_product /
@@ -17,18 +18,18 @@ Phase 3 exploration:
                                but applied to this run's own freshly-scraped
                                vendors rather than a committed vendors.json.
 
-Consolidated into ONE pass per URL rather than the prototypes' two (a
-discovery+status pass writing an intermediate live-index.json, then a
-second fetch to actually parse): each URL is fetched once and branches
-immediately on protection status -- the sole exception is a protected
-page on an "added" run, which takes a second fetch to re-load it with the
-wp-postpass cookie once its password has been POSTed.
+Every run is a full run (products and vendors together; DECISION_LOG/plan
+D18). Each discovered URL is fetched once and classified into exactly one
+outcome (classify_product / classify_vendor) -- the sole exception is a
+tracked protected product with a password on file, which takes a second
+fetch to re-load it with the wp-postpass cookie once its password has been
+POSTed.
 
 Reads and writes Firestore, never the filesystem (DECISION_LOG.md #66). All
 documents live in the `nerd_documents` collection, the same store the editor
 uses via lib/server/documents.ts and scripts/nerd_documents.py.
 
-Usage:
+Usage (no --target: every run is a full run):
     # local, against the Firestore emulator
     FIRESTORE_EMULATOR_HOST=localhost:8080 python3 scripts/scrape_ncademi_live.py
     # against the real project -- --prod is required, never the default
@@ -39,41 +40,34 @@ Input:
         product_name to build the Added-product unlock index. Both are
         required; a missing one aborts the run naming the key.
 
-Output:
-    nerd_documents/published-live -- full product detail (same shape as
-        published.json's records). No tracking_* keys: editor workflow
-        metadata is decoupled into frontend/lib/tracking.json (see
-        frontend/lib/tracking.ts) and merged onto records at read time, so
-        a scrape neither carries nor needs an opinion on it. Publicly-
-        visible product pages ONLY: a password-protected page is skipped
-        entirely here (it belongs in added-live instead).
-    nerd_documents/added-live -- same shape as published-live, but
-        for the password-protected ("Added to Site", pending vendor
-        review) product pages. Each is unlocked with its vendor-review
-        password (nerd_documents/passwords, matched to a page via
-        nerd_documents/added's product_name<->ncademi_product_url) by
-        POSTing that password to WordPress's wp-login.php?action=postpass
-        endpoint and re-fetching with the resulting wp-postpass cookie,
-        then parsed by the SAME parse_public_product() the public pages
-        use. An Added Product whose on-file password is rejected is
-        reported via the "added_passwords_failed" progress milestone and
-        omitted; a protected page with no password on file at all is
-        skipped with a stdout note (not an Added Product this tracks).
-    nerd_documents/vendors-live -- full vendor detail, shaped to match
-        DirectoryRecord (frontend/lib/directory-schema.ts) via
-        map_vendor_to_directory_record(), the same field mapping
-        scripts/migrate_vendors_to_unified.py used to produce the
-        already-migrated frontend/lib/vendors.json. That mapping only runs
-        at the write step, after the product-vendor_resources dedup step
-        below, which needs parse_public_vendor's raw "resources" key on the
-        FULL vendors_out records -- mapping first would silently turn dedup
-        into a no-op.
-Both overwritten unconditionally on a successful run.
+Output (all three written together in ONE Firestore batch, so a run either
+writes all of them or none):
+    nerd_documents/published-live -- records for product pages whose
+        outcome is public_ok (same shape as published.json's records). No
+        tracking_* keys: editor workflow metadata is decoupled into the
+        tracking document and merged onto records at read time.
+    nerd_documents/added-live -- same shape, for protected product pages
+        whose outcome is protected_unlocked: unlocked with the vendor-review
+        password on file (passwords matched to a page via added's
+        product_name<->ncademi_product_url) by POSTing it to WordPress's
+        wp-login.php?action=postpass and re-fetching with the resulting
+        cookie, then parsed by the same parse_public_product().
+    nerd_documents/vendors-live -- records for vendor pages whose outcome is
+        public_ok, shaped as DirectoryRecord via
+        map_vendor_to_directory_record() after the vendor-resource dedup.
+        Protected vendor pages produce no record (outcome protected_vendor).
+    Every snapshot's $meta carries the identical run record (plan section
+    3.9): run_id, started_at, finished_at, target "all", discovery
+    completeness per post type, and exactly one outcome per discovered URL
+    (public_ok, protected_unlocked, password_rejected, no_password,
+    not_tracked, protected_vendor, fetch_error, parse_error). The run is
+    validated (check_outcomes) before writing; on any violation nothing is
+    written and the script exits non-zero.
 
 Progress milestones: alongside the ordinary human-readable prints, main()
-also calls emit_progress() at up to seven milestones -- "start",
-"published", "added", "added_passwords_failed", "vendors",
-"vendors_missing", "complete" -- each printing ONE line of the form
+also calls emit_progress() at six milestones -- "start", "published",
+"added", "vendors", "outcomes" (counts per post type and status, plus
+discovery completeness), "complete" -- each printing ONE line of the form
 `PROGRESS_JSON:{...}`.
 
 These lines have no frontend consumer. They used to be parsed by
@@ -95,8 +89,8 @@ import json
 import os
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
-from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -110,9 +104,7 @@ API_BASE = "https://ncademi.org/wp-json/wp/v2"
 # wp-postpass_<hash> cookie on the session that a subsequent GET of the page
 # presents to render full content instead of the form.
 POSTPASS_URL = "https://ncademi.org/wp-login.php?action=postpass"
-REST_PAGE_DELAY_SECONDS = 0.1
 PAGE_FETCH_DELAY_SECONDS = 0.3
-REQUEST_TIMEOUT_SECONDS = 15
 
 # Prefix for the machine-readable milestone lines emit_progress() prints:
 # one line of the form `PROGRESS_JSON:{"stage": ..., "message": ...}`.
@@ -150,7 +142,7 @@ COLLECTION = "nerd_documents"
 # scripts/nerd_documents.py's docstring and lib/server/firebase-admin.ts.
 PROJECT_ID = "edtech-agent-2026"
 
-# Read by load_added_passwords(); written by save_live_document(). Named as
+# Read by load_added_passwords(); written by write_live_snapshots(). Named as
 # literals at every call site -- never computed, never iterated. IAM cannot
 # scope Firestore below the database level and Security Rules do not apply to
 # a service-account/ADC client, so a wrong key computed at runtime would
@@ -203,103 +195,8 @@ SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": USER_AGENT})
 
 
-# --- 1. REST API URL discovery (from build_live_index.py) ---
-def get_rest_urls(post_type: str) -> tuple[set[str], set[str], dict[str, str]]:
-    """Dynamically finds the REST endpoint for a post type and paginates to
-    get every URL of that type. Returns (all_urls, protected_urls,
-    protected_titles).
-
-    protected_urls is read from each item's own `class_list` -- WordPress
-    core appends the literal string "post-password-required" there
-    (get_post_class() / post_password_required()) whenever a post has a
-    password set, the exact same condition fetch_page() re-derives later
-    from form.pw_form on the rendered page. Classifying protection at
-    discovery time this way costs ZERO extra requests: class_list is
-    already present in the same paginated item list this function fetches
-    to build all_urls. Confirmed empirically against the real API: a known-
-    protected product's class_list carries post-password-required AND its
-    rendered page carries form.pw_form; a known-public product's carries
-    neither. See DECISION_LOG.md for the recon this enabled (--target added
-    now fetches only the protected subset, see main()).
-
-    protected_titles maps each protected_urls entry to its `title.rendered`
-    -- also free from this same response, and also confirmed empirically:
-    unlike content/excerpt (which this site's REST list view omits for
-    EVERY item, protected or not), title.rendered stays populated with the
-    real product name even for a password-protected, untracked item (e.g.
-    "Nearpod", "Grammarly"). Only collected for protected items -- it is
-    only ever needed to name a newly-discovered protected page with no
-    `added` document entry at all (see main())."""
-    urls: set[str] = set()
-    protected: set[str] = set()
-    protected_titles: dict[str, str] = {}
-    try:
-        type_info = SESSION.get(f"{API_BASE}/types/{post_type}").json()
-
-        if "_links" in type_info and "wp:items" in type_info["_links"]:
-            items_url = type_info["_links"]["wp:items"][0]["href"]
-        else:
-            # Fallback if the types endpoint doesn't return the standard link.
-            items_url = f"{API_BASE}/{post_type}s"
-
-        print(f"Discovered REST endpoint for '{post_type}': {items_url}")
-
-        page = 1
-        while True:
-            resp = SESSION.get(f"{items_url}?per_page=100&page={page}")
-            if resp.status_code != 200:
-                break  # A 400-level error usually means the page is out of bounds.
-
-            items = resp.json()
-            if not items:
-                break
-
-            for item in items:
-                link = item.get("link")
-                if not link:
-                    continue
-                urls.add(link)
-                if "post-password-required" in item.get("class_list", []):
-                    protected.add(link)
-                    title = (item.get("title") or {}).get("rendered")
-                    if title:
-                        protected_titles[link] = title
-
-            page += 1
-            time.sleep(REST_PAGE_DELAY_SECONDS)
-
-    except Exception as e:
-        print(f"Error fetching {post_type}s via REST API: {e}")
-
-    print(f"Found {len(urls)} {post_type} URLs.")
-    return urls, protected, protected_titles
-
-
-# --- 2. Single-fetch classification (protected / public / missing / error) ---
-def fetch_page(url: str) -> tuple[str, str | None]:
-    """Fetches url exactly once. Returns (status, html): status is one of
-    'protected', 'public', 'missing', 'error'; html is populated for
-    'protected' and 'public' only."""
-    try:
-        resp = SESSION.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
-        if resp.status_code == 404:
-            return "missing", None
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        if getattr(e.response, "status_code", None) == 404:
-            return "missing", None
-        print(f"    ERROR fetching {url}: {e}")
-        return "error", None
-    except Exception as e:
-        print(f"    ERROR fetching {url}: {e}")
-        return "error", None
-
-    soup = BeautifulSoup(resp.text, "html.parser")
-    if soup.select_one("form.pw_form"):
-        return "protected", resp.text
-    return "public", resp.text
-
-
+# --- 1-2. Added-product unlock index (URL discovery and per-URL fetching now
+# live in section 6: discover(), classify_product(), classify_vendor()) ---
 def load_added_passwords(client: firestore.Client) -> tuple[dict[str, dict], dict[str, str]]:
     """Returns (by_url, names_by_url):
 
@@ -314,8 +211,7 @@ def load_added_passwords(client: firestore.Client) -> tuple[dict[str, dict], dic
         Added Product regardless of whether it has a password -- by_url
         alone cannot name a product that turns out to have NO password on
         file (it's excluded from by_url precisely because it has none), so
-        the caller uses this to label that case in added-live.json's
-        $meta.missing.
+        build_added_entry() uses it to classify that case as no_password.
 
     Both documents are required. A missing one raises DocumentMissingError
     naming the key rather than returning an empty index -- scraping on with no
@@ -343,44 +239,11 @@ def load_added_passwords(client: firestore.Client) -> tuple[dict[str, dict], dic
     return by_url, names_by_url
 
 
-def fetch_protected_page(url: str, password: str) -> tuple[str, str | None]:
-    """Unlocks a password-protected page: POSTs `password` to WordPress's
-    postpass endpoint (setting a wp-postpass_<hash> cookie on SESSION), then
-    re-fetches `url` with that cookie. Returns (status, html) matching
-    fetch_page's contract -- 'public' with full HTML when the password is
-    accepted, 'protected' when it is rejected (pw_form still present), or
-    'error' on a network failure."""
-    try:
-        SESSION.post(
-            POSTPASS_URL,
-            data={"post_password": password, "Submit": "Submit"},
-            headers={"Referer": url},
-            allow_redirects=False,
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
-        resp = SESSION.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"    ERROR unlocking {url}: {e}")
-        return "error", None
-
-    if BeautifulSoup(resp.text, "html.parser").select_one("form.pw_form"):
-        return "protected", None
-    return "public", resp.text
-
-
-def slug_to_name(url: str) -> str:
-    """Derives a readable name from a URL slug for protected pages."""
-    path = urlparse(url).path.strip("/")
-    slug = path.split("/")[-1]
-    return slug.replace("-", " ").title()
-
-
 def emit_progress(stage: str, message: str, **extra) -> None:
     """One machine-readable progress line for route.ts to parse -- see the
     module docstring's "Progress streaming" section for the full protocol.
-    `stage` is a stable id ("start"/"published"/"added"/
-    "added_passwords_failed"/"vendors"/"vendors_missing"/"complete"); the
+    `stage` is a stable id ("start"/"published"/"added"/"vendors"/
+    "outcomes"/"complete"); the
     frontend uses it to REPLACE that stage's row in place rather than
     appending a new one, which is what makes the "published"/"added"/
     "vendors" counters look like they're live-updating in the Messages log
@@ -389,10 +252,6 @@ def emit_progress(stage: str, message: str, **extra) -> None:
     already sets -- belt and suspenders, since this line existing at all
     only matters if it reaches Node promptly."""
     print(f"{PROGRESS_PREFIX}{json.dumps({'stage': stage, 'message': message, **extra})}", flush=True)
-
-
-def make_protected_vendor_stub(url: str) -> dict:
-    return {"vendor_name": slug_to_name(url), "vendor_directory_url": url, "is_protected": True}
 
 
 # --- 3. BeautifulSoup extraction (from temp_content_scraper.py, unchanged) ---
@@ -476,7 +335,7 @@ def parse_public_product(html: str, url: str, is_protected: bool = False) -> dic
     """Parses a rendered product page into the frontend's record shape.
     `is_protected` is a passthrough for the returned record's own field --
     True when `html` is a password-protected page unlocked via
-    fetch_protected_page() (added-live.json), False for a genuinely public
+    classify_product()'s postpass unlock (added-live), False for a genuinely public
     page (published-live.json). The markup is identical either way; the one
     visible difference WordPress introduces on a protected post is the
     "Protected: " title prefix, stripped below."""
@@ -635,8 +494,8 @@ def dedupe_vendor_resources(products: list[dict], vendor_url_index: dict[str, se
 
 # --- 5. Output ---
 def map_vendor_to_directory_record(vendor: dict) -> dict:
-    """Maps a scraped vendor record (parse_public_vendor's full detail, or
-    make_protected_vendor_stub's already-minimal stub) to the DirectoryRecord
+    """Maps a scraped vendor record (parse_public_vendor's full detail;
+    protected vendor pages produce no record at all) to the DirectoryRecord
     shape frontend/lib/directory-schema.ts defines, for vendors-live.json --
     same field mapping scripts/migrate_vendors_to_unified.py established for
     the already-migrated frontend/lib/vendors.json: a resource only lands in
@@ -679,73 +538,10 @@ def map_vendor_to_directory_record(vendor: dict) -> dict:
     }
 
 
-def save_live_document(
-    client: firestore.Client,
-    doc_key: str,
-    key: str,
-    records: list[dict],
-    last_scraped: str,
-    missing: list[dict] | None = None,
-) -> None:
-    """Writes one live snapshot to `nerd_documents/{doc_key}`.
-
-    `doc_key` is always supplied by the caller as a literal -- see the DOC_*
-    constants' comment above for why this must never become a computed or
-    iterated lookup.
-
-    `missing`, when not None, is added to $meta as `$meta.missing` -- used
-    only by the added-live call site, for the Added Products this run could
-    not put in `records` (no password on file, or the password on file
-    failed to unlock the page; see main()'s scrape_added branch). The other
-    two call sites (published-live, vendors-live) pass nothing, leaving
-    $meta exactly as before -- see BYTE AND ETAG CONVENTION below.
-
-    BYTE AND ETAG CONVENTION, load-bearing. The stored string is
-    byte-identical to what scripts/nerd_documents.py's `push` would have
-    stored for the same content: json.dumps with indent=2, ensure_ascii=False,
-    plus a trailing newline -- exactly what the previous json.dump(..., f) +
-    f.write("\\n") produced on disk. The etag is SHA-256 over the UTF-8
-    encoding of precisely those bytes, hex-encoded, matching
-    nerd_documents.py's etag_of() and lib/server/documents.ts's etagOf().
-    Diverging on either would surface in the editor as spurious 412s that look
-    like concurrency conflicts. `missing` defaulting to None (omitted from
-    $meta entirely, not written as null/[]) is what keeps this convention
-    byte-identical for the two call sites that never pass it."""
-    meta = {
-        "last_scraped": last_scraped,
-        "total_records": len(records),
-        "generated_by": "scrape_ncademi_live.py",
-    }
-    if missing is not None:
-        meta["missing"] = missing
-    payload = {
-        "$meta": meta,
-        key: records,
-    }
-    text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
-    raw = text.encode("utf-8")
-    client.collection(COLLECTION).document(doc_key).set(
-        {
-            "bytes": text,
-            "etag": hashlib.sha256(raw).hexdigest(),
-            "size_bytes": len(raw),
-            "updated_at": firestore.SERVER_TIMESTAMP,
-            "updated_by": f"scrape_ncademi_live.py:{os.getenv('USER', 'unknown')}",
-        }
-    )
-
-
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Scrape the NCADEMI directory for products and/or vendors.")
-    parser.add_argument(
-        "--target",
-        choices=["all", "published", "added", "vendors"],
-        default="all",
-        help="Which category to scrape (default: all). 'published' scrapes only publicly-visible "
-        "product pages; 'added' scrapes only password-protected product pages, unlocking each with its "
-        "vendor-review password. Each single-category run writes only that category's output document and "
-        "skips the cross-category vendor-resource dedup step, which requires all datasets loaded.",
-    )
+    # No --target: every run is a full run (plan D18), so all three snapshots
+    # always come from the same run.
+    parser = argparse.ArgumentParser(description="Scrape the NCADEMI directory (products and vendors, always together).")
     parser.add_argument(
         "--prod",
         action="store_true",
@@ -791,261 +587,111 @@ def main() -> None:
     # Before URL discovery, not before the writes -- see assert_write_target.
     assert_write_target(args.prod)
     client = firestore_client()
-    target = args.target
-    scrape_published = target in ("published", "all")
-    scrape_added = target in ("added", "all")
-    scrape_vendors = target in ("vendors", "all")
-    scrape_products = scrape_published or scrape_added
+    run_id = str(uuid.uuid4())
+    started_at = datetime.now(timezone.utc).isoformat()
 
-    # Milestone A. Fixed text per route.ts/records page's Messages log spec
-    # -- printed before URL discovery even starts, so it's the first thing
-    # a client streaming this process sees.
-    emit_progress("start", "Retrieving data." if target == "all" else f"Retrieving {target} data.")
+    # Milestone A -- printed before any network work.
+    emit_progress("start", "Retrieving data.")
+
+    # Read before any network work: a missing `added` or `passwords` document
+    # aborts here (DocumentMissingError), before anything is written.
+    by_url, names_by_url = load_added_passwords(client)
 
     print("--- 1. REST API URL Discovery ---")
-    # Both "published" and "added" scrape from the single product post type.
-    # get_rest_urls() also classifies protection status for free from the
-    # same discovery response (see its own docstring), so each single-
-    # category run fetches only the subset it can use: target=="added" gets
-    # ONLY protected_product_urls, target=="published" gets ONLY the public
-    # ones (all_product_urls minus the protected ones) -- neither one spends
-    # a request on a page it would just discard. target=="all" is
-    # unchanged and still fetches every URL: its single combined loop below
-    # needs both subsets from the SAME fetch_page() call per URL (public ->
-    # published_out, protected -> an unlock attempt for added_out), so there
-    # is no URL it can skip without losing coverage of one output or the
-    # other.
-    all_product_urls, protected_product_urls, protected_product_titles = (
-        get_rest_urls("product") if scrape_products else (set(), set(), {})
-    )
-    all_vendor_urls, _, _ = get_rest_urls("vendor") if scrape_vendors else (set(), set(), {})
-    if target == "added":
-        product_urls = sorted(protected_product_urls)
-    elif target == "published":
-        product_urls = sorted(all_product_urls - protected_product_urls)
-    else:
-        product_urls = sorted(all_product_urls)
-    vendor_urls = sorted(all_vendor_urls)
-    print(f"\nTotal: {len(product_urls)} product URL(s), {len(vendor_urls)} vendor URL(s).")
+    # An incomplete discovery is recorded in the run record, not fatal (D15):
+    # the promote planner proposes no deletions for an incomplete post type.
+    product_disc = discover("product")
+    vendor_disc = discover("vendor")
+    for post_type, disc in (("product", product_disc), ("vendor", vendor_disc)):
+        state = "complete" if disc["complete"] else f"INCOMPLETE ({disc['error']})"
+        print(f"Found {disc['discovered']} {post_type} URLs (expected {disc['expected_total']}): {state}")
 
+    outcomes: list[dict] = []
     published_out: list[dict] = []
     added_out: list[dict] = []
-    # product_name of each Added Product whose vendor-review password was on
-    # file but did not unlock its page (rejected by WordPress, or the page
-    # errored/failed to parse). Reported once, after the loop, as the
-    # added_passwords_failed milestone; those pages are omitted from
-    # added-live.json.
-    failed_added: list[str] = []
-    # Every tracked Added Product that does NOT end up in added_out this run
-    # -- both the "no password on file" and "password on file failed to
-    # unlock" cases -- written into added-live.json's $meta.missing so these
-    # products survive past the run instead of being visible only in stdout
-    # (see the SKIP print and the failed_added.append() calls below, which
-    # both also feed this list).
-    missing_added: list[dict] = []
-    if scrape_products:
-        print("\n--- 2. Scraping product pages ---")
-        added_passwords, added_names_by_url = (
-            load_added_passwords(client) if scrape_added else ({}, {})
+
+    print("\n--- 2. Scraping product pages ---")
+    product_urls = sorted(product_disc["urls"])
+    for i, url in enumerate(product_urls, start=1):
+        o = classify_product(
+            url,
+            protected_by_rest=url in product_disc["protected"],
+            rest_title=product_disc["titles"].get(url),
+            added_entry=build_added_entry(url, by_url, names_by_url),
         )
-        published_count = 0
-        added_count = 0
-        for i, url in enumerate(product_urls, start=1):
-            print(f"[{i}/{len(product_urls)}] {url}")
-            # WordPress's wp-postpass_ cookie is site-wide (keyed by the site
-            # URL, not the individual post), so an unlock from a previous
-            # iteration would otherwise carry over and make the next
-            # protected page misclassify as "public". Clear per-iteration --
-            # this scraper holds no session state worth preserving.
-            SESSION.cookies.clear()
-            status, html = fetch_page(url)
-
-            if status == "public" and scrape_published:
-                try:
-                    published_out.append(parse_public_product(html, url))
-                    published_count += 1
-                except Exception as e:
-                    print(f"    ERROR parsing {url}: {e}")
-            elif status == "protected" and scrape_added:
-                entry = added_passwords.get(url)
-                tracked_name = added_names_by_url.get(url) if not entry else None
-                if not entry and tracked_name:
-                    # Tracked Added Product (present in the `added` document)
-                    # that simply lacks a password on file -- a human already
-                    # deliberately added this product to tracking, so this
-                    # stays a report-only gap, unchanged: no generation here.
-                    print(f"    SKIP protected page with no vendor-review password on file: {url}")
-                    missing_added.append(
-                        {
-                            "product_name": tracked_name,
-                            "ncademi_product_url": url,
-                            "reason": "no_password",
-                        }
-                    )
-                elif not entry:
-                    # Genuinely untracked: no `added` document entry at all
-                    # (e.g. Grammarly, Nearpod). No password is generated and
-                    # no unlock is attempted here -- that now happens entirely
-                    # in the frontend's promote-time flow, using the existing
-                    # lib/passwords.ts formula, not a second copy of it. Just
-                    # record enough to name the gap.
-                    title = protected_product_titles.get(url)
-                    if not title:
-                        print(f"    SKIP untracked protected page with no title available: {url}")
-                    else:
-                        print(f"    SKIP untracked protected page (no `added` entry on file): {url}")
-                        missing_added.append(
-                            {
-                                "product_name": title,
-                                "ncademi_product_url": url,
-                                "reason": "not_tracked",
-                            }
-                        )
-                else:
-                    unlocked_status, unlocked_html = fetch_protected_page(url, entry["password"])
-                    if unlocked_status == "public":
-                        try:
-                            added_out.append(parse_public_product(unlocked_html, url, is_protected=True))
-                            added_count += 1
-                        except Exception as e:
-                            print(f"    ERROR parsing {url}: {e}")
-                            failed_added.append(entry["product_name"])
-                            missing_added.append(
-                                {
-                                    "product_name": entry["product_name"],
-                                    "ncademi_product_url": url,
-                                    "reason": "password_rejected",
-                                }
-                            )
-                    else:
-                        # "protected" (password rejected) or "error" -- either
-                        # way this page did not yield content.
-                        failed_added.append(entry["product_name"])
-                        missing_added.append(
-                            {
-                                "product_name": entry["product_name"],
-                                "ncademi_product_url": url,
-                                "reason": "password_rejected",
-                            }
-                        )
-            # Every other combination -- a public page on an added-only run,
-            # a protected page on a published-only run, or "missing"/"error"
-            # from fetch_page (already logged there) -- is skipped.
-
-            if scrape_published:
-                emit_progress(
-                    "published",
-                    f"Retrieved {published_count} published product pages.",
-                    published=published_count,
-                )
-            if scrape_added:
-                emit_progress(
-                    "added",
-                    f"Retrieved {added_count} added product pages.",
-                    added=added_count,
-                )
-            time.sleep(PAGE_FETCH_DELAY_SECONDS)
-
-        # Milestone: the Added-product passwords that failed. Conditional on
-        # there being any -- same "nothing useful to say about zero" stance
-        # as the vendors_missing milestone below.
-        if scrape_added and failed_added:
-            failed_sorted = sorted(failed_added)
-            emit_progress(
-                "added_passwords_failed",
-                "The following Added Product passwords failed: " + "; ".join(failed_sorted) + ".",
-                failed=failed_sorted,
-            )
+        print(f"[{i}/{len(product_urls)}] {url} -> {o['status']}" + (f" ({o['detail']})" if o["detail"] else ""))
+        # Re-parse the classifier's page HTML with the same parser it validated
+        # against; record shaping is unchanged from the previous main().
+        if o["status"] == "public_ok":
+            published_out.append(parse_public_product(o["html"], url))
+        elif o["status"] == "protected_unlocked":
+            added_out.append(parse_public_product(o["html"], url, is_protected=True))
+        outcomes.append(o)
+        emit_progress("published", f"Retrieved {len(published_out)} published product pages.", published=len(published_out))
+        emit_progress("added", f"Retrieved {len(added_out)} added product pages.", added=len(added_out))
+        time.sleep(PAGE_FETCH_DELAY_SECONDS)
 
     vendors_out: list[dict] = []
-    missing_vendor_urls: list[str] = []
-    if scrape_vendors:
-        print("\n--- 3. Scraping vendors ---")
-        vendor_retrieved_count = 0
-        for i, url in enumerate(vendor_urls, start=1):
-            print(f"[{i}/{len(vendor_urls)}] {url}")
-            status, html = fetch_page(url)
-            if status == "protected":
-                vendors_out.append(make_protected_vendor_stub(url))
-                vendor_retrieved_count += 1
-            elif status == "public":
-                try:
-                    vendors_out.append(parse_public_vendor(html, url))
-                    vendor_retrieved_count += 1
-                except Exception as e:
-                    print(f"    ERROR parsing {url}: {e}")
-                    missing_vendor_urls.append(url)
-            else:
-                # "missing"/"error" from fetch_page itself -- no vendor record
-                # at all for this URL, which is exactly what Milestone D reports.
-                missing_vendor_urls.append(url)
-            # Milestone C -- same "replace this stage's row in place" live-
-            # counter behavior as Milestone B above.
-            emit_progress(
-                "vendors",
-                f"Retrieved {vendor_retrieved_count} vendor pages.",
-                retrieved=vendor_retrieved_count,
-            )
-            time.sleep(PAGE_FETCH_DELAY_SECONDS)
+    print("\n--- 3. Scraping vendors ---")
+    vendor_urls = sorted(vendor_disc["urls"])
+    for i, url in enumerate(vendor_urls, start=1):
+        o = classify_vendor(url, protected_by_rest=url in vendor_disc["protected"])
+        print(f"[{i}/{len(vendor_urls)}] {url} -> {o['status']}" + (f" ({o['detail']})" if o["detail"] else ""))
+        # protected_vendor produces no vendors-live record (D22).
+        if o["status"] == "public_ok":
+            vendors_out.append(parse_public_vendor(o["html"], url))
+        outcomes.append(o)
+        emit_progress("vendors", f"Retrieved {len(vendors_out)} vendor pages.", retrieved=len(vendors_out))
+        time.sleep(PAGE_FETCH_DELAY_SECONDS)
 
-        # Milestone D. Skipped entirely when nothing is missing -- a "there is
-        # no record for the following: " message naming zero pages has nothing
-        # useful to tell the user, so this milestone is conditional on the rest
-        # of the fixed A/B/C/E progression, not always emitted.
-        if missing_vendor_urls:
-            missing_vendor_names = [slug_to_name(u) for u in missing_vendor_urls]
-            emit_progress(
-                "vendors_missing",
-                "There is no record for the following vendor pages: " + "; ".join(missing_vendor_names) + ".",
-                missing=missing_vendor_names,
-            )
+    # Every run is a full run, so the dedup always has products and vendors
+    # from the same run. Applied to both product sets.
+    print("\n--- 4. Deduplicating vendor resources ---")
+    vendor_url_index = build_vendor_url_index(vendors_out)
+    removed = dedupe_vendor_resources([*published_out, *added_out], vendor_url_index)
+    print(f"Removed {removed} product-level vendor_resources URL(s) already captured under their vendor.")
 
-    # Dedup requires this run's product AND vendor scrapes loaded together,
-    # so it only makes sense -- and only runs -- for target=='all'. Applied
-    # to both product sets: an unlocked "added" page carries the same
-    # vendor_resources markup a public one does.
-    if target == "all":
-        print("\n--- 4. Deduplicating vendor resources ---")
-        vendor_url_index = build_vendor_url_index(vendors_out)
-        removed = dedupe_vendor_resources([*published_out, *added_out], vendor_url_index)
-        print(f"Removed {removed} product-level vendor_resources URL(s) already captured under their vendor.")
+    finished_at = datetime.now(timezone.utc).isoformat()
+    discovery_by_type = {"product": product_disc, "vendor": vendor_disc}
+    violations = check_outcomes(discovery_by_type, outcomes)
+    if violations:
+        print("Run record failed validation -- NOTHING was written:", file=sys.stderr)
+        for v in violations:
+            print(f"  - {v}", file=sys.stderr)
+        raise SystemExit(1)
+    run = build_run_record(run_id, started_at, finished_at, discovery_by_type, outcomes)
+
+    counts = outcome_counts(run["outcomes"])
+    discovery_complete = {"product": run["discovery"]["product"]["complete"], "vendor": run["discovery"]["vendor"]["complete"]}
+    summary = "; ".join(
+        f"{pt}: " + ", ".join(f"{status} {n}" for status, n in sorted(counts[pt].items()))
+        for pt in ("product", "vendor")
+    )
+    emit_progress("outcomes", f"Outcomes -- {summary}.", counts=counts, discovery_complete=discovery_complete)
 
     print("\n--- 5. Saving Results ---")
-    last_scraped = datetime.now(timezone.utc).isoformat()
-    if scrape_published:
-        # Each document key is a literal, one per call site. Never a variable,
-        # never a lookup -- see the DOC_* constants' comment.
-        save_live_document(client, DOC_PUBLISHED_LIVE, "products", published_out, last_scraped)
-        print(f"Saved {len(published_out)} published products to {COLLECTION}/{DOC_PUBLISHED_LIVE}")
-    if scrape_added:
-        save_live_document(
-            client, DOC_ADDED_LIVE, "products", added_out, last_scraped, missing=missing_added
-        )
-        print(f"Saved {len(added_out)} added products to {COLLECTION}/{DOC_ADDED_LIVE}")
-        if missing_added:
-            print(f"  {len(missing_added)} tracked Added Product(s) missing this run -- see $meta.missing.")
-    if scrape_vendors:
-        save_live_document(
-            client, DOC_VENDORS_LIVE, "vendors", [map_vendor_to_directory_record(v) for v in vendors_out], last_scraped
-        )
-        print(f"Saved {len(vendors_out)} vendors to {COLLECTION}/{DOC_VENDORS_LIVE}")
+    published_fields = build_live_document_fields("products", published_out, finished_at, run)
+    added_fields = build_live_document_fields("products", added_out, finished_at, run)
+    vendors_fields = build_live_document_fields(
+        "vendors", [map_vendor_to_directory_record(v) for v in vendors_out], finished_at, run
+    )
+    write_live_snapshots(client, published_fields, added_fields, vendors_fields)
+    print(f"Saved {len(published_out)} records to {COLLECTION}/{DOC_PUBLISHED_LIVE} ({_size_note(published_fields)})")
+    print(f"Saved {len(added_out)} records to {COLLECTION}/{DOC_ADDED_LIVE} ({_size_note(added_fields)})")
+    print(f"Saved {len(vendors_out)} records to {COLLECTION}/{DOC_VENDORS_LIVE} ({_size_note(vendors_fields)})")
 
-    # Milestone E. Last line of the run -- only reports counts for the
-    # category/categories actually scraped this run, so a targeted run never
-    # reports a misleading 0 for the category it didn't touch.
-    complete_extra: dict = {}
-    if scrape_published:
-        complete_extra["published"] = len(published_out)
-    if scrape_added:
-        complete_extra["added"] = len(added_out)
-    if scrape_vendors:
-        complete_extra["vendors"] = len(vendors_out)
-    emit_progress("complete", "Process complete", **complete_extra)
+    emit_progress(
+        "complete",
+        "Process complete",
+        published=len(published_out),
+        added=len(added_out),
+        vendors=len(vendors_out),
+    )
 
 
 # --- 6. Mirror-promote groundwork: discovery completeness + per-URL outcomes ---
-# Additive, side-effect-free, and NOT yet called by main() -- wiring is step 3b
-# of docs/mirror-promote-plan-11-02-26.md. These implement the plan's run
+# Called by main() (plan step 3b). Docs: docs/mirror-promote-plan-11-02-26.md.
+# These implement the plan's run
 # record (section 3.9) and decisions D10 (distinct outcomes), D15 (discovery
 # completeness) and D22 (protected vendors are "exists, could not check").
 # Every function takes an injectable `session` (default: SESSION) so tests can
@@ -1083,15 +729,15 @@ def _short(text: object, limit: int = 120) -> str:
 
 
 def _has_password_form(page_html: str) -> bool:
-    """The same protection test fetch_page() / fetch_protected_page() use."""
+    """WordPress's password-protected page test: a form.pw_form is present."""
     return BeautifulSoup(page_html, "html.parser").select_one("form.pw_form") is not None
 
 
 def discover(post_type: str, session=None) -> dict:
     """REST URL discovery that reports completeness instead of swallowing errors.
 
-    Endpoint resolution reimplements get_rest_urls()'s inline logic (the
-    types endpoint's `_links["wp:items"][0]["href"]`, falling back to
+    Endpoint resolution: the types endpoint's
+    `_links["wp:items"][0]["href"]`, falling back to
     f"{API_BASE}/{post_type}s"), with a timeout and an explicit failure if the
     types request itself fails. Page 1 is requested with per_page=100; its
     X-WP-Total and X-WP-TotalPages headers drive explicit requests for pages
@@ -1140,7 +786,7 @@ def discover(post_type: str, session=None) -> dict:
                 if rendered:
                     titles[link] = html_lib.unescape(rendered)
 
-    # Endpoint resolution (same rule as get_rest_urls, plus timeout/failure).
+    # Endpoint resolution, with a timeout and an explicit failure.
     try:
         type_resp = session.get(f"{API_BASE}/types/{post_type}", timeout=REQUEST_TIMEOUT_CONNECT_READ)
     except requests.exceptions.RequestException as e:
@@ -1220,16 +866,17 @@ def classify_product(
 ) -> dict:
     """One plan-section-3.9 outcome for a product URL (plus `html`).
 
-    Protection is decided from the page itself (form.pw_form), as
-    fetch_page() does; `protected_by_rest` only adds a note to `detail` when
+    Protection is decided from the page itself (form.pw_form);
+    `protected_by_rest` only adds a note to `detail` when
     it disagrees with the page. `rest_title` must already be decoded (as
     discover() returns it). `added_entry` is this URL's Added entry
     {product_name, password} -- None when the URL is not tracked in `added`;
     a falsy password means tracked-without-password. password_rejected means
     ONLY that the password form was shown again after a successful unlock
     request; request failures are fetch_error and parse failures are
-    parse_error. Cookies are cleared first, as main() does per iteration,
-    because WordPress's wp-postpass cookie is site-wide."""
+    parse_error. Cookies are cleared first because WordPress's wp-postpass
+    cookie is site-wide: an earlier unlock would otherwise make the next
+    protected page look public."""
     session = SESSION if session is None else session
 
     def outcome(status: str, name: str | None = None, detail: str | None = None, page_html: str | None = None) -> dict:
@@ -1262,7 +909,7 @@ def classify_product(
     if not password:
         return outcome("no_password", name=added_entry.get("product_name"), detail=rest_note)
 
-    # Unlock exactly as fetch_protected_page() does: POST to postpass, then re-fetch.
+    # Unlock: POST the password to postpass, then re-fetch with the resulting cookie.
     try:
         post_resp = session.post(
             POSTPASS_URL,
@@ -1359,6 +1006,124 @@ def check_outcomes(discovery_by_type: dict, outcomes: list[dict]) -> list[str]:
         if u not in seen:
             violations.append(f"missing outcome: {u}")
     return violations
+
+
+def build_added_entry(url: str, by_url: dict[str, dict], names_by_url: dict[str, str]) -> dict | None:
+    """This URL's Added entry for classify_product(). Pure.
+
+    load_added_passwords() leaves a tracked product with no password OUT of
+    by_url (it only appears in names_by_url), so by_url alone would make it
+    look untracked. Returns by_url's entry if present; else
+    {"product_name", "password": None} for a tracked product; else None."""
+    if url in by_url:
+        return by_url[url]
+    if url in names_by_url:
+        return {"product_name": names_by_url[url], "password": None}
+    return None
+
+
+def build_run_record(
+    run_id: str, started_at: str, finished_at: str, discovery_by_type: dict, outcomes: list[dict]
+) -> dict:
+    """The plan-section-3.9 `run` block. Pure.
+
+    Discovery is reduced to {complete, expected_total, discovered, error}
+    per post type; each outcome is reduced to exactly {url, post_type,
+    status, name, detail} (the classifiers' `html` is dropped)."""
+
+    def reduce_discovery(d: dict) -> dict:
+        return {
+            "complete": d["complete"],
+            "expected_total": d["expected_total"],
+            "discovered": d["discovered"],
+            "error": d["error"],
+        }
+
+    return {
+        "run_id": run_id,
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "target": "all",
+        "discovery": {
+            "product": reduce_discovery(discovery_by_type["product"]),
+            "vendor": reduce_discovery(discovery_by_type["vendor"]),
+        },
+        "outcomes": [
+            {"url": o["url"], "post_type": o["post_type"], "status": o["status"], "name": o["name"], "detail": o["detail"]}
+            for o in outcomes
+        ],
+    }
+
+
+def outcome_counts(outcomes: list[dict]) -> dict[str, dict[str, int]]:
+    """{post_type: {status: count}} for the "outcomes" progress milestone. Pure."""
+    counts: dict[str, dict[str, int]] = {"product": {}, "vendor": {}}
+    for o in outcomes:
+        bucket = counts.setdefault(o["post_type"], {})
+        bucket[o["status"]] = bucket.get(o["status"], 0) + 1
+    return counts
+
+
+# Firestore's per-field value ceiling for an un-indexed string (the same
+# figure lib/server/documents.ts cites). A snapshot over it would fail the
+# whole batch, so write_live_snapshots() refuses before committing.
+FIRESTORE_MAX_FIELD_BYTES = 1_048_487
+
+
+def build_live_document_fields(key: str, records: list[dict], finished_at: str, run: dict) -> dict:
+    """The Firestore fields for one live snapshot document. Pure apart from
+    the SERVER_TIMESTAMP sentinel.
+
+    BYTE AND ETAG CONVENTION, load-bearing (unchanged from the previous
+    single-document writer): `bytes` is json.dumps(payload, indent=2,
+    ensure_ascii=False) plus a trailing newline -- byte-identical to what
+    scripts/nerd_documents.py `push` stores -- and `etag` is SHA-256 over the
+    UTF-8 encoding of exactly those bytes, matching nerd_documents.py's
+    etag_of() and lib/server/documents.ts's etagOf(). $meta carries
+    last_scraped (= the run's finished_at), total_records, generated_by and
+    the run record; there is no $meta.missing any more."""
+    meta = {
+        "last_scraped": finished_at,
+        "total_records": len(records),
+        "generated_by": "scrape_ncademi_live.py",
+        "run": run,
+    }
+    payload = {
+        "$meta": meta,
+        key: records,
+    }
+    text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    raw = text.encode("utf-8")
+    return {
+        "bytes": text,
+        "etag": hashlib.sha256(raw).hexdigest(),
+        "size_bytes": len(raw),
+        "updated_at": firestore.SERVER_TIMESTAMP,
+        "updated_by": f"scrape_ncademi_live.py:{os.getenv('USER', 'unknown')}",
+    }
+
+
+def write_live_snapshots(client: firestore.Client, published_fields: dict, added_fields: dict, vendors_fields: dict) -> None:
+    """Writes all three live snapshots in ONE Firestore batch: either all
+    three land or none do (plan D16). The three document keys are named
+    explicitly, one per batch.set() -- never computed or iterated (see the
+    DOC_* constants' comment, DECISION_LOG.md #66)."""
+    for label, fields in (("published-live", published_fields), ("added-live", added_fields), ("vendors-live", vendors_fields)):
+        if fields["size_bytes"] > FIRESTORE_MAX_FIELD_BYTES:
+            raise RuntimeError(
+                f"{label} snapshot is {fields['size_bytes']:,} bytes, over the "
+                f"{FIRESTORE_MAX_FIELD_BYTES:,}-byte Firestore field limit; nothing was written."
+            )
+    batch = client.batch()
+    batch.set(client.collection(COLLECTION).document(DOC_PUBLISHED_LIVE), published_fields)
+    batch.set(client.collection(COLLECTION).document(DOC_ADDED_LIVE), added_fields)
+    batch.set(client.collection(COLLECTION).document(DOC_VENDORS_LIVE), vendors_fields)
+    batch.commit()
+
+
+def _size_note(fields: dict) -> str:
+    size = fields["size_bytes"]
+    return f"{size:,} bytes, {size / FIRESTORE_MAX_FIELD_BYTES:.1%} of the {FIRESTORE_MAX_FIELD_BYTES:,}-byte limit"
 
 
 if __name__ == "__main__":

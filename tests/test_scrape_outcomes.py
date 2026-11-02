@@ -7,6 +7,10 @@ a URL to a canned FakeResponse or raises a requests exception.
 
 from __future__ import annotations
 
+import argparse
+import hashlib
+import json
+
 import pytest
 import requests
 
@@ -362,3 +366,169 @@ def test_check_outcomes_vendor_status_on_product():
 def test_check_outcomes_product_status_on_vendor():
     v = m.check_outcomes(DISC, [oc("p1", "product", "public_ok"), oc("p2", "product", "public_ok"), oc("v1", "vendor", "password_rejected")])
     assert v == ["status 'password_rejected' not valid for vendor: v1"]
+
+
+# --- build_added_entry --------------------------------------------------------
+
+BY_URL = {"u-pw": {"product_name": "With Password", "password": "fixture-value"}}
+NAMES_BY_URL = {"u-pw": "With Password", "u-nopw": "No Password"}
+
+
+def test_build_added_entry_tracked_with_password():
+    assert m.build_added_entry("u-pw", BY_URL, NAMES_BY_URL) == {"product_name": "With Password", "password": "fixture-value"}
+
+
+def test_build_added_entry_tracked_without_password():
+    assert m.build_added_entry("u-nopw", BY_URL, NAMES_BY_URL) == {"product_name": "No Password", "password": None}
+
+
+def test_build_added_entry_untracked():
+    assert m.build_added_entry("u-other", BY_URL, NAMES_BY_URL) is None
+
+
+# --- build_run_record ---------------------------------------------------------
+
+
+def disc_full(urls, protected=(), complete=True, error=None):
+    return {"urls": set(urls), "protected": set(protected), "titles": {}, "complete": complete,
+            "expected_total": len(urls), "discovered": len(urls), "error": error}
+
+
+def test_build_run_record_shape():
+    outcomes = [
+        {"url": "p1", "post_type": "product", "status": "public_ok", "name": "P", "detail": None, "html": "<html/>"},
+        {"url": "v1", "post_type": "vendor", "status": "protected_vendor", "name": None, "detail": None, "html": None},
+    ]
+    run = m.build_run_record("rid", "t0", "t1", {"product": disc_full(["p1"]), "vendor": disc_full(["v1"], complete=False, error="x")}, outcomes)
+    assert set(run) == {"run_id", "started_at", "finished_at", "target", "discovery", "outcomes"}
+    assert run["target"] == "all" and run["run_id"] == "rid"
+    assert set(run["discovery"]) == {"product", "vendor"}
+    for d in run["discovery"].values():
+        assert set(d) == {"complete", "expected_total", "discovered", "error"}
+    assert run["discovery"]["vendor"] == {"complete": False, "expected_total": 1, "discovered": 1, "error": "x"}
+    assert all(set(o) == {"url", "post_type", "status", "name", "detail"} for o in run["outcomes"])
+    assert "html" not in json.dumps(run)
+
+
+def test_build_live_document_fields_byte_and_etag_convention():
+    run = m.build_run_record("rid", "t0", "t1", {"product": disc_full([]), "vendor": disc_full([])}, [])
+    f = m.build_live_document_fields("products", [{"a": "é"}], "t1", run)
+    assert f["bytes"].endswith("\n") and "é" in f["bytes"]
+    assert f["etag"] == hashlib.sha256(f["bytes"].encode("utf-8")).hexdigest()
+    assert f["size_bytes"] == len(f["bytes"].encode("utf-8"))
+    body = json.loads(f["bytes"])
+    assert list(body["$meta"]) == ["last_scraped", "total_records", "generated_by", "run"]
+    assert body["$meta"]["total_records"] == 1 and "missing" not in body["$meta"]
+
+
+# --- main(), fully offline ----------------------------------------------------
+
+P_PUB = "https://ncademi.org/provide/directory/products/alpha/"
+P_PROT = "https://ncademi.org/provide/directory/products/kates/"
+V_PUB = "https://ncademi.org/provide/directory/vendors/acme/"
+V_PROT = "https://ncademi.org/provide/directory/vendors/locked/"
+
+
+class FakeRef:
+    def __init__(self, path):
+        self.path = path
+
+    def set(self, *args, **kwargs):
+        raise AssertionError(f"direct (non-batch) write to {self.path}")
+
+
+class FakeCollection:
+    def __init__(self, name):
+        self.name = name
+
+    def document(self, key):
+        return FakeRef(f"{self.name}/{key}")
+
+
+class FakeBatch:
+    def __init__(self, client):
+        self.client = client
+        self.sets = []
+
+    def set(self, ref, data):
+        self.sets.append((ref.path, data))
+
+    def commit(self):
+        self.client.commits.append(list(self.sets))
+
+
+class FakeClient:
+    def __init__(self):
+        self.commits = []
+
+    def collection(self, name):
+        return FakeCollection(name)
+
+    def batch(self):
+        return FakeBatch(self)
+
+
+def run_main(monkeypatch, product_status_override=None):
+    monkeypatch.setenv("FIRESTORE_EMULATOR_HOST", "fake-emulator:1")
+    monkeypatch.setattr(m, "parse_args", lambda: argparse.Namespace(prod=False))
+    client = FakeClient()
+    monkeypatch.setattr(m, "firestore_client", lambda: client)
+    monkeypatch.setattr(m, "load_added_passwords", lambda c: ({P_PROT: {"product_name": "Kate’s Math Lessons", "password": "fixture-value"}}, {P_PROT: "Kate’s Math Lessons"}))
+    monkeypatch.setattr(m, "PAGE_FETCH_DELAY_SECONDS", 0)
+    discs = {"product": disc_full([P_PUB, P_PROT], protected=[P_PROT]), "vendor": disc_full([V_PUB, V_PROT], protected=[V_PROT])}
+    monkeypatch.setattr(m, "discover", lambda post_type, session=None: discs[post_type])
+
+    def fake_classify_product(url, *, protected_by_rest, rest_title, added_entry, session=None):
+        if product_status_override:
+            return {"url": url, "post_type": "product", "status": product_status_override, "name": None, "detail": None, "html": None}
+        if url == P_PUB:
+            return {"url": url, "post_type": "product", "status": "public_ok", "name": "Alpha Math", "detail": None, "html": PUBLIC_PRODUCT_HTML}
+        assert protected_by_rest and added_entry["password"] == "fixture-value"
+        return {"url": url, "post_type": "product", "status": "protected_unlocked", "name": "Kate’s Math Lessons", "detail": None, "html": UNLOCKED_PRODUCT_HTML}
+
+    def fake_classify_vendor(url, *, protected_by_rest, session=None):
+        if protected_by_rest:
+            return {"url": url, "post_type": "vendor", "status": "protected_vendor", "name": None, "detail": None, "html": None}
+        return {"url": url, "post_type": "vendor", "status": "public_ok", "name": "Acme Learning", "detail": None, "html": PUBLIC_VENDOR_HTML}
+
+    monkeypatch.setattr(m, "classify_product", fake_classify_product)
+    monkeypatch.setattr(m, "classify_vendor", fake_classify_vendor)
+    return client
+
+
+def test_main_writes_one_batch_with_identical_run_records(monkeypatch):
+    client = run_main(monkeypatch)
+    m.main()
+    assert len(client.commits) == 1
+    sets = client.commits[0]
+    assert [path for path, _ in sets] == ["nerd_documents/published-live", "nerd_documents/added-live", "nerd_documents/vendors-live"]
+    bodies = {path: json.loads(data["bytes"]) for path, data in sets}
+    runs = [json.dumps(b["$meta"]["run"], sort_keys=True) for b in bodies.values()]
+    assert runs[0] == runs[1] == runs[2]
+    for b in bodies.values():
+        assert "missing" not in b["$meta"]
+        assert set(b["$meta"]) == {"last_scraped", "total_records", "generated_by", "run"}
+        assert b["$meta"]["last_scraped"] == b["$meta"]["run"]["finished_at"]
+    pub = bodies["nerd_documents/published-live"]["products"]
+    added = bodies["nerd_documents/added-live"]["products"]
+    vendors = bodies["nerd_documents/vendors-live"]["vendors"]
+    assert [r["product_name"] for r in pub] == ["Alpha Math"] and pub[0]["is_protected"] is False
+    assert [r["product_name"] for r in added] == ["Kate’s Math Lessons"] and added[0]["is_protected"] is True
+    # protected_vendor produces no vendors-live record (D22)
+    assert [v["vendor_directory_url"] for v in vendors] == [V_PUB]
+    run = bodies["nerd_documents/vendors-live"]["$meta"]["run"]
+    assert len(run["outcomes"]) == 4
+    assert {(o["url"], o["status"]) for o in run["outcomes"]} == {
+        (P_PUB, "public_ok"), (P_PROT, "protected_unlocked"), (V_PUB, "public_ok"), (V_PROT, "protected_vendor")}
+    for _, data in sets:
+        assert set(data) == {"bytes", "etag", "size_bytes", "updated_at", "updated_by"}
+        assert data["etag"] == hashlib.sha256(data["bytes"].encode("utf-8")).hexdigest()
+
+
+def test_main_violation_writes_nothing_and_exits_nonzero(monkeypatch, capsys):
+    client = run_main(monkeypatch, product_status_override="protected_vendor")
+    with pytest.raises(SystemExit) as exc:
+        m.main()
+    assert exc.value.code == 1
+    assert client.commits == []
+    assert "NOTHING was written" in capsys.readouterr().err
