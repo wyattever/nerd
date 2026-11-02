@@ -1,0 +1,11 @@
+# Cloud Build source-upload exclusions for builds submitted from frontend/.
+# When this file exists, gcloud no longer reads .gitignore on its own, so it
+# is pulled in explicitly on the next line. Everything below adds local-only
+# material that is untracked but not gitignored.
+#!include:.gitignore
+.gcloudignore
+.gitignore
+.git
+emulator-data/
+*.log
+test-results/
