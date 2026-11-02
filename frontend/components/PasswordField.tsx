@@ -26,6 +26,11 @@
  * the stored value is unknown, so the field is read-only rather than
  * letting a blind save overwrite a password the operator never saw.
  *
+ * `size={9}` (roughly the label "Password"'s own width, plus a little room)
+ * rather than a fixed Tailwind width, so the field stays sized to its label
+ * regardless of the password's length. The read-only state uses readOnly,
+ * not disabled: the value stays focusable, selectable and copyable.
+ *
  * Outcomes are announced through the shared Messages footer (useMessages):
  * success in its role="status" region, failure in its role="alert" region.
  * Each save first clears the alert and sets "Saving password…", so the

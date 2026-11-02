@@ -124,9 +124,11 @@ export type DataKind = "published" | "added" | "candidate" | "vendors";
  *  no ETag guard. */
 export type LiveKind = "published-live" | "added-live" | "vendors-live";
 
-/** Side documents outside the ETag system, matching the fs version's
- *  treatment of tracking.json and passwords.json: single-operator,
- *  read-modify-write, no concurrency guarantee needed or claimed. */
+/** Side documents outside the ETag/If-Match system. tracking is written
+ *  read-modify-write with no concurrency guarantee of its own, except when
+ *  reconciled inside saveGuarded's transaction. passwords is written only
+ *  through mutateDocument (via lib/server/passwords-store.ts's
+ *  mutatePasswords): read, modify and write in one transaction. */
 export type AuxKind = "tracking" | "passwords";
 
 export type DocumentKey = DataKind | LiveKind | AuxKind;
@@ -356,8 +358,9 @@ export async function saveGuarded(params: {
 }
 
 /**
- * Unconditional write, for documents outside the ETag system: the aux
- * documents (tracking, passwords) and the live-scrape snapshots. Still
+ * Unconditional write, for documents outside the ETag system. Its only
+ * caller today is writeTrackingRecords (tracking); passwords uses
+ * mutateDocument instead. Still
  * takes a backup, still transactional -- the read is only there to capture
  * the previous bytes for that backup, not to guard anything.
  */

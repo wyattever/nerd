@@ -103,8 +103,9 @@ export function AddedEditor({ slug, initialProducts, initialSchemaVersion, initi
         }
       })
       .catch(() => {
-        // No password data is a display-only degradation -- not worth
-        // surfacing as a save-blocking error.
+        // Not surfaced as an error: passwordsLoaded stays false, so the
+        // Password field renders read-only and cannot overwrite a stored
+        // value nobody has seen.
       });
     return () => {
       cancelled = true;

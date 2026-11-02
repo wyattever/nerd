@@ -1,27 +1,30 @@
 // frontend/app/api/local/passwords/route.ts
 /**
- * Read / get-or-create / delete for vendor-review passwords. See
+ * Read / get-or-create / set / delete for vendor-review passwords. See
  * lib/passwords.ts's header for the generation spec and the rationale.
  *
- * Deliberately NOT part of the DataKind ETag system, carried over unchanged
- * from the filesystem version: a password is created once and never edited,
- * so there is no read-modify-write conflict worth guarding against with an
- * If-Match round trip.
- *
- * KNOWN LIMITATION, PRESERVED RATHER THAN SILENTLY CHANGED. POST is a plain
- * read-modify-write. Two simultaneous creates for different products could
- * interleave such that one overwrites the other's append. The filesystem
- * version had exactly this property and it never mattered, because the only
- * caller is CandidateEditor.tsx's handleImport -- one operator, one import at
- * a time. Firestore makes it *possible* to fix (wrap in a transaction) and
- * that is worth doing if this ever gains a second caller, but doing it now
- * would be adding a guarantee the prior code did not make, on a code path
- * nobody has reported a problem with. Flagged here rather than fixed
- * silently or left undocumented.
+ * Not part of the DataKind ETag/If-Match system: every write here goes
+ * through mutatePasswords (lib/server/passwords-store.ts), which reads,
+ * modifies and writes the `passwords` document in ONE Firestore
+ * transaction (documents.ts's mutateDocument), so concurrent writes cannot
+ * overwrite each other and no client If-Match round trip is needed. The
+ * only other app writer, promote-live's not_tracked stub step, uses the
+ * same helper. Scripts outside frontend/ (scripts/nerd_documents.py push,
+ * scripts/write_single_document.py) can still overwrite the document
+ * directly.
  *
  * GET returns the whole document -- CandidateEditor.tsx and AddedEditor.tsx
  * fetch once and look up by product_name client-side, the same "read the
  * whole array, filter locally" pattern the other readers use.
+ *
+ * POST is get-or-create (getOrCreatePassword): returns the product's
+ * existing password, or generates and stores one. Called from
+ * CandidateEditor.tsx's handleImport.
+ *
+ * PUT sets a product's password to the given value (trimmed, 1-255
+ * characters, matching WordPress's varchar(255) post_password), creating
+ * the row if absent; nothing is written when the value is unchanged.
+ * Called from components/PasswordField.tsx in both editors.
  *
  * DELETE is called only from AddedEditor.tsx's handlePromoteToPublished: a
  * password is vendor-review-only metadata for a page that is still gated, so

@@ -7,14 +7,22 @@ still-gated "Added to Site" page, meaningless (and actively cleaned up on
 promotion, see app/api/local/passwords/route.ts's DELETE) once a product
 is publicly live.
 
-Only needed because passwords are normally generated once, at Import
-Candidate time (see frontend/app/editor/(routed)/candidates/CandidateEditor.tsx's
-handleImport) -- anything already in candidate.json/added.json before
-that feature shipped has no password yet, and re-importing a candidate
-isn't possible (handleImport blocks on a duplicate slug), nor does
-viewing an Added record ever create one (AddedEditor.tsx's own password
-lookup is read-only by design). This script is the one-off catch-up for
-that pre-existing set; it is NOT meant to run on every deploy.
+Only needed because passwords are normally generated at Import Candidate
+time (see frontend/app/editor/(routed)/candidates/CandidateEditor.tsx's
+handleImport) and for promote-live's not_tracked stubs -- anything
+already in candidate.json/added.json before import-time generation
+shipped has no password yet, and re-importing a candidate isn't possible
+(handleImport blocks on a duplicate slug). Passwords are not immutable:
+either editor's Password field (frontend/components/PasswordField.tsx)
+can set one by hand via PUT /api/local/passwords, creating the row if
+absent. This script is the one-off catch-up for that pre-existing set;
+it is NOT meant to run on every deploy.
+
+LOCAL FILES ONLY: this script reads and writes frontend/lib/*.json (the
+paths below) and never touches Firestore. The app reads the Firestore
+`passwords` document, so this script's output reaches the app only if
+pushed with scripts/nerd_documents.py push or
+scripts/write_single_document.py -- both overwrite the whole document.
 
 Generation pattern (must exactly match frontend/lib/passwords.ts's
 getOrCreatePassword -- kept in sync manually, same as every other

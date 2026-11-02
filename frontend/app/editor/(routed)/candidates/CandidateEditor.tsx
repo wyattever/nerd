@@ -135,8 +135,9 @@ export function CandidateEditor({
         }
       })
       .catch(() => {
-        // No password data is a display-only degradation (the field just
-        // shows blank) -- not worth surfacing as a save-blocking error.
+        // Not surfaced as an error: passwordsLoaded stays false, so the
+        // Password field renders read-only and cannot overwrite a stored
+        // value nobody has seen.
       });
     return () => {
       cancelled = true;
@@ -215,10 +216,10 @@ export function CandidateEditor({
   const codeHtml = useMemo(() => (listing ? buildNcademiListingHtml(listing) : ""), [listing]);
 
   // Matched by exact product_name, same convention as VENDORS_REGISTRY's
-  // lookup above. Blank for a candidate imported before this feature
-  // shipped, or before it's been picked up by the one-off backfill script
-  // -- read-only display only, never generated from here (see
-  // handleImport below for the one place a password IS created).
+  // lookup above. Undefined (field blank) when the product has no row yet.
+  // Shown and edited through PasswordField; in this editor a password is
+  // generated only by handleImport's POST below -- PasswordField's PUT sets
+  // the exact value typed.
   const password = useMemo(
     () => (selected ? passwordRecords.find((p) => p.product_name === selected.product_name) : undefined),
     [selected, passwordRecords]
@@ -308,12 +309,14 @@ export function CandidateEditor({
       // (if anything) rather than only filling it in when absent.
       const importedRecord = { ...record, tracking_status: "Gathering" };
 
-      // Password generation happens HERE, once, at import time -- not
-      // lazily on view (see the passwordRecords fetch above) -- and is
-      // persisted to passwords.json immediately, independent of whether
-      // this candidate itself is ever saved. Non-blocking: a failure here
-      // shouldn't stop the import, just leave the Password field blank
-      // until a retry or the backfill script picks it up.
+      // Password generation happens HERE, at import time -- not lazily on
+      // view -- via POST /api/local/passwords (get-or-create: an existing
+      // row for this product_name is returned unchanged), persisted to the
+      // `passwords` document immediately, independent of whether this
+      // candidate itself is ever saved. Non-blocking: a failure here
+      // shouldn't stop the import, just leave the Password field blank; a
+      // value can then be entered through PasswordField (its PUT creates
+      // the row).
       try {
         const res = await fetch("/api/local/passwords", {
           method: "POST",
