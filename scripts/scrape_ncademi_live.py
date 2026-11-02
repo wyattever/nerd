@@ -90,6 +90,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html as html_lib
 import json
 import os
 import sys
@@ -1040,6 +1041,324 @@ def main() -> None:
     if scrape_vendors:
         complete_extra["vendors"] = len(vendors_out)
     emit_progress("complete", "Process complete", **complete_extra)
+
+
+# --- 6. Mirror-promote groundwork: discovery completeness + per-URL outcomes ---
+# Additive, side-effect-free, and NOT yet called by main() -- wiring is step 3b
+# of docs/mirror-promote-plan-11-02-26.md. These implement the plan's run
+# record (section 3.9) and decisions D10 (distinct outcomes), D15 (discovery
+# completeness) and D22 (protected vendors are "exists, could not check").
+# Every function takes an injectable `session` (default: SESSION) so tests can
+# pass a fake; every HTTP call carries REQUEST_TIMEOUT_CONNECT_READ.
+
+# (connect, read) seconds for every request made by the functions below.
+REQUEST_TIMEOUT_CONNECT_READ = (10, 30)
+
+PRODUCT_STATUSES = frozenset(
+    {
+        "public_ok",
+        "protected_unlocked",
+        "password_rejected",
+        "no_password",
+        "not_tracked",
+        "fetch_error",
+        "parse_error",
+    }
+)
+VENDOR_STATUSES = frozenset({"public_ok", "protected_vendor", "fetch_error", "parse_error"})
+
+
+def _request_failure_detail(exc: Exception) -> str:
+    """Short, stable diagnostic for a failed request (no URLs, no secrets)."""
+    if isinstance(exc, requests.exceptions.Timeout):
+        return "timeout"
+    if isinstance(exc, requests.exceptions.ConnectionError):
+        return "connection error"
+    return type(exc).__name__
+
+
+def _short(text: object, limit: int = 120) -> str:
+    s = str(text)
+    return s if len(s) <= limit else s[: limit - 3] + "..."
+
+
+def _has_password_form(page_html: str) -> bool:
+    """The same protection test fetch_page() / fetch_protected_page() use."""
+    return BeautifulSoup(page_html, "html.parser").select_one("form.pw_form") is not None
+
+
+def discover(post_type: str, session=None) -> dict:
+    """REST URL discovery that reports completeness instead of swallowing errors.
+
+    Endpoint resolution reimplements get_rest_urls()'s inline logic (the
+    types endpoint's `_links["wp:items"][0]["href"]`, falling back to
+    f"{API_BASE}/{post_type}s"), with a timeout and an explicit failure if the
+    types request itself fails. Page 1 is requested with per_page=100; its
+    X-WP-Total and X-WP-TotalPages headers drive explicit requests for pages
+    2..TotalPages (no stopping on an empty page or a non-200 -- those are
+    recorded). `complete` is True only if every request returned 200, nothing
+    raised, both headers were present and parseable, and discovered ==
+    expected_total. Never raises for network/HTTP/header problems.
+
+    Returns {urls, protected, titles, complete, expected_total, discovered,
+    error}; titles maps protected URLs to html.unescape(title.rendered)."""
+    session = SESSION if session is None else session
+    urls: set[str] = set()
+    protected: set[str] = set()
+    titles: dict[str, str] = {}
+    errors: list[str] = []
+    expected_total: int | None = None
+
+    def result() -> dict:
+        complete = not errors and expected_total is not None and len(urls) == expected_total
+        if not errors and expected_total is not None and len(urls) != expected_total:
+            errors.append(f"count mismatch: {len(urls)} of {expected_total}")
+        return {
+            "urls": urls,
+            "protected": protected,
+            "titles": titles,
+            "complete": complete,
+            "expected_total": expected_total,
+            "discovered": len(urls),
+            "error": "; ".join(errors) if errors else None,
+        }
+
+    def collect(items: object, page: int) -> None:
+        if not isinstance(items, list):
+            errors.append(f"page {page}: unexpected response body")
+            return
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            link = item.get("link")
+            if not link:
+                continue
+            urls.add(link)
+            if "post-password-required" in (item.get("class_list") or []):
+                protected.add(link)
+                rendered = (item.get("title") or {}).get("rendered")
+                if rendered:
+                    titles[link] = html_lib.unescape(rendered)
+
+    # Endpoint resolution (same rule as get_rest_urls, plus timeout/failure).
+    try:
+        type_resp = session.get(f"{API_BASE}/types/{post_type}", timeout=REQUEST_TIMEOUT_CONNECT_READ)
+    except requests.exceptions.RequestException as e:
+        errors.append(f"endpoint resolution: {_request_failure_detail(e)}")
+        return result()
+    if type_resp.status_code != 200:
+        errors.append(f"endpoint resolution: HTTP {type_resp.status_code}")
+        return result()
+    try:
+        type_info = type_resp.json()
+    except ValueError:
+        errors.append("endpoint resolution: invalid JSON")
+        return result()
+    if isinstance(type_info, dict) and "_links" in type_info and "wp:items" in type_info["_links"]:
+        items_url = type_info["_links"]["wp:items"][0]["href"]
+    else:
+        items_url = f"{API_BASE}/{post_type}s"
+
+    def get_page(page: int):
+        try:
+            resp = session.get(f"{items_url}?per_page=100&page={page}", timeout=REQUEST_TIMEOUT_CONNECT_READ)
+        except requests.exceptions.RequestException as e:
+            errors.append(f"{_request_failure_detail(e)} on page {page}")
+            return None
+        if resp.status_code != 200:
+            errors.append(f"page {page}: HTTP {resp.status_code}")
+            return None
+        return resp
+
+    first = get_page(1)
+    if first is None:
+        return result()
+
+    total_pages: int | None = None
+    raw_total = first.headers.get("X-WP-Total")
+    raw_pages = first.headers.get("X-WP-TotalPages")
+    if raw_total is None:
+        errors.append("missing X-WP-Total")
+    else:
+        try:
+            expected_total = int(raw_total)
+        except ValueError:
+            errors.append(f"unparseable X-WP-Total: {_short(raw_total, 20)}")
+    if raw_pages is None:
+        errors.append("missing X-WP-TotalPages")
+    else:
+        try:
+            total_pages = int(raw_pages)
+        except ValueError:
+            errors.append(f"unparseable X-WP-TotalPages: {_short(raw_pages, 20)}")
+
+    try:
+        collect(first.json(), 1)
+    except ValueError:
+        errors.append("page 1: invalid JSON")
+
+    if total_pages is not None:
+        for page in range(2, total_pages + 1):
+            resp = get_page(page)
+            if resp is None:
+                continue
+            try:
+                collect(resp.json(), page)
+            except ValueError:
+                errors.append(f"page {page}: invalid JSON")
+
+    return result()
+
+
+def classify_product(
+    url: str,
+    *,
+    protected_by_rest: bool,
+    rest_title: str | None,
+    added_entry: dict | None,
+    session=None,
+) -> dict:
+    """One plan-section-3.9 outcome for a product URL (plus `html`).
+
+    Protection is decided from the page itself (form.pw_form), as
+    fetch_page() does; `protected_by_rest` only adds a note to `detail` when
+    it disagrees with the page. `rest_title` must already be decoded (as
+    discover() returns it). `added_entry` is this URL's Added entry
+    {product_name, password} -- None when the URL is not tracked in `added`;
+    a falsy password means tracked-without-password. password_rejected means
+    ONLY that the password form was shown again after a successful unlock
+    request; request failures are fetch_error and parse failures are
+    parse_error. Cookies are cleared first, as main() does per iteration,
+    because WordPress's wp-postpass cookie is site-wide."""
+    session = SESSION if session is None else session
+
+    def outcome(status: str, name: str | None = None, detail: str | None = None, page_html: str | None = None) -> dict:
+        return {"url": url, "post_type": "product", "status": status, "name": name, "detail": detail, "html": page_html}
+
+    session.cookies.clear()
+    try:
+        resp = session.get(url, timeout=REQUEST_TIMEOUT_CONNECT_READ)
+    except requests.exceptions.RequestException as e:
+        return outcome("fetch_error", detail=_request_failure_detail(e))
+    if resp.status_code != 200:
+        return outcome("fetch_error", detail=f"HTTP {resp.status_code}")
+
+    page_html = resp.text
+    is_protected = _has_password_form(page_html)
+    rest_note = None
+    if protected_by_rest != is_protected:
+        rest_note = f"REST protected flag ({protected_by_rest}) disagrees with page"
+
+    if not is_protected:
+        try:
+            parsed = parse_public_product(page_html, url)
+        except Exception as e:
+            return outcome("parse_error", detail=_short(e))
+        return outcome("public_ok", name=parsed.get("product_name"), detail=rest_note, page_html=page_html)
+
+    if added_entry is None:
+        return outcome("not_tracked", name=rest_title, detail=rest_note)
+    password = added_entry.get("password")
+    if not password:
+        return outcome("no_password", name=added_entry.get("product_name"), detail=rest_note)
+
+    # Unlock exactly as fetch_protected_page() does: POST to postpass, then re-fetch.
+    try:
+        post_resp = session.post(
+            POSTPASS_URL,
+            data={"post_password": password, "Submit": "Submit"},
+            headers={"Referer": url},
+            allow_redirects=False,
+            timeout=REQUEST_TIMEOUT_CONNECT_READ,
+        )
+    except requests.exceptions.RequestException as e:
+        return outcome("fetch_error", detail=f"unlock request: {_request_failure_detail(e)}")
+    # WordPress answers a successful postpass POST with a redirect (302), so
+    # only a 4xx/5xx counts as a failed unlock request.
+    if post_resp.status_code >= 400:
+        return outcome("fetch_error", detail=f"unlock request: HTTP {post_resp.status_code}")
+    try:
+        unlocked = session.get(url, timeout=REQUEST_TIMEOUT_CONNECT_READ)
+    except requests.exceptions.RequestException as e:
+        return outcome("fetch_error", detail=f"unlock re-fetch: {_request_failure_detail(e)}")
+    if unlocked.status_code != 200:
+        return outcome("fetch_error", detail=f"unlock re-fetch: HTTP {unlocked.status_code}")
+
+    unlocked_html = unlocked.text
+    if _has_password_form(unlocked_html):
+        return outcome("password_rejected", name=added_entry.get("product_name"))
+    try:
+        parsed = parse_public_product(unlocked_html, url, is_protected=True)
+    except Exception as e:
+        return outcome("parse_error", name=added_entry.get("product_name"), detail=_short(e))
+    return outcome("protected_unlocked", name=parsed.get("product_name"), page_html=unlocked_html)
+
+
+def classify_vendor(url: str, *, protected_by_rest: bool, session=None) -> dict:
+    """One plan-section-3.9 outcome for a vendor URL (plus `html`).
+
+    Protected (by the REST flag or the page's password form) is
+    protected_vendor with name None -- never a slug-derived name (D22)."""
+    session = SESSION if session is None else session
+
+    def outcome(status: str, name: str | None = None, detail: str | None = None, page_html: str | None = None) -> dict:
+        return {"url": url, "post_type": "vendor", "status": status, "name": name, "detail": detail, "html": page_html}
+
+    try:
+        resp = session.get(url, timeout=REQUEST_TIMEOUT_CONNECT_READ)
+    except requests.exceptions.RequestException as e:
+        return outcome("fetch_error", detail=_request_failure_detail(e))
+    if resp.status_code != 200:
+        return outcome("fetch_error", detail=f"HTTP {resp.status_code}")
+
+    page_html = resp.text
+    if protected_by_rest or _has_password_form(page_html):
+        return outcome("protected_vendor")
+    try:
+        parsed = parse_public_vendor(page_html, url)
+    except Exception as e:
+        return outcome("parse_error", detail=_short(e))
+    return outcome("public_ok", name=parsed.get("vendor_name"), page_html=page_html)
+
+
+def check_outcomes(discovery_by_type: dict, outcomes: list[dict]) -> list[str]:
+    """Validates the plan-section-3.9 invariants. Pure; returns violation
+    strings (empty list = valid).
+
+    `discovery_by_type` is {"product": discover(...), "vendor": discover(...)}.
+    Checks: exactly one outcome per discovered URL (no duplicates, none
+    missing, none undiscovered), each outcome's post_type matches the type
+    its URL was discovered under, and each status is valid for its post_type."""
+    violations: list[str] = []
+    allowed = {"product": PRODUCT_STATUSES, "vendor": VENDOR_STATUSES}
+    discovered_type: dict[str, str] = {}
+    for post_type, disc in discovery_by_type.items():
+        for u in disc.get("urls", ()):
+            if u in discovered_type and discovered_type[u] != post_type:
+                violations.append(f"URL discovered under both {discovered_type[u]} and {post_type}: {u}")
+            discovered_type[u] = post_type
+
+    seen: dict[str, int] = {}
+    for o in outcomes:
+        u, pt, status = o.get("url"), o.get("post_type"), o.get("status")
+        seen[u] = seen.get(u, 0) + 1
+        if pt not in allowed:
+            violations.append(f"unknown post_type {pt!r}: {u}")
+            continue
+        if status not in allowed[pt]:
+            violations.append(f"status {status!r} not valid for {pt}: {u}")
+        if u not in discovered_type:
+            violations.append(f"outcome for undiscovered URL: {u}")
+        elif discovered_type[u] != pt:
+            violations.append(f"outcome post_type {pt} but URL discovered as {discovered_type[u]}: {u}")
+
+    for u, n in seen.items():
+        if n > 1:
+            violations.append(f"duplicate outcome ({n}x): {u}")
+    for u in discovered_type:
+        if u not in seen:
+            violations.append(f"missing outcome: {u}")
+    return violations
 
 
 if __name__ == "__main__":
