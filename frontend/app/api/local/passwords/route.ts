@@ -29,38 +29,11 @@
  */
 
 import { assertSession } from "@/lib/server/session";
-import { tryReadRaw, saveUnguarded } from "@/lib/server/documents";
-import { getOrCreatePassword, type PasswordRecord } from "@/lib/passwords";
+import { readPasswordsFile, mutatePasswords } from "@/lib/server/passwords-store";
+import { getOrCreatePassword, setPassword } from "@/lib/passwords";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-interface PasswordsFile {
-  $schema_version: number;
-  $meta: Record<string, unknown>;
-  passwords: PasswordRecord[];
-}
-
-const EMPTY: PasswordsFile = { $schema_version: 1, $meta: {}, passwords: [] };
-
-export async function readPasswordsFile(): Promise<PasswordsFile> {
-  const found = await tryReadRaw("passwords");
-  if (!found) return { ...EMPTY };
-  const body = JSON.parse(found.data) as Partial<PasswordsFile>;
-  return {
-    $schema_version: typeof body.$schema_version === "number" ? body.$schema_version : 1,
-    $meta: body.$meta ?? {},
-    passwords: Array.isArray(body.passwords) ? body.passwords : [],
-  };
-}
-
-export async function writePasswordsFile(file: PasswordsFile, actor: string): Promise<void> {
-  await saveUnguarded({
-    key: "passwords",
-    bytes: `${JSON.stringify(file, null, 2)}\n`,
-    actor,
-  });
-}
 
 function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -94,14 +67,63 @@ export async function POST(request: Request): Promise<Response> {
   const vendorNameRaw = (body as { vendor_name?: unknown } | null)?.vendor_name;
   const vendorName = typeof vendorNameRaw === "string" ? vendorNameRaw : null;
 
-  const file = await readPasswordsFile();
-  const { records, record, created } = getOrCreatePassword(file.passwords, productName, vendorName);
-
-  if (created) {
-    await writePasswordsFile({ ...file, passwords: records }, gate.user.email);
-  }
+  // Computed once, outside the transaction, so every retry of the pure
+  // mutate function stamps the same timestamp/year.
+  const now = new Date();
+  const { record, created } = await mutatePasswords(gate.user.email, (file) => {
+    const { records, record, created } = getOrCreatePassword(file.passwords, productName, vendorName, now);
+    return { file: created ? { ...file, passwords: records } : null, result: { record, created } };
+  });
 
   return jsonResponse({ record, created }, 200);
+}
+
+// Sets a product's vendor-review password to the given value, creating the
+// row if absent. No write when the value is unchanged. Atomic via
+// mutatePasswords.
+export async function PUT(request: Request): Promise<Response> {
+  const gate = await assertSession();
+  if ("response" in gate) return gate.response;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body is not valid JSON." }, 400);
+  }
+
+  const productName = (body as { product_name?: unknown } | null)?.product_name;
+  if (typeof productName !== "string" || productName.trim() === "") {
+    return jsonResponse({ error: '"product_name" must be a non-empty string.' }, 400);
+  }
+  const vendorNameRaw = (body as { vendor_name?: unknown } | null)?.vendor_name;
+  const vendorName = typeof vendorNameRaw === "string" ? vendorNameRaw : null;
+
+  const passwordRaw = (body as { password?: unknown } | null)?.password;
+  if (typeof passwordRaw !== "string") {
+    return jsonResponse({ error: '"password" must be a string.' }, 400);
+  }
+  const password = passwordRaw.trim();
+  if (password === "") {
+    return jsonResponse({ error: '"password" must be a non-empty string.' }, 400);
+  }
+  // WordPress stores post_password as varchar(255).
+  if (password.length > 255) {
+    return jsonResponse({ error: '"password" must be 255 characters or fewer.' }, 400);
+  }
+
+  // Computed once, outside the transaction, so every retry of the pure
+  // mutate function stamps the same timestamp.
+  const now = new Date();
+  const { record, created, changed } = await mutatePasswords(gate.user.email, (file) => {
+    const out = setPassword(file.passwords, productName, password, vendorName, now);
+    return {
+      file: out.changed ? { ...file, passwords: out.records } : null,
+      result: { record: out.record, created: out.created, changed: out.changed },
+    };
+  });
+
+  return jsonResponse({ record, created, changed }, 200);
 }
 
 export async function DELETE(request: Request): Promise<Response> {
@@ -120,13 +142,11 @@ export async function DELETE(request: Request): Promise<Response> {
     return jsonResponse({ error: '"product_name" must be a non-empty string.' }, 400);
   }
 
-  const file = await readPasswordsFile();
-  const passwords = file.passwords.filter((r) => r.product_name !== productName);
-  const deleted = passwords.length < file.passwords.length;
-
-  if (deleted) {
-    await writePasswordsFile({ ...file, passwords }, gate.user.email);
-  }
+  const { deleted } = await mutatePasswords(gate.user.email, (file) => {
+    const passwords = file.passwords.filter((r) => r.product_name !== productName);
+    const deleted = passwords.length < file.passwords.length;
+    return { file: deleted ? { ...file, passwords } : null, result: { deleted } };
+  });
 
   return jsonResponse({ deleted }, 200);
 }

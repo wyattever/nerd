@@ -380,6 +380,61 @@ export async function saveUnguarded(params: {
 }
 
 /**
+ * Atomic server-side read-modify-write: the read, `mutate`, and the write
+ * all happen inside ONE transaction, so two concurrent callers can never
+ * both read the same bytes and have the second silently discard the
+ * first's change.
+ *
+ * Why this exists alongside saveGuarded: saveGuarded is a compare-and-swap
+ * against a client-supplied If-Match, for documents edited in the browser.
+ * Every writer of `passwords` is server-side (route handlers, the promote),
+ * so there is no client ETag to round-trip -- the server reads, decides, and
+ * writes in one step instead. Unlike saveGuarded it can also create the
+ * document when it is absent (`currentBytes` is null; there is nothing to
+ * back up, which stageWrite already handles).
+ *
+ * `mutate` MUST be a pure function of its input. Firestore re-runs the
+ * whole transaction callback on contention, so `mutate` may be invoked more
+ * than once per call: it must not perform I/O, mutate captured state, or
+ * have any other side effect. It returns `{ bytes, result }`: `bytes` is the
+ * complete new document to write, or null to write nothing (the returned
+ * etag is then the current stored etag, or null if the document does not
+ * exist). `result` is how a caller gets data out of `mutate` without
+ * capturing outer state -- the value returned here is the one from the
+ * invocation that committed (the last one, if Firestore retried). No retry
+ * loop of its own -- Firestore's transaction retry is the only one.
+ *
+ * `key` is restricted to the literal "passwords" by deliberate decision.
+ * Widening it to AuxKind/DocumentKey is a separate decision, not an
+ * incidental type change.
+ */
+export async function mutateDocument<R>(params: {
+  key: "passwords";
+  actor: string;
+  mutate: (currentBytes: string | null) => { bytes: string | null; result: R };
+}): Promise<{ written: boolean; etag: string | null; result: R }> {
+  const { key, actor, mutate } = params;
+
+  const database = db();
+  const ref = database.collection(COLLECTION).doc(key);
+
+  return database.runTransaction(async (t) => {
+    const current = snapshotOf(await t.get(ref));
+    const { bytes: next, result } = mutate(current?.bytes ?? null);
+    if (next === null) {
+      return { written: false, etag: current?.etag ?? null, result };
+    }
+
+    // Inside the callback, unlike saveGuarded/saveUnguarded, because the
+    // bytes only exist once `mutate` has run. A throw here aborts the
+    // transaction with nothing written.
+    assertSize(key, next);
+    const etag = stageWrite(t, key, current, next, actor);
+    return { written: true, etag, result };
+  });
+}
+
+/**
  * Replaces `storedKey` with `bytes` and deletes `liveKey`, atomically --
  * the promote path (/records' "Update Stored Data"). The fs version was
  * backupThenWrite() followed by backupThenDelete(), two independent

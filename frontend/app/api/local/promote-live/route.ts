@@ -47,7 +47,7 @@ import {
   type DataKind,
 } from "@/lib/server/documents";
 import { deriveLiveProductSlug, deriveLiveVendorSlug } from "@/lib/server/documents-read";
-import { readPasswordsFile, writePasswordsFile } from "@/app/api/local/passwords/route";
+import { mutatePasswords } from "@/lib/server/passwords-store";
 import { getOrCreatePassword } from "@/lib/passwords";
 
 export const runtime = "nodejs";
@@ -229,13 +229,6 @@ export async function POST(request: Request): Promise<Response> {
         if (typeof id === "string" && id) existingUrls.add(id);
       }
 
-      // Lazy, read once: most promotes have zero not_tracked entries, and
-      // this avoids a passwords-document read for the common case. Updated
-      // in place across iterations so a second new product in the SAME run
-      // sees the first one's freshly-created password when checking for a
-      // base collision, matching getOrCreatePassword()'s own semantics.
-      let passwordsFile: Awaited<ReturnType<typeof readPasswordsFile>> | null = null;
-
       for (const entry of notTracked) {
         const url = entry.ncademi_product_url;
         const name = entry.product_name;
@@ -249,17 +242,31 @@ export async function POST(request: Request): Promise<Response> {
           slug: deriveLiveProductSlug(url),
         };
 
-        if (passwordsFile === null) passwordsFile = await readPasswordsFile();
-        const { records, created } = getOrCreatePassword(passwordsFile.passwords, name, null);
-        if (created) {
-          passwordsFile = { ...passwordsFile, passwords: records };
-          await writePasswordsFile(passwordsFile, gate.user.email);
-        }
-
         merged.push(stub);
         existingUrls.add(url);
         stubsCreated += 1;
         stubProducts.push(name);
+      }
+
+      // Every stub's password in ONE atomic read-modify-write, still before
+      // promoteLive below. Skipped (no passwords read) when no stub
+      // qualified. Records are threaded through each getOrCreatePassword
+      // call in stub order, so a second new product in the SAME run sees the
+      // first one's freshly-created password when checking for a base
+      // collision. `now` is fixed outside the transaction so a retried
+      // attempt generates identical passwords and timestamps.
+      if (stubProducts.length > 0) {
+        const now = new Date();
+        await mutatePasswords(gate.user.email, (file) => {
+          let records = file.passwords;
+          let anyCreated = false;
+          for (const name of stubProducts) {
+            const outcome = getOrCreatePassword(records, name, null, now);
+            records = outcome.records;
+            if (outcome.created) anyCreated = true;
+          }
+          return { file: anyCreated ? { ...file, passwords: records } : null, result: null };
+        });
       }
     }
   }

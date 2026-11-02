@@ -87,3 +87,49 @@ export function getOrCreatePassword(
 
   return { records: [...records, record], record, created: true };
 }
+
+/**
+ * Sets `productName`'s password to exactly `password`, creating the row if
+ * none exists. Matched by exact `product_name` string, the same convention
+ * as getOrCreatePassword above. Pure function: never mutates `records` or
+ * any record in it, and callers own persisting the returned `records` when
+ * `changed` is true.
+ *
+ * - Existing row, same password: input returned as-is, `changed: false`.
+ * - Existing row, different password: a NEW array with that row replaced;
+ *   its `vendor_name` is kept (the `vendorName` argument is ignored here).
+ * - No row: one appended, `created: true`.
+ *
+ * No trimming or validation here -- the route owns input validation. No
+ * uniqueness check against other rows' passwords: duplicates are allowed by
+ * decision. On an edited row `timestamp` now means "last set", not "first
+ * created" -- a deliberate change in that field's meaning.
+ */
+export function setPassword(
+  records: PasswordRecord[],
+  productName: string,
+  password: string,
+  vendorName: string | null,
+  now: Date
+): { records: PasswordRecord[]; record: PasswordRecord; created: boolean; changed: boolean } {
+  const index = records.findIndex((r) => r.product_name === productName);
+
+  if (index !== -1) {
+    const existing = records[index];
+    if (existing.password === password) {
+      return { records, record: existing, created: false, changed: false };
+    }
+    const record: PasswordRecord = { ...existing, password, timestamp: now.toISOString() };
+    const next = records.slice();
+    next[index] = record;
+    return { records: next, record, created: false, changed: true };
+  }
+
+  const record: PasswordRecord = {
+    product_name: productName,
+    vendor_name: vendorName,
+    password,
+    timestamp: now.toISOString(),
+  };
+  return { records: [...records, record], record, created: true, changed: true };
+}
