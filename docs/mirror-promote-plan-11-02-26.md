@@ -1,7 +1,7 @@
 # N.E.R.D. — Mirror-Promote Rework, Password Editing, and Deploy Plan
 
 **Date:** 2026-11-02
-**Status:** Decisions settled; rework not yet implemented. Password editing complete (local commits, not yet deployed).
+**Status:** Decisions settled; rework not yet implemented. Password editing and the temporary Added guard are deployed (2026-11-02, revision `nerd-frontend-00018-vad`).
 **Suggested location:** `docs/mirror-promote-plan-11-02-26.md`
 **Relationship to DECISION_LOG:** #68 records the password-editing work. The mirror-promote rework will need its own entry (#69 or next free number) when it lands, because it reverses the promote merge rule described in §3.1. This document is the working plan; the log entries are the record.
 
@@ -58,6 +58,8 @@ This reverses the keep-unmatched merge rule introduced with "Update Stored Data"
 
 **D2. One shared planner for all three categories.** The decision logic lives in one pure planning function used by all three categories. It is testable without Firestore, and it implements the case tables in §3.2–3.4.
 
+**D14. Deleting a record also deletes its tracking row.** This applies in all three categories and matches D7 for password rows. Tracking rows are keyed by `product_name` (a vendor record's `product_name` is its vendor name), so a row left behind would be an orphan, like today's "Amplify Change" row.
+
 ### 3.2 Added — case table
 
 Records are matched to scrape results by `ncademi_product_url`.
@@ -68,7 +70,7 @@ Records are matched to scrape results by `ncademi_product_url`.
 | Password on file rejected (WordPress returned the password form again) | Keep the stored record; **delete the password row** | Needs correct password |
 | Protected page, but no password on file | Keep the stored record | Needs password |
 | Page fetch failed (network or server error) | **Untouched**: record and password unchanged | Could not check |
-| Not found as a protected page: absent from the site, or now public | **Delete the record and its password row** | Removed, with reason ("not on site" / "now public") |
+| Not found as a protected page: absent from the site, or now public | **Delete the record, its password row and its tracking row** | Removed, with reason ("not on site" / "now public") |
 | *(Not a stored record)* Protected page on the site that N.E.R.D. does not track | **Create nothing** | Listed as an untracked protected page |
 
 **D3. Fetch errors leave the record untouched, and the rest of the promote proceeds.** Only the affected record is skipped. The run-wide alternative, where any fetch error blocks all deletions, was considered and not adopted, because the confirmation modal (D9) shows every proposed change before anything is written.
@@ -81,7 +83,7 @@ Records are matched to scrape results by `ncademi_product_url`.
 
 **Rationale for D6.** A generated password made sense when N.E.R.D. assigned passwords that someone then set on WordPress. For pages already protected on the site, the real password exists on WordPress, so a generated one is wrong by construction and would fail to unlock on every future scrape.
 
-**D7. Deleting a record also deletes its password row.** This avoids the orphaned-row pattern found today; see §7.
+**D7. Deleting a record also deletes its password row** (and its tracking row, per D14). This avoids the orphaned-row pattern found today; see §7.
 
 ### 3.3 Published — case table
 
@@ -91,7 +93,7 @@ Records are matched by `ncademi_product_url`.
 |---|---|---|
 | Public page scraped | Keep, updated from the live page | Updated |
 | Page fetch failed | Untouched | Could not check |
-| Not found as a public page: absent from the site, or now protected | Delete | Removed, with reason ("not on site" / "now protected") |
+| Not found as a public page: absent from the site, or now protected | Delete the record and its tracking row | Removed, with reason ("not on site" / "now protected") |
 | *(Not a stored record)* New public page | Append | Added |
 
 **D12. Current workflow assumption.** "Promote to Published" in the Added editor is used only after the product page has been manually made public on the website. Under that workflow, stored Published never runs ahead of the site, so the mirror rule never deletes a legitimate in-flight record.
@@ -104,7 +106,7 @@ Records are matched by `vendor_directory_url`.
 |---|---|---|
 | Vendor page scraped | Keep, updated from the live page | Updated |
 | Page fetch failed | Untouched | Could not check |
-| Not found on the site | Delete | Removed ("not on site") |
+| Not found on the site | Delete the record and its tracking row | Removed ("not on site") |
 | *(Not a stored record)* New vendor page | Append | Added |
 
 **Expected effect on first run:** the two test vendors ("Another Test", "Test Vendor") are proposed for deletion and appear in the confirmation modal.
@@ -147,7 +149,7 @@ Each step is one Claude CLI dispatch with stop-and-report gates. Claude validate
 1. **Recon.** How the scraper handles fetch failures per target (products, protected products, vendors); what `$meta.missing` and `vendors_missing` contain today; how protected-vendor stubs appear in `vendors-live`; every code path that creates records in stored Added, Published and Vendors (to confirm nothing runs ahead of the site beyond D12); promote-live's current structure; and the `DeleteAddedModal.tsx` pattern to reuse.
 2. **Scraper.** Distinct `$meta.missing` reasons; fetch errors recorded for all targets; `html.unescape` on REST titles. Verify with `py_compile`/pytest and an emulator run.
 3. **Planner.** A pure function implementing §3.2–3.4 for all three categories, returning a plan with per-record actions and reasons. Test it standalone against fixtures for every row of every table.
-4. **Promote route.** A dry-run mode returning the plan, and the real promote applying it in one transaction (D8), including password-row deletions (D5, D7). Remove the D13 guard here.
+4. **Promote route.** A dry-run mode returning the plan, and the real promote applying it in one transaction (D8), including password-row and tracking-row deletions (D5, D7, D14). Remove the D13 guard here.
 5. **Modal and messages.** The confirmation modal (D9) and the result lines in the Messages log.
 6. **Emulator end-to-end test.** Fixtures covering every case (unlocked, rejected, no password, fetch error, not on site, now public, untracked, appended), across all three categories. Developer browser and screen-reader check of the modal.
 7. **DECISION_LOG entry** recording D1–D13, with a forward pointer on the merge-rule entry it reverses.
@@ -181,11 +183,17 @@ Only `nerd-frontend` needs a new revision. Nothing under `api/` or `Dockerfile.a
 - Re-scrape (`scrape_ncademi_live.py --prod`) to confirm Grammarly and Nearpod unlock.
 - Promoting Vendors and Published under the current merge rule remains safe; see the recon reports. Added stays blocked by the guard.
 
+**Outcome (2026-11-02):** deployed as planned.
+- Eleven commits shipped, `97fd4d9` through `7134bfc`, including this document's commit and the guard. `origin/main` = `7134bfc`.
+- Cloud Build `630f60fc`; image digest `sha256:76c01acb21eb8bfb5423b17adf36384042285158110fc5147b9c2635c1fcfaa6`.
+- Revision `nerd-frontend-00018-vad` was deployed with no traffic, checked at the candidate URL, and then promoted to 100%. Environment variable names and the service account are unchanged.
+- Rollback target: `nerd-frontend-00016-beq`.
+- Password edits were confirmed working in production. Grammarly's and Nearpod's correct WordPress passwords are still to be obtained from whoever manages the protected pages on ncademi.org.
+
 ---
 
 ## 6. Open questions
 
-- **Tracking rows on deletion.** When the mirror rule deletes a record that has a tracking row (today only the "Amplify" vendor and candidate records have them), should the tracking row be deleted too, consistent with D7 for passwords? *Proposed: yes; confirm.*
 - **Message wording and ordering** in the Messages log for promote results: to be settled in step 5.
 - **Promote order across categories.** Promoting Added before Published deletes the four now-public products from Added before Published holds them. Nothing is lost, since they remain in the published snapshot, but the modal should say "now public" so the order is understandable. *Proposed: no enforced order; rely on the reason text.*
 
@@ -206,3 +214,58 @@ Only `nerd-frontend` needs a new revision. Nothing under `api/` or `Dockerfile.a
 - **CLAUDE.md and AGENTS.md describe Next.js 15**; the repo runs Next 16.2.9.
 - **Earlier Cloud Build source uploads may contain `emulator-data/`** (a Firestore export including passwords) and debug logs, if those existed at the time. The bucket is private to the project. This needs a read-only check of retained source archives (**UNVERIFIED**).
 - **The `"Amplify Change"` tracking row matches no record.** Delete it, or rename it to the intended product.
+
+---
+
+## 8. Later phase: scraping from the cloud
+
+**Goal.** Keep the live snapshots current without anyone running the scraper from a terminal, so N.E.R.D. stays in step with the site while it is not in regular use. Promotes remain manual and reviewed through the D9 modal; a scrape only ever writes the three `*-live` snapshots.
+
+**Sequencing.** After the mirror-promote rework (§4). The rework changes the scraper (D10), and the mirror rule's reviewed promote is what makes unattended snapshots safe to act on. The feasibility probe (§8.3) runs first, independently of the rework.
+
+### 8.1 Options
+
+**Option A: GitHub Actions** (preferred; a judgment call).
+- A workflow runs `scripts/scrape_ncademi_live.py --prod` on a schedule (proposed: nightly) and on demand ("Run workflow").
+- It authenticates to Google Cloud through Workload Identity Federation, with no key files, trusted only for this repository, the `main` branch and this workflow. It runs as a service account holding `roles/datastore.user`.
+- Progress and failures appear in the GitHub run log.
+- Effort: about 3–4/10.
+- Trade-offs:
+  - Triggering requires GitHub repository access, which is separate from `NERD_ALLOWED_EMAILS`.
+  - The run log is GitHub's interface, not an in-app status display that the project's live-region requirement could govern.
+  - Minutes count against GitHub's free allowance if the repository is private. Repository visibility is **UNVERIFIED**.
+
+**Option B: a Cloud Run Job, triggered from the N.E.R.D. UI.**
+- The job is built from the existing Python image. A server route starts an execution through the Cloud Run Admin API.
+- The job has its own service account with `roles/datastore.user`, and the frontend service account gets permission to run the job.
+- A lock prevents overlapping runs.
+- A status document is polled by an accessible progress display: milestones (not individual pages) announced through a polite live region per SC 4.1.3, and failures announced with `role="alert"`.
+- Effort: about 6/10. It supersedes DECISION_LOG #66.
+- Preferred only if colleagues without GitHub access must be able to trigger scrapes.
+
+**Common to both:**
+- **Each run scrapes all three categories together; there are no per-category runs.** Vendor-resource deduplication requires vendors in the same run, and the mirror rule needs one consistent snapshot. For example, deciding an Added product is "now public" requires a Published snapshot from the same run.
+- **#66's write boundary still applies.** The script names its three output documents explicitly.
+- **Any identity that runs the scraper can write any document in the database** (#66), so its credentials must be scoped and protected accordingly.
+- **Running from colleagues' own machines (Mac or Windows) was considered and not preferred.** It works, and WSL2 makes Windows behave like the Mac setup, but each person would need a Google login with Firestore write access to the project. That widens the exposure #66 describes.
+
+### 8.2 Why not GitHub Pages
+
+GitHub Pages serves static files only, so the scraper would have to run in a browser, which cannot do the job:
+- The browser cannot read ncademi.org's product pages from another origin.
+- It cannot use WordPress's page-password cookie for another site.
+- Writing to Firestore from the browser would require loosening the deny-all security rules.
+
+### 8.3 Feasibility probe (first step)
+
+**The unknown (UNVERIFIED):** whether ncademi.org, or a security plugin protecting `wp-login.php`, blocks or challenges requests from cloud datacenter addresses. The scraper works from a developer laptop, which says nothing about cloud addresses. GitHub Actions runners and Cloud Run both use datacenter addresses, so the answer applies to both options.
+
+**The probe:** a one-off, manually triggered workflow with no Google Cloud access. It:
+- fetches the WordPress REST product list;
+- fetches one public product page;
+- unlocks one protected page (Newsela Student Platform) using its password stored as an Actions secret — one password request in total;
+- prints the status codes, and whether the unlocked page parsed.
+
+**After it:**
+- If any step is blocked or challenged, raise it with ncademi.org's site owner (an allowlist or an exception) before any further design.
+- Remove the probe workflow and its secret afterwards.
