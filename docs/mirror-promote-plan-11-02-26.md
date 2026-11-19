@@ -239,6 +239,22 @@ Rules:
 
 **D21.** The old `/editor` page (`frontend/app/editor/page.tsx`) is unused, and still reachable by URL with its own copies of the promote and import actions. It is retired, after a grep-confirmed zero-reference check. This is independent of the mirror rework and can ship separately.
 
+### 3.11 Planner escalation rulings (2026-11-19)
+
+The planner (§4 step 4) marked six points where §3.2–3.4 and §3.9 did not settle its behaviour. Each is ruled on below and marked `RESOLVED (Dn)` in `frontend/lib/mirror-planner.ts`.
+
+**D24.** A stored Added record whose URL has a `not_tracked` outcome has no row in §3.2; it arises when the record was added to stored Added between the scrape and the promote. Ruling: untouched, reported as could not check.
+
+**D25.** §3.9 states that the number of outcomes equals the sum of `discovery.*.discovered`, and the planner checks the count per post type instead. Ruling: per-post-type check kept.
+
+**D26.** The tables do not say what to do when a stored record's URL matches an outcome of the other post type. Ruling: refuse.
+
+**D27.** §3.2 has no append row, so a live Added record with no stored counterpart is neither appended nor deleted. Ruling: not appended; reported under couldNotCheck. Reported under couldNotCheck; never created, deleted or appended, and does not affect deletionsAllowed.
+
+**D28.** An outcome of the category's post type with no stored record and no table row — `fetch_error` or `parse_error` in any category, or for Added `protected_unlocked`, `password_rejected` or `no_password` — was ignored silently. Statuses that place the page in the other product category (Added: `public_ok`; Published: `protected_unlocked`, `password_rejected`, `no_password`, `not_tracked`) are not reported, because every snapshot lists every product URL (D16). Ruling: never created or deleted; reported under couldNotCheck. Reported under couldNotCheck; never created, deleted or appended, and does not affect deletionsAllowed.
+
+**D29.** The tables say "Append" for a `public_ok` outcome with no stored record, but the live snapshot can hold no record to append. Ruling: refuse.
+
 ---
 
 ## 4. Implementation plan
@@ -253,6 +269,8 @@ Each step is one dispatch with stop-and-report gates, validated before the next 
 4. **Planner** (external model, Claude Fable, from an upload bundle). A pure TypeScript function implementing §3.2–3.4, D15, D20 and D22 against the §3.9 format, with a `node:test` test for every row of every table.
    - Node 25 runs `.ts` test files directly; the tests live outside `frontend/`, because `tsconfig.json` does not allow `.ts`-extension imports.
    - Claude CLI places the files on a branch and runs the tests and the typecheck.
+   - **Done** — commit `00b11a4`.
+   - Escalation rulings (§3.11, D24–D29) applied in commit `e538930`.
 5. **Promote route and document layer** (Claude CLI).
    - A four-document transaction variant of `promoteLive` that calls the planner inside the transaction (D8).
    - The dry run with version tokens (D17).
@@ -261,7 +279,7 @@ Each step is one dispatch with stop-and-report gates, validated before the next 
 6. **Modal and messages** (Claude CLI): D9.
 7. **Emulator end-to-end test.** Fixtures covering every row of §3.2–3.4, plus incomplete discovery. Developer browser and screen-reader check of the modal.
 8. **Retire the legacy editor** (D21). Independent; any time.
-9. **DECISION_LOG entry** recording D1–D23, with a forward pointer on the merge-rule entry it reverses.
+9. **DECISION_LOG entry** recording D1–D29, with a forward pointer on the merge-rule entry it reverses.
 
 ---
 
