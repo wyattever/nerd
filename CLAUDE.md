@@ -24,3 +24,11 @@
 - **Documentation & Schema Index:**
   - For unified directory types and schemas: Refer to `frontend/lib/directory-schema.ts` (or legacy `vendor-schema.ts`).
   - For shared UI components: Refer to `frontend/components/`.
+
+## 5. Reporting (applies to every dispatch)
+- Write the complete report for every dispatch to `.scratch/verification/<task-slug>-<YYYYMMDD-HHMM>.md`. This includes dispatches that stop early: write the file before stopping, with the stop reason and its evidence.
+- The file holds everything the dispatch's REPORT section asks for: verbatim command output, diffs, commit output, assumption checks, and any judgment calls you made, with their reasons.
+- Capture command output with the shell, not by retyping it: `cmd 2>&1 | tee -a <file>`, or `>> <file>`. For long output (full test runs, typecheck, lint, large diffs), redirect to the file and read back only what decides the gate: the exit code, summary lines, and failures. Read the full output whenever a gate fails.
+- Keep the terminal reply to about 15 lines: the report file path, one line per gate (PASS / FAIL / SKIPPED), any commit hashes, and any stop reason in one sentence. Do not repeat report content in the reply.
+- Never write password values, secrets, or credentials to a report file.
+- A dispatch's own REPORT section decides what the report contains. This section decides where the report is written and how output is captured.
