@@ -8,8 +8,9 @@
  * modifies and writes the `passwords` document in ONE Firestore
  * transaction (documents.ts's mutateDocument), so concurrent writes cannot
  * overwrite each other and no client If-Match round trip is needed. The
- * only other app writer, promote-live's not_tracked stub step, uses the
- * same helper. Scripts outside frontend/ (scripts/nerd_documents.py push,
+ * only other app writer is the mirror promote (promote-live), which creates
+ * no rows (D6) and deletes rows inside its own transaction (D40). Scripts
+ * outside frontend/ (scripts/nerd_documents.py push,
  * scripts/write_single_document.py) can still overwrite the document
  * directly.
  *

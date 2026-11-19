@@ -1,82 +1,31 @@
 // frontend/app/api/local/promote-live/route.ts
 /**
- * "Update Stored Data": merges a live-scrape snapshot into its stored
- * counterpart, then clears the snapshot. Wired to /records' SourceToggle,
- * which enables the button only while the matching live document exists.
+ * "Update Stored Data": the mirror promote (docs/mirror-promote-plan-11-02-26.md
+ * §3.12–3.13). POST { category, mode, tokens } previews or applies one
+ * category. Both modes read the seven documents of D30 in ONE
+ * transactDocuments transaction (D8); apply writes only when every version
+ * token still matches (D17, D32), otherwise it returns a fresh preview.
  *
- * PORTED, WITH THE MERGE LOGIC UNTOUCHED. Every decision about record
- * identity below is carried over verbatim from the filesystem version and
- * should not be "improved" while porting -- the conservative merge in
- * particular is deliberate and load-bearing:
+ * Every decision lives in lib/server/promote-mirror.ts (D41); this handler
+ * only authenticates, parses, runs the transaction and responds. The D13
+ * Added guard is gone, and untracked protected pages no longer get
+ * auto-created records or passwords (D34).
  *
- *   A live record upserts over its stored counterpart, matched by
- *   ncademi_product_url / vendor_directory_url. A stored record with no live
- *   counterpart is KEPT. A live-only record is appended. This is not a
- *   wholesale replace because `added` still contains products whose
- *   vendor-review password does not unlock their page, so they never appear
- *   in the live snapshot and a replace would silently drop them. Once every
- *   password resolves, merge and replace converge.
- *
- * Identity is the URL a record was scraped from, never product_name (an
- * editor can rename it) and never slug (derived).
- *
- * WHAT CHANGED. The filesystem version was backupThenWrite() followed by
- * backupThenDelete() -- two independent operations with a window between
- * them where a crash left the live snapshot consumed but the stored document
- * unchanged, or the reverse. promoteLive() does both in one Firestore
- * transaction. The merge itself stays here rather than moving into the
- * datastore: record identity is a domain question, and lib/server/documents.ts
- * deliberately knows nothing about record shape.
- *
- * Not part of the ETag/If-Match flow, same as before: this is an
- * operator-initiated whole-document swap, not a read-modify-write of
- * individual records, and it takes its own backup either way.
- *
- * tracking is untouched throughout -- workflow metadata was decoupled
- * precisely so a promote never disturbs it (lib/tracking.ts); it is merged
- * back onto the promoted records at read time.
+ * SourceToggle's "Update Stored Data" still sends { category } with no mode,
+ * so it gets a 400 on this branch until step 6 (D37).
  */
 
 import { assertSession } from "@/lib/server/session";
+import { transactDocuments, DocumentTooLargeError } from "@/lib/server/documents";
 import {
-  tryReadRaw,
-  promoteLive,
-  liveKeyFor,
-  isDataKind,
-  DocumentTooLargeError,
-  type DataKind,
-} from "@/lib/server/documents";
-import { deriveLiveProductSlug, deriveLiveVendorSlug } from "@/lib/server/documents-read";
-import { mutatePasswords } from "@/lib/server/passwords-store";
-import { getOrCreatePassword } from "@/lib/passwords";
+  decidePromote,
+  parsePromoteRequest,
+  promoteDocumentKeys,
+  type PromoteResponseBody,
+} from "@/lib/server/promote-mirror";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-// "candidate" has no live snapshot -- nothing scrapes it -- so liveKeyFor()
-// returns null for it and the request is rejected below.
-const PROMOTABLE: readonly DataKind[] = ["published", "added", "vendors"];
-
-/**
- * A product record's non-array fields that lib/published-validate.ts requires
- * to be PRESENT (as a string or null). A stored record missing any of them is
- * a blocking error the next time it is saved from /editor.
- * scrape_ncademi_live.py's parse_public_product() emits all of these EXCEPT
- * ai_insights (no page equivalent), so the promote backfills the gap. A live
- * value, when present, always wins via spread order.
- */
-const PRODUCT_FIELD_DEFAULTS: Record<string, null | []> = {
-  vendor_name: null,
-  vendor_directory_url: null,
-  product_website_url: null,
-  product_description: null,
-  last_updated: null,
-  ai_insights: null,
-  vendor_resources: [],
-  other_resources: [],
-  support_contacts: [],
-  acr_reports: [],
-};
 
 function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -96,214 +45,22 @@ export async function POST(request: Request): Promise<Response> {
     return jsonResponse({ error: "Request body is not valid JSON." }, 400);
   }
 
-  const category = (body as { category?: unknown } | null)?.category;
-  if (!isDataKind(category) || !PROMOTABLE.includes(category)) {
-    return jsonResponse(
-      { error: '"category" must be one of "published", "added", "vendors".' },
-      400
-    );
+  const parsed = parsePromoteRequest(body);
+  if (!parsed.ok) {
+    return jsonResponse({ error: parsed.error }, 400);
   }
+  const promoteRequest = parsed.request;
 
-  // TEMPORARY (added 2026-11-02): the Added branch currently auto-creates
-  // not_tracked stubs with generated passwords (626c556), which is being
-  // replaced by mirror-promote rules (see DECISION_LOG, forthcoming). Remove
-  // this guard when that lands. Compared via `as string` so TypeScript does
-  // not narrow `category`/`kind` and flag the (now unreachable) Added
-  // branch below as a no-overlap comparison.
-  if ((category as string) === "added") {
-    return jsonResponse(
-      {
-        error:
-          "Updating stored Added data is temporarily disabled while the promote rules are being reworked. Published and Vendors are unaffected",
+  let outcome: { status: number; body: PromoteResponseBody };
+  try {
+    outcome = await transactDocuments({
+      keys: promoteDocumentKeys(promoteRequest.category),
+      actor: gate.user.email,
+      decide: (docs) => {
+        const d = decidePromote(promoteRequest, docs);
+        return { writes: d.writes, deletes: d.deletes, result: { status: d.status, body: d.body } };
       },
-      409
-    );
-  }
-
-  const kind = category;
-  const isVendors = kind === "vendors";
-  const arrayKey = isVendors ? "vendors" : "products";
-  const idKey = isVendors ? "vendor_directory_url" : "ncademi_product_url";
-  const totalKey = isVendors ? "total_vendors" : "total_products";
-  const deriveSlug = isVendors ? deriveLiveVendorSlug : deriveLiveProductSlug;
-
-  const liveKey = liveKeyFor(kind);
-  if (!liveKey) {
-    return jsonResponse({ error: `"${kind}" has no live snapshot.` }, 400);
-  }
-
-  const liveDoc = await tryReadRaw(liveKey);
-  if (!liveDoc) {
-    return jsonResponse({ error: 'No live data to promote. Run "Retrieve Live Data" first.' }, 409);
-  }
-
-  let live: Record<string, unknown>;
-  try {
-    live = JSON.parse(liveDoc.data) as Record<string, unknown>;
-  } catch {
-    return jsonResponse({ error: "The stored live snapshot is not valid JSON." }, 500);
-  }
-
-  const liveMeta = (live.$meta && typeof live.$meta === "object" ? live.$meta : {}) as Record<
-    string,
-    unknown
-  >;
-
-  const liveRecords = Array.isArray(live[arrayKey])
-    ? (live[arrayKey] as Array<Record<string, unknown>>)
-    : [];
-
-  // Re-shape each live record to the stored schema on the way in: derive the
-  // slug (live snapshots carry none) and backfill missing required fields.
-  const liveShaped: Array<Record<string, unknown>> = liveRecords.map((record) => ({
-    ...(isVendors ? {} : PRODUCT_FIELD_DEFAULTS),
-    ...record,
-    slug: deriveSlug(record[idKey] as string),
-  }));
-
-  // The stored document's schema envelope is preserved; its records are the
-  // base the live snapshot merges INTO.
-  const storedDoc = await tryReadRaw(kind);
-  let storedSchemaVersion = 1;
-  let storedMeta: Record<string, unknown> = {};
-  let storedRecords: Array<Record<string, unknown>> = [];
-  if (storedDoc) {
-    try {
-      const stored = JSON.parse(storedDoc.data) as Record<string, unknown>;
-      if (typeof stored.$schema_version === "number") storedSchemaVersion = stored.$schema_version;
-      if (stored.$meta && typeof stored.$meta === "object") {
-        storedMeta = stored.$meta as Record<string, unknown>;
-      }
-      if (Array.isArray(stored[arrayKey])) {
-        storedRecords = stored[arrayKey] as Array<Record<string, unknown>>;
-      }
-    } catch {
-      return jsonResponse({ error: `The stored "${kind}" document is not valid JSON.` }, 500);
-    }
-  }
-
-  const liveById = new Map<string, Record<string, unknown>>();
-  for (const record of liveShaped) {
-    const id = record[idKey];
-    if (typeof id === "string" && id) liveById.set(id, record);
-  }
-
-  const merged: Array<Record<string, unknown>> = [];
-  const consumed = new Set<string>();
-  let updated = 0;
-  for (const stored of storedRecords) {
-    const id = stored[idKey];
-    const replacement = typeof id === "string" ? liveById.get(id) : undefined;
-    if (replacement) {
-      merged.push(replacement);
-      consumed.add(id as string);
-      updated += 1;
-    } else {
-      merged.push(stored);
-    }
-  }
-  // Products returned by the scrape have already passed NCADEMI's own
-  // vetting, so a live record with no stored counterpart is promoted
-  // automatically (pushed into `merged` above) rather than routed through
-  // Candidate review. `addedProducts` is built in this SAME pass as
-  // `addedNew` so the count and the name list can never disagree.
-  let addedNew = 0;
-  const addedProducts: string[] = [];
-  for (const record of liveShaped) {
-    const id = record[idKey];
-    if (typeof id === "string" && !consumed.has(id)) {
-      merged.push(record);
-      addedNew += 1;
-      const name = record.product_name;
-      if (typeof name === "string" && name) addedProducts.push(name);
-    }
-  }
-  const keptFromStored = storedRecords.length - updated;
-
-  // A protected page the scraper found but has never been tracked before
-  // (added-live's $meta.missing, reason: "not_tracked") gets created here as
-  // a stub record + a generated password, rather than staying an invisible
-  // gap only visible in scrape stdout. Strictly scoped to "not_tracked" --
-  // "no_password" and "password_rejected" entries are existing admin-owned
-  // records this feature must never touch, and are never read here.
-  let stubsCreated = 0;
-  const stubProducts: string[] = [];
-  if (kind === "added") {
-    const missingEntries = Array.isArray(liveMeta.missing)
-      ? (liveMeta.missing as Array<Record<string, unknown>>)
-      : [];
-    const notTracked = missingEntries.filter((entry) => entry.reason === "not_tracked");
-
-    if (notTracked.length > 0) {
-      // Idempotency guard: every URL this run already has a record for --
-      // stored-and-kept, stored-and-replaced, or this run's own addedNew
-      // pushes -- so a repeated promote with no new scrape in between never
-      // creates a duplicate stub.
-      const existingUrls = new Set<string>();
-      for (const record of merged) {
-        const id = record[idKey];
-        if (typeof id === "string" && id) existingUrls.add(id);
-      }
-
-      for (const entry of notTracked) {
-        const url = entry.ncademi_product_url;
-        const name = entry.product_name;
-        if (typeof url !== "string" || !url || typeof name !== "string" || !name) continue;
-        if (existingUrls.has(url)) continue;
-
-        const stub: Record<string, unknown> = {
-          ...PRODUCT_FIELD_DEFAULTS,
-          product_name: name,
-          ncademi_product_url: url,
-          slug: deriveLiveProductSlug(url),
-        };
-
-        merged.push(stub);
-        existingUrls.add(url);
-        stubsCreated += 1;
-        stubProducts.push(name);
-      }
-
-      // Every stub's password in ONE atomic read-modify-write, still before
-      // promoteLive below. Skipped (no passwords read) when no stub
-      // qualified. Records are threaded through each getOrCreatePassword
-      // call in stub order, so a second new product in the SAME run sees the
-      // first one's freshly-created password when checking for a base
-      // collision. `now` is fixed outside the transaction so a retried
-      // attempt generates identical passwords and timestamps.
-      if (stubProducts.length > 0) {
-        const now = new Date();
-        await mutatePasswords(gate.user.email, (file) => {
-          let records = file.passwords;
-          let anyCreated = false;
-          for (const name of stubProducts) {
-            const outcome = getOrCreatePassword(records, name, null, now);
-            records = outcome.records;
-            if (outcome.created) anyCreated = true;
-          }
-          return { file: anyCreated ? { ...file, passwords: records } : null, result: null };
-        });
-      }
-    }
-  }
-
-  const nextStored = {
-    $schema_version: storedSchemaVersion,
-    $meta: {
-      ...storedMeta,
-      snapshot_taken_at:
-        typeof liveMeta.last_scraped === "string"
-          ? liveMeta.last_scraped
-          : new Date().toISOString(),
-      [totalKey]: merged.length,
-      generated_from: `live-scrape merge via /records ("Update Stored Data")`,
-    },
-    [arrayKey]: merged,
-  };
-  const bytes = `${JSON.stringify(nextStored, null, 2)}\n`;
-
-  try {
-    await promoteLive({ storedKey: kind, liveKey, bytes, actor: gate.user.email });
+    });
   } catch (err) {
     if (err instanceof DocumentTooLargeError) {
       return jsonResponse({ error: err.message }, 413);
@@ -311,18 +68,5 @@ export async function POST(request: Request): Promise<Response> {
     throw err;
   }
 
-  return jsonResponse(
-    {
-      ok: true,
-      category: kind,
-      updated,
-      keptFromStored,
-      addedNew,
-      addedProducts,
-      stubsCreated,
-      stubProducts,
-      total: merged.length,
-    },
-    200
-  );
+  return jsonResponse(outcome.body, outcome.status);
 }
