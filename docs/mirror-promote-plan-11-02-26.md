@@ -177,7 +177,7 @@ Records are matched by `vendor_directory_url`.
 - **The modal** lists every proposed deletion with its reason, every password to be cleared, every record that could not be checked (and why), every untracked or unscraped protected page, and the counts of updates and additions. It also shows the snapshot's run time. The operator confirms or cancels the whole promote. Per-record keep checkboxes were considered and not adopted: under D12, D19 and D23, every deletion should be legitimate, so anything unexpected is a signal to cancel and investigate.
 - **Accessibility requirements.** The modal follows the native `<dialog>`/`showModal()` pattern of `DeleteAddedModal.tsx`:
   - `aria-labelledby` and `aria-describedby`;
-  - focus moved into the dialog on open, and returned to the "Update Stored Data" button on close;
+  - focus moved into the dialog on open; on close, focus goes where D51 says (amended 2026-11-19: the "Update Stored Data" button after cancel, the Messages log after a successful apply, because the button is then disabled);
   - native Escape to cancel;
   - real list markup for the lists;
   - a confirm button with a specific accessible name, such as "Delete 6 records and update".
@@ -364,6 +364,51 @@ Name comparison for (b) normalizes `vendor_name` on both sides: Unicode NFC, tri
 
 **For step 6.** The modal is filled from a preview's plan body. Confirm sends `apply` with that body's `tokens`. On `conflict`, the modal replaces its content with `fresh` and asks for confirmation again. On `refused`, it shows `error` and offers no confirm.
 
+### 3.14 Step 6 rulings (2026-11-19)
+
+The step 6 recon (`.scratch/verification/step6-recon-20261119-1443.md`) raised 14 open questions and 12 accessibility gaps. Each is ruled on below. D51 amends D9; D50 implements D38.
+
+**D42. Response types on the client.** Client components import the §3.13 body types with `import type` from `@/lib/server/promote-mirror`. Type-only imports are erased at build time; a value import would fail the build through `server-only`. Precedent: the editors type-import `SnapshotMeta` from `documents-read.ts`.
+
+**D43. Opening the modal.** Pressing "Update Stored Data" opens the D9 modal at once in a loading state, announced through a status region that exists before it is filled, then requests the preview from inside the modal.
+
+**D44. Lists and their order.** Every list is shown in full (D9: "lists every"), each under an `h3` naming it with its count, inside one scrollable dialog body that is keyboard-focusable and labelled. Order, by consequence: (1) records to delete, with reasons; (2) password rows to delete (`passwordNamesToDelete`); (3) Added records needing a correct password or a password (`needsCorrectPassword`, `needsPassword`), as lists; (4) records that could not be checked, with reasons; (5) untracked protected pages and unscraped protected vendor pages; (6) counts: updated, added, stored before and after, tracking rows to delete (count only). The snapshot's run time (`runFinishedAt`) is shown near the top. Empty lists are omitted.
+
+**D45. Blocked deletions.** When `deletionsAllowed` is false, a prominent notice at the top of the dialog states `deletionsBlockedReason`. The notice is part of the dialog's `aria-describedby`, and the confirm label follows D46.
+
+**D46. The confirm button.** Its visible text and accessible name are "Delete N records and update stored <Category>" when `counts.removed` > 0 and deletions are allowed, otherwise "Update stored <Category>". Password-row changes are stated in the dialog description, not in the label. There is no confirm button for refused or error bodies (D48).
+
+**D47. Conflict refresh.** On a `conflict` body the dialog stays open, replaces its content with `fresh`, and shows a notice: the contract's error text followed by the changed documents in plain words. Document labels: published "stored Published data", added "stored Added data", candidate "stored Candidates data", vendors "stored Vendors data", published-live "the live Published snapshot", added-live "the live Added snapshot", vendors-live "the live Vendors snapshot", passwords "vendor-review passwords", tracking "tracking data". Focus moves to the notice (`tabIndex=-1`), so it is announced exactly once; the notice is not also a live region. If `fresh` is a refused or error body, D48 applies to it.
+
+**D48. Refused and error bodies.** A `refused` body or an error body (any response without `outcome`) is shown inside the dialog in a `role="alert"` region that exists before it is filled, with only a Close button. On close, one Messages line is written (D49). A 401 says the session has expired and asks the operator to sign in again.
+
+**D49. Messages wording.** One line per event, written when the dialog closes:
+- applied: `Updated stored <Category> from the live run of <runFinishedAt, formatted with formatLocalTimestamp>: <updated> updated, <appended> added, <removed> removed; <passwordRowsToDelete> password rows removed. Live snapshot cleared.`
+- applied with deletions blocked: the applied line, then `Deletions were not applied: <deletionsBlockedReason>`
+- cancelled (Cancel, Escape or Close before any apply): `Update Stored Data cancelled; nothing was changed.`
+- refused or error: `Update Stored Data failed: <error>` (for 401: `Update Stored Data failed: your session has expired; sign in again.`)
+- unknown result (D54): `Update Stored Data: the result is unknown (<detail>); review a fresh preview.`
+Category labels are "Published", "Added" and "Vendors".
+
+**D50. Unique Messages keys.** The Messages panel assigns every entry a panel-unique id through an `appendLog(stage, message)` helper on the messages context, and keys entries by that id. Writers never build keys. This implements D38 and survives `SourceToggle` remounting on record navigation.
+
+**D51. Focus on close (amends D9).** After Cancel, Escape, or Close of a refused or error body, focus returns to the "Update Stored Data" button, which must still be enabled at that point. After a successful apply the button is disabled (the snapshot is consumed), so focus moves to the Messages log, which has a visible focus indicator (D55). If the button is unexpectedly disabled at close, focus goes to the Messages log.
+
+**D52. The open record after apply.** If the record open on the page is in `report.removed` (matched by its URL), the client navigates to `/records/<category>`, whose index redirects to the first remaining record. Otherwise it stays on the record and refreshes.
+
+**D53. Enabling the button.** "Update Stored Data" is enabled whenever the category's live snapshot document exists, even with zero records: an empty snapshot can still carry deletions, password flags and refusals (for example, every protected Added page rejected its password). "Live Data" stays enabled only when the snapshot has records.
+
+**D54. Unknown results.** If the apply request fails at the network level or returns a body that is not JSON, the dialog states that the result is unknown and offers "Preview again", which requests a fresh preview. Apply is never retried automatically. The transaction is atomic (D8), so the fresh preview shows either "No live data to promote" (it applied) or the same plan (it did not).
+
+**D55. Accessibility requirements for step 6.** In addition to D9's:
+- Busy state: while a preview or apply is in flight, a status region (present before it is filled) announces it; Escape and every close request are ignored while apply runs (a `cancel` listener with `preventDefault`, plus a guard in the close path, since browsers may not honour repeated `preventDefault`); focus is never left on a control that becomes disabled.
+- Structure: the dialog title is an `h2`; each list section is an `h3`; lists use real list markup.
+- The scrollable dialog body has `tabIndex=0` and an accessible name.
+- The Messages log gets an accessible name (associated with its visible "Messages" title) and a visible focus indicator (it receives programmatic focus); its status and alert regions move out of the `role="log"` container so announcements are not doubled.
+- Focus indicators on every control `SourceToggle` and the modal render meet 3:1 (SC 1.4.11); the current `focus:ring-emerald-500` is replaced.
+- No new motion; any added motion honours `prefers-reduced-motion`.
+Deferred, not step 6: the nested `<main>` landmarks on `/records` category pages, and the legacy `/records` page's stubbed "Update Stored Data" button.
+
 ---
 
 ## 4. Implementation plan
@@ -387,8 +432,12 @@ Each step is one dispatch with stop-and-report gates, validated before the next 
    - 5.3 Pure decision module `frontend/lib/server/promote-mirror.ts`, covering reshape (D33), tokens (D32), envelope (D35), row changes (D40) and response bodies, with unit tests (D41).
    - 5.4 Route handler: preview and apply through `transactDocuments` and the pure module (D8, D17, D30, D32). The D13 guard, the stub block and the `$meta.missing` reads are removed (D34).
    - 5.5 Emulator verification: preview and apply for all three categories, the D32 conflict path, and D36.
-   - **Done** — commits 83db7a6, 62162db, 66b7818, 28b40e7, 321b01b; emulator-verified 2026-11-19 (report `.scratch/verification/step5-5-emulator-verification-20261119-1456.md`).
-6. **Modal and messages** (Claude CLI): D9.
+   - **Done** — commits 83db7a6, 62162db, 66b7818, bef6eed, 28b40e7, 43aa2b4, 321b01b; emulator-verified 2026-11-19 (report `.scratch/verification/step5-5-emulator-verification-20261119-1456.md`).
+6. **Modal and messages** (Claude CLI), as four gated dispatches. Rulings are in §3.14.
+   - 6.0 Plan update: D42–D55, the D9 amendment, and the completed step 5 "Done" line.
+   - 6.1 Messages panel: `appendLog` with panel-unique ids (D50), the log's accessible name and focus indicator, and its status and alert regions moved out of the log (D55).
+   - 6.2 The D9 modal component (D43–D49, D51, D54, D55), statically verified.
+   - 6.3 `SourceToggle` wiring: preview, apply, conflict, refused, error and unknown flows; Messages lines; focus on close; navigation after apply (D52); the button gate (D53); focus-ring contrast (D55). Developer browser and VoiceOver check before commit.
 7. **Emulator end-to-end test.** Fixtures covering every row of §3.2–3.4, plus incomplete discovery. Developer browser and screen-reader check of the modal.
 8. **Retire the legacy editor** (D21). Independent; any time.
 9. **DECISION_LOG entry** recording D1–D29, with a forward pointer on the merge-rule entry it reverses.
