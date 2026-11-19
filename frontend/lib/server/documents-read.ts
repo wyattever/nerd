@@ -142,28 +142,8 @@ export async function getVendors(): Promise<VendorsDocument> {
 
 // --- Live snapshots -------------------------------------------------------
 
-/**
- * Live records carry no `slug` field, unlike the curated snapshots. Derived
- * from the last non-empty path segment of the record's URL (e.g.
- * ".../products/99math/" -> "99math"), never the URL itself -- a raw URL
- * contains slashes, which a single dynamic [slug] segment cannot hold, and
- * using the whole URL produced an href Next parsed as several nested route
- * segments rather than a working link.
- *
- * Exported so the Route Handler siblings apply the SAME derivation. Two
- * independently-maintained copies would let one record resolve to two
- * different URLs depending on which path loaded it.
- */
-export function deriveLiveProductSlug(ncademiProductUrl: string): string {
-  const segments = (ncademiProductUrl ?? "").split("/").filter(Boolean);
-  return segments[segments.length - 1] ?? ncademiProductUrl;
-}
-
-/** Same derivation applied to vendor_directory_url. */
-export function deriveLiveVendorSlug(vendorDirectoryUrl: string): string {
-  const segments = (vendorDirectoryUrl ?? "").split("/").filter(Boolean);
-  return segments[segments.length - 1] ?? vendorDirectoryUrl;
-}
+import { deriveLiveProductSlug, deriveLiveVendorSlug } from "../live-slug";
+export { deriveLiveProductSlug, deriveLiveVendorSlug };
 
 /** `$meta.last_scraped` is absent for a live document that predates Decision
  * #66's timestamp field, or that was hand-edited -- null in either case, not
