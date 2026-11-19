@@ -299,10 +299,10 @@ export function decidePromote(request: PromoteRequest, docs: TransactionDocs): P
     }
   }
 
-  // 5. A present document that is not valid JSON; for the four stored
-  //    documents and the live snapshot, also one that is not a JSON object
-  //    or has no records array. passwords and tracking keep their own parse
-  //    functions' behaviour.
+  // 5. A present document that is not valid JSON or not a JSON object; for
+  //    the four stored documents and the live snapshot, also one that has no
+  //    records array. Past the object check, passwords and tracking keep
+  //    their own parse functions' behaviour.
   const bodies = new Map<DocumentKey, Record<string, unknown>>();
   for (const key of keys) {
     const doc = docs.get(key);
@@ -313,10 +313,10 @@ export function decidePromote(request: PromoteRequest, docs: TransactionDocs): P
     } catch {
       return respond(500, { error: `The "${key}" document is not valid JSON.` });
     }
-    if (key === "passwords" || key === "tracking") continue;
     if (!isPlainObject(value)) {
       return respond(500, { error: `The "${key}" document is not a JSON object.` });
     }
+    if (key === "passwords" || key === "tracking") continue;
     const recordsKey = recordsKeyFor(key);
     if (!Array.isArray(value[recordsKey])) {
       return respond(500, { error: `The "${key}" document has no "${recordsKey}" array.` });

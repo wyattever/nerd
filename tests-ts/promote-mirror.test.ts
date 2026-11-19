@@ -392,6 +392,25 @@ test("8. invalid or misshapen documents → 500 naming the key; no writes", () =
   }
 });
 
+test("8. passwords that is the JSON value null → 500 naming passwords; no writes", () => {
+  for (const request of [preview("added"), apply("added", tokensOf(addedDocs({ passwords: { raw: "null" } }), "added"))]) {
+    const decision = run(request, addedDocs({ passwords: { raw: "null" } }));
+    assert.equal(decision.status, 500, request.mode);
+    assert.deepEqual(decision.body, { error: 'The "passwords" document is not a JSON object.' });
+    assertNoWrites(decision);
+  }
+});
+
+test("8. tracking that is an array → 500 naming tracking; no writes", () => {
+  const docs = publishedHappyDocs({ tracking: { raw: "[]" } });
+  for (const request of [preview("published"), apply("published", tokensOf(docs, "published"))]) {
+    const decision = run(request, docs);
+    assert.equal(decision.status, 500, request.mode);
+    assert.deepEqual(decision.body, { error: 'The "tracking" document is not a JSON object.' });
+    assertNoWrites(decision);
+  }
+});
+
 test("9. planner refusal → 409 refused with the planner text verbatim; tokens present; no writes", () => {
   const docs = makeDocs("published", {
     "published-live": { $meta: { run: makeRun([], { target: "published" }) }, products: [] },
