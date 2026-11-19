@@ -18,7 +18,7 @@ export default async function VendorRecordDetailPage({ params, searchParams }: R
   const { slug } = await params;
   const { source } = await searchParams;
   const { vendors: storedVendors } = await getVendors();
-  const { vendors: liveVendors, lastScraped } = await getLiveVendors();
+  const { vendors: liveVendors, lastScraped, exists } = await getLiveVendors();
 
   const isLive = source === "live";
   const storedVendor = storedVendors.find((v) => v.slug === slug);
@@ -39,7 +39,14 @@ export default async function VendorRecordDetailPage({ params, searchParams }: R
       );
     }
 
-    return <RecordsVendorDetail record={liveMatch} hasLiveScrapeData={liveVendors.length > 0} lastScraped={lastScraped} />;
+    return (
+      <RecordsVendorDetail
+        record={liveMatch}
+        hasLiveScrapeData={liveVendors.length > 0}
+        liveSnapshotExists={exists}
+        lastScraped={lastScraped}
+      />
+    );
   }
 
   if (!storedVendor) {
@@ -50,5 +57,12 @@ export default async function VendorRecordDetailPage({ params, searchParams }: R
     );
   }
 
-  return <RecordsVendorDetail record={storedVendor} hasLiveScrapeData={liveVendors.length > 0} lastScraped={lastScraped} />;
+  return (
+    <RecordsVendorDetail
+      record={storedVendor}
+      hasLiveScrapeData={liveVendors.length > 0}
+      liveSnapshotExists={exists}
+      lastScraped={lastScraped}
+    />
+  );
 }

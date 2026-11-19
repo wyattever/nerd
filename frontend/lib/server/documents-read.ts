@@ -142,28 +142,8 @@ export async function getVendors(): Promise<VendorsDocument> {
 
 // --- Live snapshots -------------------------------------------------------
 
-/**
- * Live records carry no `slug` field, unlike the curated snapshots. Derived
- * from the last non-empty path segment of the record's URL (e.g.
- * ".../products/99math/" -> "99math"), never the URL itself -- a raw URL
- * contains slashes, which a single dynamic [slug] segment cannot hold, and
- * using the whole URL produced an href Next parsed as several nested route
- * segments rather than a working link.
- *
- * Exported so the Route Handler siblings apply the SAME derivation. Two
- * independently-maintained copies would let one record resolve to two
- * different URLs depending on which path loaded it.
- */
-export function deriveLiveProductSlug(ncademiProductUrl: string): string {
-  const segments = (ncademiProductUrl ?? "").split("/").filter(Boolean);
-  return segments[segments.length - 1] ?? ncademiProductUrl;
-}
-
-/** Same derivation applied to vendor_directory_url. */
-export function deriveLiveVendorSlug(vendorDirectoryUrl: string): string {
-  const segments = (vendorDirectoryUrl ?? "").split("/").filter(Boolean);
-  return segments[segments.length - 1] ?? vendorDirectoryUrl;
-}
+import { deriveLiveProductSlug, deriveLiveVendorSlug } from "../live-slug";
+export { deriveLiveProductSlug, deriveLiveVendorSlug };
 
 /** `$meta.last_scraped` is absent for a live document that predates Decision
  * #66's timestamp field, or that was hand-edited -- null in either case, not
@@ -176,11 +156,11 @@ function extractLastScraped(meta: unknown): string | null {
 
 async function readLiveProducts(
   key: "published-live" | "added-live"
-): Promise<{ products: PublishedProductRecord[]; lastScraped: string | null }> {
+): Promise<{ products: PublishedProductRecord[]; lastScraped: string | null; exists: boolean }> {
   await requireSessionUser();
 
   const found = await tryReadRaw(key);
-  if (!found) return { products: [], lastScraped: null };
+  if (!found) return { products: [], lastScraped: null, exists: false };
 
   const body = JSON.parse(found.data) as { products?: unknown; $meta?: unknown };
   const raw = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
@@ -196,12 +176,13 @@ async function readLiveProducts(
     await readTrackingRecords()
   ) as unknown as PublishedProductRecord[];
 
-  return { products, lastScraped: extractLastScraped(body.$meta) };
+  return { products, lastScraped: extractLastScraped(body.$meta), exists: true };
 }
 
 export function getPublishedLiveProducts(): Promise<{
   products: PublishedProductRecord[];
   lastScraped: string | null;
+  exists: boolean;
 }> {
   return readLiveProducts("published-live");
 }
@@ -209,6 +190,7 @@ export function getPublishedLiveProducts(): Promise<{
 export function getAddedLiveProducts(): Promise<{
   products: PublishedProductRecord[];
   lastScraped: string | null;
+  exists: boolean;
 }> {
   return readLiveProducts("added-live");
 }
@@ -216,11 +198,12 @@ export function getAddedLiveProducts(): Promise<{
 export async function getLiveVendors(): Promise<{
   vendors: DirectoryRecord[];
   lastScraped: string | null;
+  exists: boolean;
 }> {
   await requireSessionUser();
 
   const found = await tryReadRaw("vendors-live");
-  if (!found) return { vendors: [], lastScraped: null };
+  if (!found) return { vendors: [], lastScraped: null, exists: false };
 
   const body = JSON.parse(found.data) as { vendors?: unknown; $meta?: unknown };
   const raw = Array.isArray(body.vendors) ? (body.vendors as Array<Record<string, unknown>>) : [];
@@ -241,5 +224,5 @@ export async function getLiveVendors(): Promise<{
     await readTrackingRecords()
   ) as unknown as DirectoryRecord[];
 
-  return { vendors, lastScraped: extractLastScraped(body.$meta) };
+  return { vendors, lastScraped: extractLastScraped(body.$meta), exists: true };
 }

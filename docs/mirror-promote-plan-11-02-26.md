@@ -145,10 +145,12 @@ Records are matched by `vendor_directory_url`.
 | No outcome entry, and vendor discovery incomplete | Untouched | Could not check: discovery incomplete |
 | *(No stored record)* `public_ok` | Append | Added |
 | *(No stored record)* `protected_vendor` | Append nothing | Listed as an unscraped protected vendor page |
+| *(Stored record with no `vendor_directory_url`: null, empty or whitespace-only)* | Untouched, never deleted, does not block the promote (D36) | Could not check: not on the site yet (no directory URL) |
+| *(No stored record with this URL)* `public_ok`, and the live `vendor_name` matches a stored vendor that has no URL (D36) | Append nothing | Could not check: possible match for that vendor; add its directory URL to link them |
 
 **D22. Protected vendor pages are "exists, could not check."** The stored vendor is left as it is, and the slug-derived stub is never appended or used as an update.
 
-**D23. Workflow assumption, Vendors.** New vendors are added with "add vendor" in the Vendor editor only after the vendor page has been manually added to the website. Under that workflow, stored Vendors never runs ahead of the site. The confirmation modal (D9) remains the backstop if a record ever does.
+**D23. Workflow assumption, Vendors.** *(Amended 2026-11-19 by D36.)* A vendor may be created with "add vendor" in the Vendor editor before its NCADEMI page exists, or without a real URL for testing, so `vendor_directory_url` stays optional in the UI and API. A vendor with no directory URL is "not on the site yet", and the promote leaves it untouched (D36). A vendor that has a directory URL is assumed to have its page on the website, so stored vendors with URLs never run ahead of the site. The confirmation modal (D9) remains the backstop if a record ever does.
 
 ### 3.5 Scraper changes
 
@@ -168,14 +170,14 @@ Records are matched by `vendor_directory_url`.
 
 ### 3.6 Promote route and confirmation
 
-**D8. One transaction.** The stored-document write, password-row changes, tracking-row changes and the live-snapshot deletion happen in one Firestore transaction. All four documents are read first, then planned (the pure planner of D2, called inside the transaction), then written. This follows the read-then-pure-function pattern of `mutateDocument`, extended to four documents. A failed promote leaves nothing half-applied.
+**D8. One transaction.** The stored-document write, password-row changes, tracking-row changes and the live-snapshot deletion happen in one Firestore transaction. All seven documents of D30 are read first (the category's stored document, the other three stored documents, the live snapshot, `passwords` and `tracking`), then planned (the pure planner of D2, called inside the transaction), then up to four are written (the stored document, `passwords`, `tracking`, and the live-snapshot deletion). This follows the read-then-pure-function pattern of `mutateDocument`, through the dedicated helper of D31. A failed promote leaves nothing half-applied. *(Amended 2026-11-19 by D30; originally "four documents".)*
 
 **D9. Dry run, then an all-or-nothing confirmation modal.**
 - **The dry run.** The route accepts a dry-run request that returns the complete plan and the version tokens of D17, and writes nothing.
 - **The modal** lists every proposed deletion with its reason, every password to be cleared, every record that could not be checked (and why), every untracked or unscraped protected page, and the counts of updates and additions. It also shows the snapshot's run time. The operator confirms or cancels the whole promote. Per-record keep checkboxes were considered and not adopted: under D12, D19 and D23, every deletion should be legitimate, so anything unexpected is a signal to cancel and investigate.
 - **Accessibility requirements.** The modal follows the native `<dialog>`/`showModal()` pattern of `DeleteAddedModal.tsx`:
   - `aria-labelledby` and `aria-describedby`;
-  - focus moved into the dialog on open, and returned to the "Update Stored Data" button on close;
+  - focus moved into the dialog on open; on close, focus goes where D51 says (amended 2026-11-19: the "Update Stored Data" button after cancel, the Messages log after a successful apply, because the button is then disabled);
   - native Escape to cancel;
   - real list markup for the lists;
   - a confirm button with a specific accessible name, such as "Delete 6 records and update".
@@ -237,7 +239,175 @@ Rules:
 
 ### 3.10 Retire the legacy editor
 
-**D21.** The old `/editor` page (`frontend/app/editor/page.tsx`) is unused, and still reachable by URL with its own copies of the promote and import actions. It is retired, after a grep-confirmed zero-reference check. This is independent of the mirror rework and can ship separately.
+**D21.** The old `/editor` page (`frontend/app/editor/page.tsx`) is unused, and still reachable by URL, with its own import actions and a per-record move between Added and Published (`handlePromoteRecord`). It has no copy of the live-data promote. It is retired, after a grep-confirmed zero-reference check. This is independent of the mirror rework and can ship separately. *(Wording corrected 2026-11-19 by D39.)*
+
+### 3.11 Planner escalation rulings (2026-11-19)
+
+The planner (§4 step 4) marked six points where §3.2–3.4 and §3.9 did not settle its behaviour. Each is ruled on below and marked `RESOLVED (Dn)` in `frontend/lib/mirror-planner.ts`.
+
+**D24.** A stored Added record whose URL has a `not_tracked` outcome has no row in §3.2; it arises when the record was added to stored Added between the scrape and the promote. Ruling: untouched, reported as could not check.
+
+**D25.** §3.9 states that the number of outcomes equals the sum of `discovery.*.discovered`, and the planner checks the count per post type instead. Ruling: per-post-type check kept.
+
+**D26.** The tables do not say what to do when a stored record's URL matches an outcome of the other post type. Ruling: refuse.
+
+**D27.** §3.2 has no append row, so a live Added record with no stored counterpart is neither appended nor deleted. Ruling: not appended; reported under couldNotCheck. Reported under couldNotCheck; never created, deleted or appended, and does not affect deletionsAllowed.
+
+**D28.** An outcome of the category's post type with no stored record and no table row — `fetch_error` or `parse_error` in any category, or for Added `protected_unlocked`, `password_rejected` or `no_password` — was ignored silently. Statuses that place the page in the other product category (Added: `public_ok`; Published: `protected_unlocked`, `password_rejected`, `no_password`, `not_tracked`) are not reported, because every snapshot lists every product URL (D16). Ruling: never created or deleted; reported under couldNotCheck. Reported under couldNotCheck; never created, deleted or appended, and does not affect deletionsAllowed.
+
+**D29.** The tables say "Append" for a `public_ok` outcome with no stored record, but the live snapshot can hold no record to append. Ruling: refuse.
+
+### 3.12 Step 5 rulings (2026-11-19)
+
+The step 5 recon (taken at commit `39eba1b`) raised twelve findings where the plan and the code did not settle step 5, and a vendor policy question. Each is ruled on below. D30 amends D8, D36 amends D23 and the §3.4 table, and D39 corrects D21.
+
+**D30.** Promote reads seven documents in one transaction: the stored document for the category, the other three stored documents (needed for `namesInOtherCategories`, D20), the category's live snapshot, `passwords` and `tracking`. It writes up to four: the stored document, `passwords`, `tracking`, and the deletion of the live snapshot (with the existing backup behaviour). This amends D8's "four documents".
+
+**D31.** A new dedicated multi-document transaction helper, `transactDocuments`, in `frontend/lib/server/documents.ts`. `mutateDocument` is not widened: its restriction to `"passwords"` is a standing decision. Existing helpers are not composed, because each opens its own `runTransaction`. The existing backup behaviour (`stageWrite`) is preserved for every document written. Like the rest of `documents.ts`, the helper knows nothing about record shape: it reads a given list of keys, hands their bytes and etags to a pure `decide` function, and applies the writes and live-snapshot deletions that function returns.
+
+**D32.** Version tokens (D17) cover all seven documents. A document's token is its stored `etag`; a document that does not exist has the token `"absent"`. If any token differs at apply time, including absent→present and present→absent, the apply is refused, writes nothing, and returns a fresh preview.
+
+**D33.** The route reshapes live records to stored shape before calling `planPromote`, as before: product field defaults (`PRODUCT_FIELD_DEFAULTS`) and the derived `slug`. It also strips `is_protected`, a scraper-only field that stored records do not have. Before stripping, step 5 verifies that no stored record type declares it.
+
+**D34.** Removed from the route: the D13 guard, the unreachable Added stub block (which read `$meta.missing` and created stub records and passwords in a separate transaction), and every other read of `$meta.missing`. D6 forbids stubs, and §3.9 replaces `$meta.missing`.
+
+**D35.** The promoted stored document's `$meta` keeps `snapshot_taken_at`, the `total_*` count and `generated_from`, with values taken from the run record, and adds `run_id`:
+- `snapshot_taken_at` is `run.finished_at`;
+- `total_products` or `total_vendors` is the length of the new stored array;
+- `generated_from` is `mirror promote via /records ("Update Stored Data")`;
+- `run_id` is `run.run_id`.
+
+Other `$meta` keys and `$schema_version` are carried over unchanged.
+
+**D36.** Vendors with no directory URL. Users must be able to create vendors before their NCADEMI page exists, and to test the system without real URLs, so `vendor_directory_url` stays optional in the UI and API. The planner changes as follows, for Vendors only:
+- (a) A stored vendor whose `vendor_directory_url` is null, empty or whitespace-only is "not on the site yet". It is left untouched, never deleted, and never blocks the promote, and it is reported (below). This replaces the planner's "has no vendor_directory_url" refusal for Vendors only. The refusal stays for every other category, for a vendor whose `vendor_directory_url` is missing or not a string, and for every other unmatched-key case.
+- (b) Duplicate guard: a live vendor that would otherwise be appended is not appended if its `vendor_name` matches the `vendor_name` of a stored vendor that has no URL. It is reported (below).
+- (c) D23's workflow assumption is amended accordingly.
+
+Reporting uses the existing `couldNotCheck` array; `PlanReport` gains no fields. Three reasons:
+- D1 lets a stored record remain only if the scrape identified it or could not check it, and a vendor with no URL cannot be checked.
+- D27 and D28 already use `couldNotCheck` for pages on the site that are not acted on, which is case (b).
+- The D9 modal already lists `couldNotCheck`.
+
+The entries are:
+- (a) `{ url: "", name: <stored product_name>, reason: "not on the site yet (no directory URL)" }`. `url` is the empty string because the record has none.
+- (b) `{ url: <live vendor_directory_url>, name: <outcome name, else live product_name>, reason: "possible match for \"<stored product_name>\"; add its directory URL to link them" }`.
+
+Name comparison for (b) normalizes `vendor_name` on both sides: Unicode NFC, trim, collapse internal whitespace runs to one space, lower-case. A `vendor_name` that is null or not a string matches nothing. The plan prescribes no normalization for comparing vendor names (D10's `html.unescape` applies to scraper-side REST titles), so this normalization is a step 5 choice, flagged for review. Neither case affects `deletionsAllowed`, and neither is subject to the D15 gate.
+
+**Deferred (not a decision).** A full vendor lifecycle — a Vendor Candidate state, with Admin-only promotion to Added — is deferred and out of scope for the mirror-promote rework.
+
+**D37.** The existing "Update Stored Data" button (`SourceToggle.tsx`) may break on the branch between steps 5 and 6. Nothing merges or deploys until steps 6 and 7 pass, so there is no backward-compatibility layer.
+
+**D38.** `liveLog` keys must be unique per press. This belongs to step 6 and is recorded here only.
+
+**D39.** D21's wording is corrected: the legacy `/editor` page moves single records between Added and Published, and has no copy of the promote. Retiring it still stands.
+
+**D40.** Password-row deletions (`passwordNamesToDelete`) and tracking-row deletions (`trackingNamesToDelete`) commit in the same transaction as the stored-document write. Every password row whose `product_name` matches exactly is deleted, including duplicates. Tracking deletion reuses `reconcileTrackingRows(existing, namesToDelete, [])`. A `passwords` or `tracking` document is written only when at least one row is removed, and is never created when absent.
+
+**D41.** Testing.
+- `transactDocuments` gets an emulator-backed `node:test` integration test. It runs only when `FIRESTORE_EMULATOR_HOST` is set, and skips with a clear message otherwise.
+- The route's decision logic (reshape, plan, tokens, envelope, response building) moves into a pure, unit-tested module, `frontend/lib/server/promote-mirror.ts`, so the route handler is thin.
+- Playwright/E2E is not used in dispatches (AGENTS.md). `node:test` against the emulator is not E2E.
+- `documents.ts` and its neighbours use `import "server-only"`, extensionless value imports and TypeScript parameter properties. These tests therefore run with a test-only resolve hook (`tests-ts/support/ts-resolve.mjs`) and Node's `--experimental-transform-types`. The planner test keeps running with plain `node --test`.
+
+### 3.13 Promote route contract (step 5)
+
+`POST /api/local/promote-live`, with `runtime = "nodejs"` and `dynamic = "force-dynamic"`. Every response is JSON with `Cache-Control: no-store`. The handler is thin: `assertSession`, JSON parsing, `parsePromoteRequest`, then one `transactDocuments` call whose `decide` function is `decidePromote` (both in `frontend/lib/server/promote-mirror.ts`, D41). Steps 5.4 and 6 build from this section.
+
+**Request.** The body is `{ "category": "published" | "added" | "vendors", "mode": "preview" | "apply", "tokens": { ... } }`.
+- Not valid JSON: 400 `{ error: "Request body is not valid JSON." }`.
+- `category` not one of the three: 400 `{ error: '"category" must be one of "published", "added", "vendors".' }`.
+- `mode` missing, or not `"preview"` or `"apply"`: 400. There is no default, so the pre-step-6 `SourceToggle` request (`{ category }` only) gets 400 (D37).
+- `apply`: `tokens` must be an object with exactly the seven keys below, each a non-empty string; otherwise 400. In `preview`, `tokens` is ignored.
+- No session: 401 from `assertSession`, unchanged.
+
+**The seven documents, in this fixed order.** This is also the order of `tokens` and of `changed`:
+1. the category's stored document;
+2. the other three of `published`, `added`, `candidate`, `vendors`, in that order;
+3. the category's live snapshot (`published-live`, `added-live` or `vendors-live`);
+4. `passwords`;
+5. `tracking`.
+
+**Processing.** Both modes run in one `transactDocuments` transaction that reads all seven documents. Preview writes nothing.
+1. Tokens: each document's stored `etag`, or `"absent"`. A present document without a string `etag` returns 500 `{ error }`.
+2. `apply` only: if any request token differs from the token just read, return 409 conflict (below), writing nothing.
+3. Live snapshot absent: 409 `{ error: 'No live data to promote. Run "Retrieve Live Data" first.' }`.
+4. Any of the four stored documents absent: 503 `{ error }` naming it.
+5. Any present document that is not valid JSON, is not a JSON object, or (for the four stored documents and the live snapshot) lacks an array under "products" or "vendors": 500 { error } naming it.
+6. Call `planPromote` with: the stored records; the live records reshaped per D33; `$meta.run`; `namesInOtherCategories` (every string `product_name` in the other three stored documents); the password rows (`parsePasswordsFile`; none if absent); and the tracking rows (none if absent). A planner refusal returns 409 refused (below).
+7. If `run.finished_at` is not a non-empty string, return 409 refused, with `error` saying so.
+8. `preview`: 200 plan body with `outcome: "preview"`.
+9. `apply`: stage the writes, then return 200 plan body with `outcome: "applied"`:
+   - The stored document, always: `$schema_version`, and `$meta` per D35; the `products` or `vendors` array is `plan.nextStored`; serialized as `JSON.stringify(doc, null, 2) + "\n"`.
+   - `passwords`, only if at least one row is removed: every row whose `product_name` is exactly in `passwordNamesToDelete`, duplicates included. Other rows keep their order. Serialized by `serializePasswordsFile`.
+   - `tracking`, only if at least one row is removed: `reconcileTrackingRows(existing, trackingNamesToDelete, [])`, serialized as `tracking` is elsewhere.
+   - The live snapshot is deleted, after its rolling backup is refreshed.
+
+   Every written document gets its rolling backup (`stageWrite`). `DocumentTooLargeError` returns 413 `{ error }`, and nothing is written.
+
+**Plan body** (status 200; `outcome` is `"preview"` or `"applied"`):
+- `outcome`, `category`.
+- `runId` (`run.run_id`) and `runFinishedAt` (`run.finished_at`, the snapshot's run time for the modal).
+- `tokens`: the seven tokens read, keyed by document key. The modal sends these back on apply.
+- `deletionsAllowed`, `deletionsBlockedReason`.
+- `report`: the complete `PlanReport`.
+- `passwordNamesToDelete`, `trackingNamesToDelete`. These are names only; password values never appear in any response.
+- `counts`: `storedBefore`, `storedAfter`, one count per `PlanReport` array (`updated`, `appended`, `removed`, `needsCorrectPassword`, `needsPassword`, `couldNotCheck`, `untrackedProtected`, `unscrapedProtectedVendors`), `passwordRowsToDelete` and `trackingRowsToDelete` (rows, counting duplicates).
+- `applied` only: `written: { stored: true, passwords: <boolean>, tracking: <boolean>, liveDeleted: true }`.
+
+**Refused body** (status 409): `{ outcome: "refused", category, error, runId: <string or null>, runFinishedAt: <string or null>, tokens }`. `error` is the planner's text, verbatim.
+
+**Conflict body** (status 409, `apply` only): `{ outcome: "conflict", category, error: "The stored data changed after the preview. Review the updated preview and confirm again.", changed: [<keys whose token differs, in the fixed order>], fresh: { status, body } }`. `fresh` is exactly the response that a `preview` of the same category would give from the documents just read: a plan body, a refused body or an error body.
+
+**Error body.** `{ error }`, for statuses 400, 401, 409 (no live data), 413, 500 and 503. Any response without an `outcome` field is an error.
+
+**For step 6.** The modal is filled from a preview's plan body. Confirm sends `apply` with that body's `tokens`. On `conflict`, the modal replaces its content with `fresh` and asks for confirmation again. On `refused`, it shows `error` and offers no confirm.
+
+### 3.14 Step 6 rulings (2026-11-19)
+
+The step 6 recon (`.scratch/verification/step6-recon-20261119-1443.md`) raised 14 open questions and 12 accessibility gaps. Each is ruled on below. D51 amends D9; D50 implements D38.
+
+**D42. Response types on the client.** Client components import the §3.13 body types with `import type` from `@/lib/server/promote-mirror`. Type-only imports are erased at build time; a value import would fail the build through `server-only`. Precedent: the editors type-import `SnapshotMeta` from `documents-read.ts`.
+
+**D43. Opening the modal.** Pressing "Update Stored Data" opens the D9 modal at once in a loading state, announced through a status region that exists before it is filled, then requests the preview from inside the modal.
+
+**D44. Lists and their order.** Every list is shown in full (D9: "lists every"), each under an `h3` naming it with its count, inside one scrollable dialog body that is keyboard-focusable and labelled. Order, by consequence: (1) records to delete, with reasons; (2) password rows to delete (`passwordNamesToDelete`); (3) Added records needing a correct password or a password (`needsCorrectPassword`, `needsPassword`), as lists; (4) records that could not be checked, with reasons; (5) untracked protected pages and unscraped protected vendor pages; (6) counts: updated, added, stored before and after, tracking rows to delete (count only). The snapshot's run time (`runFinishedAt`) is shown near the top. Empty lists are omitted.
+
+**D45. Blocked deletions.** When `deletionsAllowed` is false, a prominent notice at the top of the dialog states `deletionsBlockedReason`. The notice is part of the dialog's `aria-describedby`, and the confirm label follows D46.
+
+**D46. The confirm button.** Its visible text and accessible name are "Delete N records and update stored <Category>" when `counts.removed` > 0 and deletions are allowed, otherwise "Update stored <Category>". Password-row changes are stated in the dialog description, not in the label. There is no confirm button for refused or error bodies (D48).
+
+**D47. Conflict refresh.** On a `conflict` body the dialog stays open, replaces its content with `fresh`, and shows a notice: the contract's error text followed by the changed documents in plain words. Document labels: published "stored Published data", added "stored Added data", candidate "stored Candidates data", vendors "stored Vendors data", published-live "the live Published snapshot", added-live "the live Added snapshot", vendors-live "the live Vendors snapshot", passwords "vendor-review passwords", tracking "tracking data". Focus moves to the notice (`tabIndex=-1`), so it is announced exactly once; the notice is not also a live region. If `fresh` is a refused or error body, D48 applies to it.
+
+**D48. Refused and error bodies.** A `refused` body or an error body (any response without `outcome`) is shown inside the dialog in a `role="alert"` region that exists before it is filled, with only a Close button. On close, one Messages line is written (D49). A 401 says the session has expired and asks the operator to sign in again.
+
+**D49. Messages wording.** One line per event, written when the dialog closes:
+- applied: `Updated stored <Category> from the live run of <runFinishedAt, formatted with formatLocalTimestamp>: <updated> updated, <appended> added, <removed> removed; <passwordRowsToDelete> password rows removed. Live snapshot cleared.`
+- applied with deletions blocked: the applied line, then `Deletions were not applied: <deletionsBlockedReason>`
+- cancelled (Cancel, Escape or Close before any apply): `Update Stored Data cancelled; nothing was changed.`
+- refused or error: `Update Stored Data failed: <error>` (for 401: `Update Stored Data failed: your session has expired; sign in again.`)
+- unknown result (D54): `Update Stored Data: the result is unknown (<detail>); review a fresh preview.`
+Category labels are "Published", "Added" and "Vendors".
+
+**D50. Unique Messages keys.** The Messages panel assigns every entry a panel-unique id through an `appendLog(stage, message)` helper on the messages context, and keys entries by that id. Writers never build keys. This implements D38 and survives `SourceToggle` remounting on record navigation.
+
+**D51. Focus on close (amends D9).** After Cancel, Escape, or Close of a refused or error body, focus returns to the "Update Stored Data" button, which must still be enabled at that point. After a successful apply the button is disabled (the snapshot is consumed), so focus moves to the Messages log, which has a visible focus indicator (D55). If the button is unexpectedly disabled at close, focus goes to the Messages log.
+
+**D52. The open record after apply.** If the record open on the page is in `report.removed` (matched by its URL), the client navigates to `/records/<category>`, whose index redirects to the first remaining record. Otherwise it stays on the record and refreshes.
+
+**D53. Enabling the button.** "Update Stored Data" is enabled whenever the category's live snapshot document exists, even with zero records: an empty snapshot can still carry deletions, password flags and refusals (for example, every protected Added page rejected its password). "Live Data" stays enabled only when the snapshot has records.
+
+**D54. Unknown results.** If the apply request fails at the network level or returns a body that is not JSON, the dialog states that the result is unknown and offers "Preview again", which requests a fresh preview. Apply is never retried automatically. The transaction is atomic (D8), so the fresh preview shows either "No live data to promote" (it applied) or the same plan (it did not).
+
+**D55. Accessibility requirements for step 6.** In addition to D9's:
+- Busy state: while a preview or apply is in flight, a status region (present before it is filled) announces it; Escape and every close request are ignored while apply runs (a `cancel` listener with `preventDefault`, plus a guard in the close path, since browsers may not honour repeated `preventDefault`); focus is never left on a control that becomes disabled.
+- Structure: the dialog title is an `h2`; each list section is an `h3`; lists use real list markup.
+- The scrollable dialog body has `tabIndex=0` and an accessible name.
+- The Messages log gets an accessible name (associated with its visible "Messages" title) and a visible focus indicator (it receives programmatic focus); its status and alert regions move out of the `role="log"` container so announcements are not doubled.
+- Focus indicators on every control `SourceToggle` and the modal render meet 3:1 (SC 1.4.11); the current `focus:ring-emerald-500` is replaced.
+- No new motion; any added motion honours `prefers-reduced-motion`.
+Deferred, not step 6: the nested `<main>` landmarks on `/records` category pages, and the legacy `/records` page's stubbed "Update Stored Data" button.
 
 ---
 
@@ -253,15 +423,27 @@ Each step is one dispatch with stop-and-report gates, validated before the next 
 4. **Planner** (external model, Claude Fable, from an upload bundle). A pure TypeScript function implementing §3.2–3.4, D15, D20 and D22 against the §3.9 format, with a `node:test` test for every row of every table.
    - Node 25 runs `.ts` test files directly; the tests live outside `frontend/`, because `tsconfig.json` does not allow `.ts`-extension imports.
    - Claude CLI places the files on a branch and runs the tests and the typecheck.
-5. **Promote route and document layer** (Claude CLI).
-   - A four-document transaction variant of `promoteLive` that calls the planner inside the transaction (D8).
-   - The dry run with version tokens (D17).
-   - Password and tracking row changes (D5, D7, D14, D20). Tracking removal can reuse `reconcileTrackingRows`.
-   - Remove the D13 guard.
-6. **Modal and messages** (Claude CLI): D9.
+   - **Done** — commit `00b11a4`.
+   - Escalation rulings (§3.11, D24–D29) applied in commit `e538930`.
+5. **Promote route and document layer** (Claude CLI), as six gated dispatches. Rulings are in §3.12; the route contract is in §3.13.
+   - 5.0 Plan update: D30–D41, the route contract, and the D8, D21 and D23 amendments.
+   - 5.1 Planner: D36, with `node:test` tests.
+   - 5.2 Document layer: `transactDocuments` (D31), its emulator-backed `node:test` test, and the test-only resolve hook (D41).
+   - 5.3 Pure decision module `frontend/lib/server/promote-mirror.ts`, covering reshape (D33), tokens (D32), envelope (D35), row changes (D40) and response bodies, with unit tests (D41).
+   - 5.4 Route handler: preview and apply through `transactDocuments` and the pure module (D8, D17, D30, D32). The D13 guard, the stub block and the `$meta.missing` reads are removed (D34).
+   - 5.5 Emulator verification: preview and apply for all three categories, the D32 conflict path, and D36.
+   - **Done** — commits 83db7a6, 62162db, 66b7818, bef6eed, 28b40e7, 43aa2b4, 321b01b; emulator-verified 2026-11-19 (report `.scratch/verification/step5-5-emulator-verification-20261119-1456.md`).
+6. **Modal and messages** (Claude CLI), as four gated dispatches. Rulings are in §3.14.
+   - 6.0 Plan update: D42–D55, the D9 amendment, and the completed step 5 "Done" line.
+   - 6.1 Messages panel: `appendLog` with panel-unique ids (D50), the log's accessible name and focus indicator, and its status and alert regions moved out of the log (D55).
+   - 6.2 The D9 modal component (D43–D49, D51, D54, D55), statically verified.
+   - 6.3 `SourceToggle` wiring: preview, apply, conflict, refused, error and unknown flows; Messages lines; focus on close; navigation after apply (D52); the button gate (D53); focus-ring contrast (D55). Developer browser and VoiceOver check before commit.
 7. **Emulator end-to-end test.** Fixtures covering every row of §3.2–3.4, plus incomplete discovery. Developer browser and screen-reader check of the modal.
+   - **Done** — tests-ts/promote-e2e.test.ts (11 cases; every §3.2–3.4 row covered), emulator-verified 2026-11-19; screen-reader check of the modal done in 6.3.
 8. **Retire the legacy editor** (D21). Independent; any time.
-9. **DECISION_LOG entry** recording D1–D23, with a forward pointer on the merge-rule entry it reverses.
+   - **Done** — on branch retire-legacy-editor, commit cc0531e (/editor redirects to /editor/candidates); merged to main in this sprint close.
+9. **DECISION_LOG entry** recording D1–D29, with a forward pointer on the merge-rule entry it reverses.
+   - **Done** — DECISION_LOG #69 (supersedes #44 and #68 in part).
 
 ---
 

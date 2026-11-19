@@ -2,167 +2,121 @@
 "use client";
 
 /**
- * VIEWER widget for the published record view -- bordered panel with a
- * "VIEWER" header bar, holding the Stored/Live data-source toggle and the
- * "Update Stored Data" action on the left, and the HTML/JSON view-mode
- * toggle right-aligned on the same row (Phase 4.9 -- previously a separate
- * standalone button row above the viewer in RecordsPublishedDetail.tsx, now
- * folded into this one widget).
+ * VIEWER widget for the /records record views: the Stored/Live data-source
+ * toggle, "Update Stored Data", and the HTML/JSON view-mode toggle.
  *
- * This widget markup used to live in the now-deleted
- * RecordsPublishedListPanel.tsx (Phase 3 removed it in favor of
- * IntegratedListPanel), NOT in this file -- this file only ever rendered
- * the two bare Stored/Live buttons before Phase 4.5 moved the rest of the
- * widget markup in.
+ * "Update Stored Data" opens the D9 confirmation modal (PromoteConfirmModal),
+ * which previews and applies the mirror promote and reports how it closed.
+ * This component then writes the Messages lines (D49), moves focus (D51),
+ * and after an apply navigates away from a deleted record or refreshes (D52).
  *
- * There is no "Retrieve Live Data" button here any more. The scrape runs
- * locally, from a terminal (DECISION_LOG.md #66), so this component only
- * consumes live snapshots something else produced -- it never starts one.
- *
- * "Update Stored Data" (enabled only while `hasLiveScrapeData`, the same
- * gate as "Live Data") confirms first, then POSTs `{ category }` to
- * /api/local/promote-live, which backs up the stored document, MERGES the
- * live snapshot into it (live records update their stored counterparts,
- * stored-only records are kept -- see that route's header for why merge,
- * not replace), and deletes the snapshot. On success this leaves the live
- * view (`router.replace("?")`); either way `router.refresh()` runs in the
- * finally block, so both it and "Live Data" fall back to disabled once the
- * snapshot is gone.
- *
- * Its outcome -- one `promote` entry, or one `promote-error` entry -- is
- * pushed into IntegratedListPanel's shared `liveLog` via useMessages(),
- * because the Messages footer (not this component) is what renders that
- * log. Those two are now `liveLog`'s only writer, and they are the only
- * user-visible confirmation that "Update Stored Data" did anything.
- * focusMessages() moves focus there first, so the result is not announced
- * somewhere the user is not looking.
- *
- * `hasLiveScrapeData` is a prop, computed server-side in page.tsx. With no
- * in-app trigger left, nothing flips it mid-session: a scrape run in a
- * terminal is picked up only on the next load or refresh of this route.
- *
- * useSearchParams()/router.replace() for the Stored/Live toggle itself --
- * see git history (or an earlier revision of this file) for the full
- * rationale on why this needs its own <Suspense> boundary at the call
- * site, and why `router.replace` (never `push`) with `scroll: false`.
- * viewMode/onViewModeChange are plain controlled props, owned by
- * RecordsPublishedDetail.tsx (the record content they switch lives there,
- * not here) -- this component only renders the two buttons and reports
- * clicks upward.
+ * Two gates (D53): "Update Stored Data" is enabled whenever the category's
+ * live snapshot document exists, even with zero records; "Live Data" only
+ * when the snapshot has records. Both come from page.tsx's server-side read.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMessages } from "@/components/IntegratedListPanel";
+import { PromoteConfirmModal } from "@/components/PromoteConfirmModal";
 import { formatLocalTimestamp } from "@/lib/format";
+import { messageLines, removedContainsUrl, type PromoteModalResult } from "@/lib/promote-ui";
 
 const PRIMARY_BUTTON_CLASSES =
-  "rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500";
+  "rounded border border-transparent bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-blue-700";
 const SECONDARY_BUTTON_CLASSES =
   "rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
+/** Stage names for the Messages panel; the panel assigns the keys (D50). */
+const RESULT_STAGE: Record<PromoteModalResult["kind"], string> = {
+  applied: "promote-applied",
+  cancelled: "promote-cancelled",
+  failed: "promote-failed",
+  unknown: "promote-unknown",
+};
+
+/** What to do once the dialog has closed and React has committed. */
+type AfterClose = {
+  focus: "button" | "messages";
+  navigateTo: string | null;
+  refresh: boolean;
+};
 
 interface SourceToggleProps {
   category: "published" | "added" | "vendors";
   hasLiveScrapeData: boolean;
+  liveSnapshotExists: boolean;
+  /** The open record's own URL (ncademi_product_url or vendor_directory_url), for D52. */
+  recordUrl: string | null;
   lastScraped: string | null;
   viewMode: "html" | "json";
   onViewModeChange: (mode: "html" | "json") => void;
 }
 
-export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMode, onViewModeChange }: SourceToggleProps) {
+export function SourceToggle({
+  category,
+  hasLiveScrapeData,
+  liveSnapshotExists,
+  recordUrl,
+  lastScraped,
+  viewMode,
+  onViewModeChange,
+}: SourceToggleProps) {
   const formattedLastScraped = formatLocalTimestamp(lastScraped);
   const searchParams = useSearchParams();
   const router = useRouter();
   const source: "stored" | "live" = searchParams.get("source") === "live" ? "live" : "stored";
-  const { setLiveLog, focusMessages } = useMessages();
-  const [isPromoting, setIsPromoting] = useState(false);
+  const { appendLog, focusMessages } = useMessages();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const updateButtonRef = useRef<HTMLButtonElement>(null);
+  const afterCloseRef = useRef<AfterClose | null>(null);
 
-  async function handleUpdateStoredData() {
-    const confirmed = window.confirm(
-      `Merge the retrieved live ${category} data into your stored ${category} records?\n\n` +
-        `Live records update their stored counterparts; stored records not in the live ` +
-        `snapshot are kept. The previous stored version is saved as a backup first, ` +
-        `then the live snapshot is cleared.`
-    );
-    if (!confirmed) return;
+  // D51/D52, deferred until the modal has unmounted: the native <dialog>
+  // restores focus to "Update Stored Data" as it closes, so focus moved any
+  // earlier would be overridden. This effect runs after the commit that
+  // removes the modal.
+  useEffect(() => {
+    if (isModalOpen) return;
+    const pending = afterCloseRef.current;
+    if (pending === null) return;
+    afterCloseRef.current = null;
 
-    focusMessages();
-    setIsPromoting(true);
-    try {
-      const response = await fetch("/api/local/promote-live", {
-        method: "POST",
-        body: JSON.stringify({ category }),
-      });
-      const result = (await response.json().catch(() => ({}))) as {
-        updated?: number;
-        keptFromStored?: number;
-        addedNew?: number;
-        addedProducts?: string[];
-        stubsCreated?: number;
-        stubProducts?: string[];
-        total?: number;
-        error?: string;
-      };
+    const button = updateButtonRef.current;
+    if (pending.focus === "button" && button && !button.disabled) button.focus();
+    else focusMessages();
 
-      if (!response.ok) {
-        setLiveLog((prev) => [
-          ...prev,
-          {
-            stage: "promote-error",
-            message: `Update Stored Data failed: ${result.error ?? `server responded ${response.status}`}.`,
-          },
-        ]);
-        return;
-      }
+    if (pending.navigateTo === "?") router.replace("?", { scroll: false });
+    else if (pending.navigateTo !== null) router.replace(pending.navigateTo);
+    if (pending.refresh) router.refresh();
+  }, [isModalOpen, focusMessages, router]);
 
-      setLiveLog((prev) => [
-        ...prev,
-        {
-          stage: "promote",
-          message:
-            `Merged live ${category} data into your stored ${category} records ` +
-            `(${result.updated ?? 0} updated, ${result.keptFromStored ?? 0} kept, ${result.addedNew ?? 0} new; ` +
-            `${result.total ?? 0} total). Previous version backed up; live snapshot cleared.`,
-        },
-      ]);
-      // Separate entry (distinct `stage`, since LiveLogEntry.stage doubles as
-      // this list's React key) so the count summary above and the name list
-      // read as two distinct lines, not one runon. Only pushed when there's
-      // something to say -- no "no new products" noise line.
-      if (result.addedProducts && result.addedProducts.length > 0) {
-        setLiveLog((prev) => [
-          ...prev,
-          {
-            stage: "promote-added",
-            message: `New records created for the following products: ${result.addedProducts!.join(", ")}.`,
-          },
-        ]);
-      }
-      // Distinct stage again, same reasoning as promote-added above -- a
-      // third, separate line rather than folding into either of the other
-      // two. Only pushed when there's something to say.
-      if (result.stubProducts && result.stubProducts.length > 0) {
-        setLiveLog((prev) => [
-          ...prev,
-          {
-            stage: "promote-stubs",
-            message:
-              `New products discovered on the live site, added for tracking with a generated ` +
-              `password: ${result.stubProducts!.join(", ")}. Set each one's real password on WordPress to match.`,
-          },
-        ]);
-      }
-      // The live snapshot is gone -- leave the live view so the refresh
-      // below doesn't try to render a record from a document that no longer
-      // exists.
-      router.replace("?", { scroll: false });
-    } finally {
-      setIsPromoting(false);
-      // Re-run the Server Component tree so `hasLiveScrapeData` reflects the
-      // now-deleted snapshot (disabling "Live Data" and this button) and the
-      // Stored view shows the just-promoted records.
-      router.refresh();
+  function handleClosed(result: PromoteModalResult) {
+    const formattedRunTime =
+      result.kind === "applied" ? formatLocalTimestamp(result.body.runFinishedAt) : null;
+    for (const line of messageLines(result, category, formattedRunTime)) {
+      appendLog(RESULT_STAGE[result.kind], line);
     }
+
+    switch (result.kind) {
+      case "applied":
+        // D52: leave a deleted record for the category index, which redirects
+        // to the first remaining record; otherwise leave the live view.
+        afterCloseRef.current = {
+          focus: "messages",
+          navigateTo: removedContainsUrl(result.body, recordUrl) ? `/records/${category}` : "?",
+          refresh: true,
+        };
+        break;
+      case "cancelled":
+      case "failed":
+        afterCloseRef.current = { focus: "button", navigateTo: null, refresh: false };
+        break;
+      case "unknown":
+        // Refresh so the button gate shows whether the apply landed (D54).
+        afterCloseRef.current = { focus: "messages", navigateTo: null, refresh: true };
+        break;
+    }
+    setIsModalOpen(false);
   }
 
   return (
@@ -179,12 +133,13 @@ export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMod
           Stored Data
         </button>
         <button
+          ref={updateButtonRef}
           type="button"
-          disabled={!hasLiveScrapeData || isPromoting}
-          onClick={handleUpdateStoredData}
+          disabled={!liveSnapshotExists}
+          onClick={() => setIsModalOpen(true)}
           className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isPromoting ? "Updating..." : "Update Stored Data"}
+          Update Stored Data
         </button>
         <button
           type="button"
@@ -215,6 +170,8 @@ export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMod
           </button>
         </div>
       </div>
+
+      {isModalOpen && <PromoteConfirmModal category={category} onClosed={handleClosed} />}
     </div>
   );
 }

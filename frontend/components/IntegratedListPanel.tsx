@@ -49,10 +49,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { DirectoryRecord } from "@/lib/directory-schema";
 
 export interface LiveLogEntry {
+  /** Panel-unique, assigned by appendLog; the React key (D50). */
+  id: number;
   stage: string;
   message: string;
 }
@@ -96,7 +98,9 @@ interface MessagesContextValue {
    *  (DECISION_LOG.md #66), so these confirmations are all that is left in
    *  it -- and they are the only user-visible outcome of a promote. */
   liveLog: LiveLogEntry[];
-  setLiveLog: (log: LiveLogEntry[] | ((prev: LiveLogEntry[]) => LiveLogEntry[])) => void;
+  /** Appends one entry; the panel assigns its id, so writers never build
+   *  keys (D50). */
+  appendLog: (stage: string, message: string) => void;
   /** Moves focus to the Messages footer -- called when a promote starts, so
    *  a screen-reader/keyboard user lands on the log as its result arrives
    *  instead of it changing silently off-screen. */
@@ -131,9 +135,18 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
   const [statusMessage, setStatusMessage] = useState("");
   const [saveError, setSaveError] = useState("");
   const [createAction, setCreateAction] = useState<(() => void) | null>(null);
-  const [liveLog, setLiveLog] = useState<LiveLogEntry[]>([]);
+  const [liveLog, setLogEntries] = useState<LiveLogEntry[]>([]);
+  const nextLogId = useRef<number>(0);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const messagesTitleId = useId();
   const focusMessages = () => messagesRef.current?.focus();
+
+  // The id is taken outside the updater so a re-run updater (Strict Mode)
+  // cannot skip ids; the append itself is a functional update.
+  const appendLog = useCallback((stage: string, message: string) => {
+    const id = nextLogId.current++;
+    setLogEntries((prev) => [...prev, { id, stage, message }]);
+  }, []);
 
   const messagesValue = useMemo(
     () => ({
@@ -143,10 +156,10 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
       setSaveError,
       setCreateAction,
       liveLog,
-      setLiveLog,
+      appendLog,
       focusMessages,
     }),
-    [statusMessage, saveError, liveLog]
+    [statusMessage, saveError, liveLog, appendLog]
   );
 
   const filtered = useMemo(() => {
@@ -338,16 +351,30 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
 
           <footer className="flex-shrink-0 border-t border-gray-200 p-6">
             <div className="w-full rounded-md border border-gray-300 bg-white">
-              <div className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Messages</div>
-              <div ref={messagesRef} tabIndex={-1} role="log" className="flex flex-col gap-1 p-4 focus:outline-none">
-                <p className="text-sm text-gray-600">Displaying {items.length} records.</p>
-                <p role="status" aria-live="polite" className="text-sm text-gray-600 min-h-[1.25rem]">{statusMessage}</p>
-                <p role="alert" className="text-sm font-semibold text-red-700 min-h-[1.25rem]">{saveError}</p>
-                {liveLog.map((entry) => (
-                  <p key={entry.stage} className="text-sm text-gray-600">
-                    {entry.message}
-                  </p>
-                ))}
+              <div id={messagesTitleId} className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Messages</div>
+              {/* The status and alert regions sit beside the log, not inside it,
+                  so their announcements are not doubled (D55). The log holds
+                  only liveLog entries; mt-1 when non-empty reproduces the
+                  former gap-1 spacing, and an empty log adds no space. */}
+              <div className="p-4">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm text-gray-600">Displaying {items.length} records.</p>
+                  <p role="status" aria-live="polite" className="text-sm text-gray-600 min-h-[1.25rem]">{statusMessage}</p>
+                  <p role="alert" className="text-sm font-semibold text-red-700 min-h-[1.25rem]">{saveError}</p>
+                </div>
+                <div
+                  ref={messagesRef}
+                  tabIndex={-1}
+                  role="log"
+                  aria-labelledby={messagesTitleId}
+                  className={`flex flex-col gap-1 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-offset-2 ${liveLog.length > 0 ? "mt-1" : ""}`}
+                >
+                  {liveLog.map((entry) => (
+                    <p key={entry.id} className="text-sm text-gray-600">
+                      {entry.message}
+                    </p>
+                  ))}
+                </div>
               </div>
             </div>
           </footer>

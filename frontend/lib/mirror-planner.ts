@@ -5,6 +5,7 @@
  * promotes. It implements the case tables of §3.2, §3.3 and §3.4, the
  * discovery gate (D15), the full-run gate (D18), the shared-name rule (D20)
  * and the protected-vendor rule (D22), against the §3.9 run-record format.
+ * Vendors with no directory URL are left untouched and guard against duplicates (D36).
  *
  * Purity: no I/O, no clock, no randomness, and no mutation of any input.
  * Only `import type` statements are used so the module runs under Node's
@@ -90,7 +91,7 @@ export interface PlanReport {
   needsCorrectPassword: ReportEntry[];
   /** Added only: `no_password`. */
   needsPassword: ReportEntry[];
-  /** fetch/parse error, protected vendor page, discovery incomplete. */
+  /** fetch/parse error, protected vendor page, discovery incomplete; items with no stored record (D27, D28); vendors with no directory URL and their possible live matches (D36). */
   couldNotCheck: { url: string; name: string; reason: string }[];
   /** Added only: `not_tracked` outcomes with no stored record. */
   untrackedProtected: { url: string; name: string | null }[];
@@ -180,6 +181,20 @@ function matchKey(category: Category, record: StoredRecord): string | null {
   return typeof raw === "string" && raw.length > 0 ? raw : null;
 }
 
+/** D36: vendor_name for duplicate matching: NFC, trimmed, whitespace runs collapsed, lower-cased. */
+function normalizeVendorName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
+  return normalized === "" ? null : normalized;
+}
+
+/** D36: true when vendor_directory_url is null, or a string that is empty or whitespace-only. */
+function hasNoDirectoryUrl(record: StoredRecord): boolean {
+  const raw: unknown = record.vendor_directory_url;
+  if (raw === null) return true;
+  return typeof raw === "string" && raw.trim() === "";
+}
+
 function withDetail(base: string, detail: string | null): string {
   return detail !== null && detail !== "" ? `${base}: ${detail}` : base;
 }
@@ -244,12 +259,12 @@ function decide(category: Category, outcome: RunOutcome | undefined): Decision |
     if (status === "no_password") return { kind: "keep", flag: "needs_password" };
     if (status === "public_ok") return { kind: "delete", reason: "now public" };
     if (status === "not_tracked") {
-      // ESCALATION: §3.2 has no row for a STORED Added record whose URL has a
+      // RESOLVED (D24): §3.2 has no row for a STORED Added record whose URL has a
       // `not_tracked` outcome (the scraper assigns not_tracked by comparing
       // against stored Added at scrape time, so this arises when a record was
       // added to stored Added between the scrape and the promote). Most
       // conservative reading: untouched, reported as "could not check".
-      // Alternative: refuse as an invariant violation.
+      // Ruling: untouched, reported as could not check.
       return { kind: "untouched", reason: "not tracked at scrape time; re-scrape to check" };
     }
     return null;
@@ -338,10 +353,10 @@ export function planPromote(input: PlanInput): PlanResult {
     else vendorOutcomeCount += 1;
   }
 
-  // ESCALATION: §3.9 states that outcomes.length equals the SUM of
+  // RESOLVED (D25): §3.9 states that outcomes.length equals the SUM of
   // discovery.*.discovered. Implemented per post type (stricter, and implied by
-  // "one entry for every URL discovered for either post type"). Alternative:
-  // check only the sum.
+  // "one entry for every URL discovered for either post type").
+  // Ruling: per-post-type check kept.
   if (productOutcomeCount !== run.discovery.product.discovered) {
     return fail(
       `Run record has ${productOutcomeCount} product outcome entries but discovery.product.discovered is ${run.discovery.product.discovered} (§3.9).`
@@ -367,9 +382,26 @@ export function planPromote(input: PlanInput): PlanResult {
 
   // ---- Index stored and live records -----------------------------------------
 
-  const storedEntries: { key: string; record: StoredRecord }[] = [];
+  // key null: a URL-less stored vendor (D36), carried in stored order.
+  const storedEntries: { key: string | null; record: StoredRecord }[] = [];
   const storedByKey = new Map<string, StoredRecord>();
+  // D36: normalized vendor_name → product_name of a URL-less stored vendor (first entry wins).
+  const urlLessVendorNames = new Map<string, string>();
   for (const record of input.stored) {
+    // RESOLVED (D36): a stored vendor whose vendor_directory_url is null, empty or
+    // whitespace-only is "not on the site yet". It is kept unchanged, never
+    // deleted and never blocks the promote; it bypasses decide(), the D15 gate
+    // and the duplicate-key check. Checked before matchKey, which accepts a
+    // whitespace-only key. Undefined or non-string URLs still refuse below.
+    // Ruling: untouched, reported under couldNotCheck.
+    if (category === "vendors" && hasNoDirectoryUrl(record)) {
+      const normalizedName = normalizeVendorName(record.vendor_name);
+      if (normalizedName !== null && !urlLessVendorNames.has(normalizedName)) {
+        urlLessVendorNames.set(normalizedName, record.product_name);
+      }
+      storedEntries.push({ key: null, record });
+      continue;
+    }
     const key = matchKey(category, record);
     if (key === null) {
       return fail(
@@ -428,12 +460,18 @@ export function planPromote(input: PlanInput): PlanResult {
 
   for (const { key, record } of storedEntries) {
     const name = record.product_name;
+    if (key === null) {
+      // D36 (see the indexing loop): kept unchanged, before decide() and the D15 gate.
+      nextStored.push(record);
+      couldNotCheck.push({ url: "", name, reason: "not on the site yet (no directory URL)" });
+      continue;
+    }
     const outcome = outcomesByUrl.get(key);
 
     if (outcome !== undefined && outcome.post_type !== postType) {
-      // ESCALATION: the tables do not say what to do when a stored record's URL
+      // RESOLVED (D26): the tables do not say what to do when a stored record's URL
       // matches an outcome of the OTHER post type. Refusing deletes nothing.
-      // Alternative: treat as "no outcome entry" or as "could not check".
+      // Ruling: refuse.
       return fail(
         `Stored ${category} record "${name}" (${key}) matches a "${outcome.post_type}" outcome; expected post_type "${postType}".`
       );
@@ -496,16 +534,52 @@ export function planPromote(input: PlanInput): PlanResult {
   // Published and Vendors: "(No stored record) public_ok → Append", in `live` order.
   // Every live record has already been validated to carry the required status.
   //
-  // ESCALATION: §3.2 (Added) has no append row. A live Added record with no
+  // RESOLVED (D27): §3.2 (Added) has no append row. A live Added record with no
   // stored counterpart (protected_unlocked, no stored record) is therefore
-  // neither appended nor deleted, and — because the report interface reserves
-  // untrackedProtected for `not_tracked` — is not reported either.
-  // Alternative: list it under untrackedProtected, or refuse.
+  // neither appended nor deleted. It is not listed under untrackedProtected,
+  // which the report interface reserves for `not_tracked`.
+  // Ruling: not appended; reported under couldNotCheck.
+
+  // URLs with no stored record already listed in couldNotCheck (D27, D28), so
+  // that each such URL is reported at most once.
+  const reportedWithoutStored = new Set<string>();
+  const reportWithoutStored = (url: string, name: string, reason: string): void => {
+    if (reportedWithoutStored.has(url)) return;
+    reportedWithoutStored.add(url);
+    couldNotCheck.push({ url, name, reason });
+  };
+
+  if (category === "added") {
+    for (const { key, record } of liveEntries) {
+      if (storedByKey.has(key)) continue;
+      const outcome = outcomesByUrl.get(key);
+      const outcomeName = outcome !== undefined ? outcome.name : null;
+      reportWithoutStored(key, outcomeName ?? record.product_name, "on the live site, no stored Added record");
+    }
+  }
+
   if (category !== "added") {
     for (const { key, record } of liveEntries) {
       if (storedByKey.has(key)) continue;
       const outcome = outcomesByUrl.get(key);
       const outcomeName = outcome !== undefined ? outcome.name : null;
+      if (category === "vendors") {
+        // RESOLVED (D36): duplicate guard. A live vendor whose normalized
+        // vendor_name matches a URL-less stored vendor is not appended; it is
+        // reported as a possible match so the operator can add the URL.
+        // Ruling: not appended; reported under couldNotCheck.
+        const normalizedName = normalizeVendorName(record.vendor_name);
+        const storedProductName =
+          normalizedName !== null ? urlLessVendorNames.get(normalizedName) : undefined;
+        if (storedProductName !== undefined) {
+          couldNotCheck.push({
+            url: key,
+            name: outcomeName ?? record.product_name,
+            reason: `possible match for "${storedProductName}"; add its directory URL to link them`,
+          });
+          continue;
+        }
+      }
       nextStored.push(record);
       appended.push({ url: key, name: outcomeName ?? record.product_name });
     }
@@ -514,11 +588,23 @@ export function planPromote(input: PlanInput): PlanResult {
   // ---- Outcomes with no stored record -------------------------------------------
   //
   // Only outcomes of the governing post type are considered.
-  // ESCALATION: no-stored-record outcomes without a table row (e.g. fetch_error
-  // or parse_error with no stored record; for Added, protected_unlocked,
-  // password_rejected, no_password or public_ok with no stored record) are
-  // ignored: nothing is created, deleted or reported. Alternative: report them
-  // under couldNotCheck.
+  // RESOLVED (D28): no-stored-record outcomes without a table row (fetch_error
+  // or parse_error in any category; for Added, protected_unlocked,
+  // password_rejected or no_password) create and delete nothing. Statuses that
+  // place the page in the other product category (Added: public_ok; Published:
+  // protected_unlocked, password_rejected, no_password, not_tracked) are not
+  // reported here, because every snapshot lists every product URL (D16).
+  // Ruling: never created or deleted; reported under couldNotCheck.
+  const reportOutcomeWithoutStored = (outcome: RunOutcome): void => {
+    const liveRecord = liveByKey.get(outcome.url);
+    const name = outcome.name ?? (liveRecord !== undefined ? liveRecord.product_name : outcome.url);
+    reportWithoutStored(
+      outcome.url,
+      name,
+      withDetail(`no stored record; outcome ${outcome.status}`, outcome.detail)
+    );
+  };
+
   for (const outcome of run.outcomes) {
     if (outcome.post_type !== postType) continue;
     if (storedByKey.has(outcome.url)) continue;
@@ -527,13 +613,17 @@ export function planPromote(input: PlanInput): PlanResult {
       if (outcome.status === "not_tracked") {
         // D6: no auto-stubs; listed for a person to act on.
         untrackedProtected.push({ url: outcome.url, name: outcome.name });
+      } else if (outcome.status !== "public_ok") {
+        // D28: protected_unlocked, password_rejected, no_password, fetch_error, parse_error.
+        reportOutcomeWithoutStored(outcome);
       }
       continue;
     }
 
     if (outcome.status === "public_ok" && !liveByKey.has(outcome.url)) {
-      // ESCALATION: the tables say "Append" but the snapshot holds no record to
-      // append. Refusing deletes nothing. Alternative: skip and report.
+      // RESOLVED (D29): the tables say "Append" but the snapshot holds no record to
+      // append. Refusing deletes nothing.
+      // Ruling: refuse.
       return fail(
         `Outcome for ${outcome.url} is "public_ok" with no stored ${category} record, but the ${category}-live snapshot has no record for it; cannot append.`
       );
@@ -542,6 +632,9 @@ export function planPromote(input: PlanInput): PlanResult {
     if (category === "vendors" && outcome.status === "protected_vendor") {
       // D22: append nothing; listed as an unscraped protected vendor page.
       unscrapedProtectedVendors.push({ url: outcome.url });
+    } else if (outcome.status === "fetch_error" || outcome.status === "parse_error") {
+      // D28. Published's protected statuses with no stored record are not reported (see above).
+      reportOutcomeWithoutStored(outcome);
     }
   }
 

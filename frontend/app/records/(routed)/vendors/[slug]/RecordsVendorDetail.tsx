@@ -31,10 +31,11 @@ import { SourceToggle } from "../../published/SourceToggle";
 interface RecordsVendorDetailProps {
   record: DirectoryRecord;
   hasLiveScrapeData: boolean;
+  liveSnapshotExists: boolean;
   lastScraped: string | null;
 }
 
-export function RecordsVendorDetail({ record, hasLiveScrapeData, lastScraped }: RecordsVendorDetailProps) {
+export function RecordsVendorDetail({ record, hasLiveScrapeData, liveSnapshotExists, lastScraped }: RecordsVendorDetailProps) {
   const [viewMode, setViewMode] = useState<"html" | "json">("html");
 
   return (
@@ -62,7 +63,15 @@ export function RecordsVendorDetail({ record, hasLiveScrapeData, lastScraped }: 
       </div>
 
       <Suspense fallback={<div className="h-[74px] w-full animate-pulse rounded-md border border-gray-300 bg-gray-100" />}>
-        <SourceToggle category="vendors" hasLiveScrapeData={hasLiveScrapeData} lastScraped={lastScraped} viewMode={viewMode} onViewModeChange={setViewMode} />
+        <SourceToggle
+          category="vendors"
+          hasLiveScrapeData={hasLiveScrapeData}
+          liveSnapshotExists={liveSnapshotExists}
+          recordUrl={typeof record.vendor_directory_url === "string" ? record.vendor_directory_url : null}
+          lastScraped={lastScraped}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
       </Suspense>
 
       <section aria-label="Visual preview" className="rounded border border-gray-200 bg-gray-50 p-4 w-full min-w-0">

@@ -258,6 +258,7 @@ Present-tense record of SETTLED decisions and their rationale. Update only when 
 - **Status:** SETTLED/VERIFIED. Commit `bc46181` (manual-QA follow-up in `1966999`).
 
 ### 44. `/records` ROUTE AND "UPDATE STORED DATA" — live-snapshot promotion.
+> **Superseded in part by [#69](#69-mirror-promote--update-stored-data-makes-stored-data-mirror-the-live-site-transactional-previewed-and-confirmed-in-a-modal):** the merge rule and its rationale. The `/records` routing stands.
 - **Decision:** The live-data widget (scrape trigger + "Retrieve Live Data") moved off `/editor` to a dedicated `/records` route (commit `5c1623b`); `/editor` and `/records` were then both split into routed leaves with record-selection URLs — `app/{editor,records}/(routed)/{added,candidates,published,vendors}/[slug]` — served by Server Components that read through `frontend/lib/local-data.ts` (commit `3b2dacf`). The "Update Stored Data" button (commit `0a7849f`) POSTs `{ category }` to the new `frontend/app/api/local/promote-live/route.ts`, which: backs up the stored file to a single rolling `.bak`; **merges** the matching `*-live.json` snapshot in (a live record updates its stored counterpart matched by `ncademi_product_url` / `vendor_directory_url`, a stored record with no live counterpart is kept, a live-only record is appended — conservative on purpose, since some `added` products' pages are not yet unlocked); re-shapes live records to the stored schema on the way in (derive `slug`, backfill `ai_insights`, keep the stored envelope, refresh provenance); then backs up and deletes the live snapshot. `tracking.json` is never touched — `local-data.ts` merges tracking back on read. `local-write.ts` gained `documentPath` / `liveSnapshotPath` / `backupThenWrite` / `backupThenDelete`; `frontend/.gitignore` ignores `lib/*.bak` and `lib/*.tmp`.
 - **Rationale:** Separating the destructive whole-document refresh from the per-field editor keeps the two workflows from sharing accident surface, and a merge (rather than a replace) means an incomplete scrape can't silently drop stored records.
 - **Status:** SETTLED/VERIFIED. Commits `5c1623b`, `3b2dacf`, `0a7849f`.
@@ -1202,7 +1203,7 @@ production Firestore has been confirmed (item 6 above).
 ---
 
 ### 68. VENDOR-REVIEW PASSWORDS ARE EDITABLE — atomic server-side writes, PUT endpoint, inline field in both editors.
-
+> **Superseded in part by [#69](#69-mirror-promote--update-stored-data-makes-stored-data-mirror-the-live-site-transactional-previewed-and-confirmed-in-a-modal):** promote-live no longer creates stubs or generates passwords, and its password deletions run inside the promote transaction (D6, D34, D40).
 **Date:** 2026-11-02
 **Status:** Decided
 **Supersedes in part:** #45 — its statement that "a password, once assigned, is only read or created, never edited." The same claim restated later in this log (approx. lines 871–872 and 902 at time of writing) is superseded with it. #45's other decisions stand.
@@ -1248,3 +1249,48 @@ Typecheck and lint; a pure-function test of `setPassword`; manual browser and Vo
 - Pressing Escape while a save is in flight reverts the field, but the save still completes; the field then shows the old value against the newly saved one, as an unsaved change.
 - Promote-live's password write runs before, not inside, the `promoteLive` transaction, so a failed promote can leave generated passwords behind.
 - `frontend/lib/passwords.json`'s `$meta` text still says passwords are never regenerated. It is local seed data and was left unedited.
+
+### 69. MIRROR PROMOTE — "Update Stored Data" makes stored data mirror the live site; transactional, previewed and confirmed in a modal.
+
+**Date:** 2026-11-19
+**Status:** Decided; implemented and verified on branch `mirror-promote`. Not yet merged or deployed (production still runs the 2026-11-02 build, with the D13 Added guard in place).
+**Supersedes in part:** #44 — its merge rule ("a stored record with no live counterpart is kept, a live-only record is appended") and its rationale that a merge protects against incomplete scrapes. #68 — its listing of "promote-live's stub step" as a password writer and a password generator, and its known issue that promote-live's password write runs outside the promote transaction. #44's routing and #68's other decisions stand.
+**Authoritative detail:** `docs/mirror-promote-plan-11-02-26.md`, §3 (decisions D1–D55, case tables §3.2–3.4, run-record format §3.9, route contract §3.13, step 6 rulings §3.14). This entry summarizes; the plan governs.
+**Commits (mirror-promote):** scraper run record 5564a65; planner 00b11a4, e538930, 62162db; document layer 66b7818, bef6eed; decision module 28b40e7, 43aa2b4; route 321b01b; Messages panel 75efd32; modal 24766e7; SourceToggle 4ad1b6d; end-to-end test f069944; plan updates 83db7a6, 76ce91a and others. Full list: `git log --oneline 00b11a4^..f069944`. Related: legacy /editor retired (D21) on `retire-legacy-editor` (cc0531e); deploy script rebuilt on `deploy-script` (03d81a8).
+
+#### DECISION — stored data mirrors the live site.
+
+A promote makes the stored Added, Published or Vendors document match what the latest full scrape found on ncademi.org. A stored record stays only if the scrape identified it or could not check it (D1). Records confirmed gone are deleted; records that could not be checked (fetch or parse errors, protected vendor pages, incomplete discovery) are left untouched and reported. Every case is in the §3.2–3.4 tables.
+
+**Why:** N.E.R.D. is not in daily use, so stored data drifts from the site. The conservative merge of #44 could never remove anything, so drift only accumulated. Its premise, that a merge protects against an incomplete scrape, is now met directly: deletions require complete discovery (D15) and a full run (D18).
+
+#### HOW IT IS MADE SAFE
+
+- **Scraper run record (§3.9, D10, D16, D18):** every scrape writes per-URL outcomes and discovery completeness into all three live snapshots in one atomic batch. Targeted runs are gone.
+- **Pure planner (D2):** `frontend/lib/mirror-planner.ts` decides every case from the tables, refuses on invariant violations (D24–D29), and is unit-tested row by row.
+- **One transaction (D8, D30, D31):** the promote reads seven documents (the category's stored document, the other three stored documents, the live snapshot, passwords and tracking) and writes up to four, through `transactDocuments`, with the rolling backup kept for every write. A failed promote leaves nothing half-applied.
+- **Preview, then confirm (D9, D17, D32):** the route returns a dry-run plan with version tokens for all seven documents; the apply is refused, with a fresh preview, if any document changed in between.
+- **Passwords and tracking (D5, D7, D14, D20, D40):** password and tracking rows of deleted records are removed in the same transaction, except where another category still uses the name. No stubs and no generated passwords (D6, D34).
+- **Vendors without a URL (D36; amends D23):** a vendor with no directory URL is "not on the site yet": kept, never deleted, never blocking, and reported. A live vendor whose name matches one is held back as a possible duplicate.
+
+#### THE CONFIRMATION MODAL (D9, D42–D55)
+
+"Update Stored Data" opens a native `<dialog>` that loads the preview, lists every deletion, password change, could-not-check record and protected page, and confirms with a specific label ("Delete 16 records and update stored Added"). Conflicts refresh the dialog in place; refusals and errors show without a confirm; an unknown result offers "Preview again" and never retries. Results go to the Messages log with panel-unique keys (D50). The button is enabled whenever the live snapshot exists, even with zero records (D53).
+
+**Accessibility:** h2/h3 structure and real lists; pre-rendered status and alert regions; aria-disabled (not disabled) during apply so focus is never dropped; Escape blocked while applying; a named, keyboard-scrollable body; focus returned to the button on cancel and moved to the Messages log after apply (D51, amending D9); the Messages log named and given a visible focus indicator; the failing emerald focus ring (2.46:1) replaced with blue-700 (6.82:1).
+
+#### VERIFIED
+
+- Unit tests: planner 77, decision module 28, modal logic 38; `transactDocuments` 11 against the emulator.
+- Route over HTTP against the emulator (step 5.5): validation, previews matching the planner smoke results, the D32 conflict paths, applies of all three categories with envelope, backup and row-deletion checks.
+- End-to-end emulator test (step 7, `tests-ts/promote-e2e.test.ts`): all 23 case-table rows, incomplete discovery, shared names, refusals, both D36 cases, an empty-but-present snapshot, idempotence.
+- Browser and VoiceOver (macOS, Chrome) against the emulator: cancel, Escape, conflict, apply with navigation away from a deleted record, Published and Vendors applies, unknown result, keyboard-only, and the D53 button gate.
+
+#### KNOWN, NOT ADDRESSED
+
+- `promoteLive` in `documents.ts` is now unused and overwrites without a version check; remove it.
+- The D36 duplicate guard compares `vendor_name` only; a renamed URL-less vendor can slip a duplicate through.
+- The full vendor lifecycle (Vendor Candidates, Admin-only promotion) is deferred.
+- `session.ts` verifies cookies with `checkRevoked: false`, so a leaked session cookie cannot be revoked before it expires.
+- Nested `<main>` landmarks on `/records` category pages; the legacy `/records` page's stubbed "Update Stored Data" button.
+- Not yet deployed. The first production promote (Added first) will delete the records the site shows as public and flag the wrong passwords (Grammarly, Nearpod).
