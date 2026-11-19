@@ -156,11 +156,11 @@ function extractLastScraped(meta: unknown): string | null {
 
 async function readLiveProducts(
   key: "published-live" | "added-live"
-): Promise<{ products: PublishedProductRecord[]; lastScraped: string | null }> {
+): Promise<{ products: PublishedProductRecord[]; lastScraped: string | null; exists: boolean }> {
   await requireSessionUser();
 
   const found = await tryReadRaw(key);
-  if (!found) return { products: [], lastScraped: null };
+  if (!found) return { products: [], lastScraped: null, exists: false };
 
   const body = JSON.parse(found.data) as { products?: unknown; $meta?: unknown };
   const raw = Array.isArray(body.products) ? (body.products as Array<Record<string, unknown>>) : [];
@@ -176,12 +176,13 @@ async function readLiveProducts(
     await readTrackingRecords()
   ) as unknown as PublishedProductRecord[];
 
-  return { products, lastScraped: extractLastScraped(body.$meta) };
+  return { products, lastScraped: extractLastScraped(body.$meta), exists: true };
 }
 
 export function getPublishedLiveProducts(): Promise<{
   products: PublishedProductRecord[];
   lastScraped: string | null;
+  exists: boolean;
 }> {
   return readLiveProducts("published-live");
 }
@@ -189,6 +190,7 @@ export function getPublishedLiveProducts(): Promise<{
 export function getAddedLiveProducts(): Promise<{
   products: PublishedProductRecord[];
   lastScraped: string | null;
+  exists: boolean;
 }> {
   return readLiveProducts("added-live");
 }
@@ -196,11 +198,12 @@ export function getAddedLiveProducts(): Promise<{
 export async function getLiveVendors(): Promise<{
   vendors: DirectoryRecord[];
   lastScraped: string | null;
+  exists: boolean;
 }> {
   await requireSessionUser();
 
   const found = await tryReadRaw("vendors-live");
-  if (!found) return { vendors: [], lastScraped: null };
+  if (!found) return { vendors: [], lastScraped: null, exists: false };
 
   const body = JSON.parse(found.data) as { vendors?: unknown; $meta?: unknown };
   const raw = Array.isArray(body.vendors) ? (body.vendors as Array<Record<string, unknown>>) : [];
@@ -221,5 +224,5 @@ export async function getLiveVendors(): Promise<{
     await readTrackingRecords()
   ) as unknown as DirectoryRecord[];
 
-  return { vendors, lastScraped: extractLastScraped(body.$meta) };
+  return { vendors, lastScraped: extractLastScraped(body.$meta), exists: true };
 }

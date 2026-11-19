@@ -6,9 +6,11 @@
  *
  * Kept outside lib/server/documents.ts's DataKind ETag/If-Match system:
  * every writer is server-side, so instead of a client If-Match round trip
- * each app write is an atomic read-modify-write through mutatePasswords
+ * app writes are atomic read-modify-writes through mutatePasswords
  * (lib/server/passwords-store.ts -- read, modify and write in one Firestore
- * transaction). Scripts outside frontend/ (scripts/nerd_documents.py push,
+ * transaction). The exception is the mirror promote, which deletes password
+ * rows inside its own transaction (transactDocuments, D40) and creates none
+ * (D6). Scripts outside frontend/ (scripts/nerd_documents.py push,
  * scripts/write_single_document.py) can still overwrite the document
  * directly.
  *
