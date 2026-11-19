@@ -126,9 +126,12 @@ export type LiveKind = "published-live" | "added-live" | "vendors-live";
 
 /** Side documents outside the ETag/If-Match system. tracking is written
  *  read-modify-write with no concurrency guarantee of its own, except when
- *  reconciled inside saveGuarded's transaction. passwords is written only
+ *  reconciled inside saveGuarded's transaction. passwords is written
  *  through mutateDocument (via lib/server/passwords-store.ts's
- *  mutatePasswords): read, modify and write in one transaction. */
+ *  mutatePasswords): read, modify and write in one transaction. The mirror
+ *  promote also writes passwords and tracking (row deletions only) inside
+ *  transactDocuments, in the same transaction as the stored document
+ *  (plan D30, D40). */
 export type AuxKind = "tracking" | "passwords";
 
 export type DocumentKey = DataKind | LiveKind | AuxKind;
@@ -660,13 +663,13 @@ function coerceTrackingRow(value: unknown): TrackingRecord | null {
   };
 }
 
-function parseTrackingRows(bytes: string): TrackingRecord[] {
+export function parseTrackingRows(bytes: string): TrackingRecord[] {
   const body = JSON.parse(bytes) as Partial<TrackingFile>;
   const rows = Array.isArray(body.tracking) ? body.tracking : [];
   return rows.map(coerceTrackingRow).filter((r): r is TrackingRecord => r !== null);
 }
 
-function serializeTracking(rows: TrackingRecord[]): string {
+export function serializeTracking(rows: TrackingRecord[]): string {
   const payload: TrackingFile = { $schema_version: 1, $meta: TRACKING_META, tracking: rows };
   return `${JSON.stringify(payload, null, 2)}\n`;
 }

@@ -334,7 +334,7 @@ Name comparison for (b) normalizes `vendor_name` on both sides: Unicode NFC, tri
 2. `apply` only: if any request token differs from the token just read, return 409 conflict (below), writing nothing.
 3. Live snapshot absent: 409 `{ error: 'No live data to promote. Run "Retrieve Live Data" first.' }`.
 4. Any of the four stored documents absent: 503 `{ error }` naming it.
-5. Any present document that is not valid JSON: 500 `{ error }` naming it.
+5. Any present document that is not valid JSON, is not a JSON object, or (for the four stored documents and the live snapshot) lacks an array under "products" or "vendors": 500 { error } naming it.
 6. Call `planPromote` with: the stored records; the live records reshaped per D33; `$meta.run`; `namesInOtherCategories` (every string `product_name` in the other three stored documents); the password rows (`parsePasswordsFile`; none if absent); and the tracking rows (none if absent). A planner refusal returns 409 refused (below).
 7. If `run.finished_at` is not a non-empty string, return 409 refused, with `error` saying so.
 8. `preview`: 200 plan body with `outcome: "preview"`.
