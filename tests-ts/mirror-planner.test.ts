@@ -1229,3 +1229,308 @@ test("plan metadata: category and runId are echoed", () => {
   assert.equal(plan.category, "vendors");
   assert.equal(plan.runId, "abc-123");
 });
+
+// ---------------------------------------------------------------------------
+// D27 — live Added record with no stored counterpart
+// ---------------------------------------------------------------------------
+
+test("D27 (Added): a live record with no stored counterpart is reported once under couldNotCheck and not appended", () => {
+  const a = P("alpha");
+  const n = P("new");
+  const storedA = product("Alpha", a);
+  const liveA = product("Alpha", a, { product_description: "fresh" });
+  const liveN = product("New Thing", n);
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "added",
+        stored: [storedA],
+        live: [liveA, liveN],
+        run: makeRun([
+          outcome(a, "protected_unlocked", { name: "Alpha" }),
+          outcome(n, "protected_unlocked", { name: "New Thing" }),
+        ]),
+        passwords: [pw("Alpha"), pw("New Thing")],
+        tracking: [tr("Alpha"), tr("New Thing")],
+      })
+    )
+  );
+  assert.deepEqual(plan.report.couldNotCheck, [
+    { url: n, name: "New Thing", reason: "on the live site, no stored Added record" },
+  ]);
+  assert.deepEqual(plan.nextStored, [liveA]);
+  assert.equal(plan.deletionsAllowed, true);
+  assert.equal(plan.deletionsBlockedReason, null);
+  assert.deepEqual(plan.passwordNamesToDelete, []);
+  assert.deepEqual(plan.trackingNamesToDelete, []);
+  assert.deepEqual(plan.report.updated, [{ url: a, name: "Alpha" }]);
+  assertReportEmptyExcept(plan.report, ["updated", "couldNotCheck"]);
+});
+
+// ---------------------------------------------------------------------------
+// D28 — outcomes with no stored record and no table row
+// ---------------------------------------------------------------------------
+
+test("D28 (Published): fetch_error with no stored record is reported under couldNotCheck, not appended", () => {
+  const url = P("new");
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "published",
+        run: makeRun([outcome(url, "fetch_error", { name: "New Page", detail: "HTTP 503" })]),
+      })
+    )
+  );
+  assert.deepEqual(plan.report.couldNotCheck, [
+    { url, name: "New Page", reason: "no stored record; outcome fetch_error: HTTP 503" },
+  ]);
+  assert.deepEqual(plan.nextStored, []);
+  assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+});
+
+test("D28 (Published): parse_error with no stored record is reported under couldNotCheck, not appended", () => {
+  const url = P("new");
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "published",
+        run: makeRun([outcome(url, "parse_error")]),
+      })
+    )
+  );
+  assert.deepEqual(plan.report.couldNotCheck, [
+    { url, name: url, reason: "no stored record; outcome parse_error" },
+  ]);
+  assert.deepEqual(plan.nextStored, []);
+  assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+});
+
+test("D28 (Vendors): fetch_error with no stored record is reported under couldNotCheck, not appended", () => {
+  const url = V("newco");
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "vendors",
+        run: makeRun([outcome(url, "fetch_error", { name: "NewCo", detail: "timeout" })]),
+      })
+    )
+  );
+  assert.deepEqual(plan.report.couldNotCheck, [
+    { url, name: "NewCo", reason: "no stored record; outcome fetch_error: timeout" },
+  ]);
+  assert.deepEqual(plan.nextStored, []);
+  assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+});
+
+test("D28 (Vendors): parse_error with no stored record is reported under couldNotCheck, not appended", () => {
+  const url = V("newco");
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "vendors",
+        run: makeRun([outcome(url, "parse_error", { name: "NewCo", detail: "no <article>" })]),
+      })
+    )
+  );
+  assert.deepEqual(plan.report.couldNotCheck, [
+    { url, name: "NewCo", reason: "no stored record; outcome parse_error: no <article>" },
+  ]);
+  assert.deepEqual(plan.nextStored, []);
+  assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+});
+
+test("D28 (Added): fetch_error with no stored record is reported under couldNotCheck", () => {
+  const url = P("new");
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "added",
+        run: makeRun([outcome(url, "fetch_error", { name: "New", detail: "HTTP 500" })]),
+      })
+    )
+  );
+  assert.deepEqual(plan.report.couldNotCheck, [
+    { url, name: "New", reason: "no stored record; outcome fetch_error: HTTP 500" },
+  ]);
+  assert.deepEqual(plan.nextStored, []);
+  assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+});
+
+test("D28 (Added): password_rejected with no stored record is reported under couldNotCheck", () => {
+  const url = P("rej");
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "added",
+        run: makeRun([outcome(url, "password_rejected", { name: "Rejected" })]),
+        passwords: [pw("Rejected")],
+      })
+    )
+  );
+  assert.deepEqual(plan.report.couldNotCheck, [
+    { url, name: "Rejected", reason: "no stored record; outcome password_rejected" },
+  ]);
+  assert.deepEqual(plan.nextStored, []);
+  assert.deepEqual(plan.passwordNamesToDelete, []);
+  assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+});
+
+test("D28 (Added): no_password with no stored record is reported under couldNotCheck", () => {
+  const url = P("nopw");
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "added",
+        run: makeRun([outcome(url, "no_password", { name: "No Pw" })]),
+      })
+    )
+  );
+  assert.deepEqual(plan.report.couldNotCheck, [
+    { url, name: "No Pw", reason: "no stored record; outcome no_password" },
+  ]);
+  assert.deepEqual(plan.nextStored, []);
+  assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+});
+
+test("D28 (Added): public_ok with no stored record belongs to Published and is not reported", () => {
+  const url = P("pub");
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "added",
+        run: makeRun([outcome(url, "public_ok", { name: "Pub" })]),
+      })
+    )
+  );
+  assert.deepEqual(plan.nextStored, []);
+  assertReportEmptyExcept(plan.report, []);
+});
+
+test("D28 (Published): protected statuses with no stored record belong to Added and are not reported", () => {
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "published",
+        run: makeRun([
+          outcome(P("a"), "protected_unlocked"),
+          outcome(P("b"), "password_rejected"),
+          outcome(P("c"), "no_password"),
+          outcome(P("d"), "not_tracked"),
+        ]),
+      })
+    )
+  );
+  assert.deepEqual(plan.nextStored, []);
+  assertReportEmptyExcept(plan.report, []);
+});
+
+test("D27/D28 de-duplication: a live Added record with no stored record is reported once, with the D27 reason", () => {
+  const url = P("new");
+  const plan = okPlan(
+    planPromote(
+      makeInput({
+        category: "added",
+        live: [product("From Live", url)],
+        run: makeRun([outcome(url, "protected_unlocked")]),
+      })
+    )
+  );
+  assert.deepEqual(plan.report.couldNotCheck, [
+    { url, name: "From Live", reason: "on the live site, no stored Added record" },
+  ]);
+  assert.deepEqual(plan.nextStored, []);
+  assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+});
+
+// ---------------------------------------------------------------------------
+// D27/D28 invariant — only couldNotCheck changes
+// ---------------------------------------------------------------------------
+
+/** The plan with report.couldNotCheck blanked, for comparing every other field. */
+function withoutCouldNotCheck(plan: Plan): Plan {
+  return { ...plan, report: { ...plan.report, couldNotCheck: [] } };
+}
+
+test("D27/D28 invariant (Added): the new cases change only couldNotCheck", () => {
+  const base: RunOutcome[] = [
+    outcome(P("alpha"), "public_ok", { name: "Alpha" }),
+    outcome(P("beta"), "protected_unlocked", { name: "Beta" }),
+    outcome(P("gamma"), "password_rejected"),
+    outcome(P("ghost"), "not_tracked", { name: "Ghost" }),
+    outcome(P("pub"), "public_ok", { name: "Pub" }),
+  ];
+  const extra: RunOutcome[] = [
+    outcome(P("new"), "protected_unlocked", { name: "New" }),
+    outcome(P("rej"), "password_rejected", { name: "Rej" }),
+    outcome(P("nopw"), "no_password", { name: "NoPw" }),
+    outcome(P("err"), "fetch_error", { detail: "HTTP 503" }),
+    outcome(P("bad"), "parse_error"),
+  ];
+  const shared = {
+    category: "added" as const,
+    stored: [product("Alpha", P("alpha")), product("Beta", P("beta")), product("Gamma", P("gamma"))],
+    namesInOtherCategories: ["Pub"],
+    passwords: [pw("Alpha"), pw("Gamma"), pw("New"), pw("Rej")],
+    tracking: [tr("Alpha"), tr("Beta"), tr("New"), tr("NoPw")],
+  };
+  const withNew = okPlan(
+    planPromote(
+      makeInput({
+        ...shared,
+        live: [product("Beta", P("beta")), product("New", P("new"))],
+        run: makeRun([...base, ...extra]),
+      })
+    )
+  );
+  const without = okPlan(
+    planPromote(makeInput({ ...shared, live: [product("Beta", P("beta"))], run: makeRun(base) }))
+  );
+  assert.ok(withNew.report.removed.length >= 1);
+  assert.equal(withNew.report.couldNotCheck.length, without.report.couldNotCheck.length + extra.length);
+  assert.deepEqual(withoutCouldNotCheck(withNew), withoutCouldNotCheck(without));
+});
+
+test("D27/D28 invariant (Published): the new cases change only couldNotCheck", () => {
+  const base: RunOutcome[] = [
+    outcome(P("a"), "public_ok", { name: "A" }),
+    outcome(P("e"), "public_ok", { name: "E" }),
+    outcome(P("x"), "fetch_error"),
+  ];
+  const extra: RunOutcome[] = [
+    outcome(P("err"), "fetch_error", { name: "Err", detail: "timeout" }),
+    outcome(P("bad"), "parse_error"),
+  ];
+  const shared = {
+    category: "published" as const,
+    stored: [product("A", P("a")), product("F", P("f")), product("X", P("x"))],
+    live: [product("A", P("a")), product("E", P("e"))],
+    tracking: [tr("F"), tr("Err")],
+  };
+  const withNew = okPlan(planPromote(makeInput({ ...shared, run: makeRun([...base, ...extra]) })));
+  const without = okPlan(planPromote(makeInput({ ...shared, run: makeRun(base) })));
+  assert.ok(withNew.report.removed.length >= 1);
+  assert.equal(withNew.report.couldNotCheck.length, without.report.couldNotCheck.length + extra.length);
+  assert.deepEqual(withoutCouldNotCheck(withNew), withoutCouldNotCheck(without));
+});
+
+test("D27/D28 invariant (Vendors): the new cases change only couldNotCheck", () => {
+  const base: RunOutcome[] = [
+    outcome(V("acme"), "public_ok", { name: "Acme" }),
+    outcome(V("secret"), "protected_vendor"),
+  ];
+  const extra: RunOutcome[] = [
+    outcome(V("err"), "fetch_error", { detail: "HTTP 500" }),
+    outcome(V("bad"), "parse_error", { name: "Bad" }),
+  ];
+  const shared = {
+    category: "vendors" as const,
+    stored: [vendor("Acme", V("acme")), vendor("Gone", V("gone"))],
+    live: [vendor("Acme", V("acme"))],
+    tracking: [tr("Gone")],
+  };
+  const withNew = okPlan(planPromote(makeInput({ ...shared, run: makeRun([...base, ...extra]) })));
+  const without = okPlan(planPromote(makeInput({ ...shared, run: makeRun(base) })));
+  assert.ok(withNew.report.removed.length >= 1);
+  assert.equal(withNew.report.couldNotCheck.length, without.report.couldNotCheck.length + extra.length);
+  assert.deepEqual(withoutCouldNotCheck(withNew), withoutCouldNotCheck(without));
+});
