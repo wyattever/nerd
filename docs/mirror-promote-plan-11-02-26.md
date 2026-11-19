@@ -387,6 +387,7 @@ Each step is one dispatch with stop-and-report gates, validated before the next 
    - 5.3 Pure decision module `frontend/lib/server/promote-mirror.ts`, covering reshape (D33), tokens (D32), envelope (D35), row changes (D40) and response bodies, with unit tests (D41).
    - 5.4 Route handler: preview and apply through `transactDocuments` and the pure module (D8, D17, D30, D32). The D13 guard, the stub block and the `$meta.missing` reads are removed (D34).
    - 5.5 Emulator verification: preview and apply for all three categories, the D32 conflict path, and D36.
+   - **Done** — commits 83db7a6, 62162db, 66b7818, 28b40e7, 321b01b; emulator-verified 2026-11-19 (report `.scratch/verification/step5-5-emulator-verification-20261119-1456.md`).
 6. **Modal and messages** (Claude CLI): D9.
 7. **Emulator end-to-end test.** Fixtures covering every row of §3.2–3.4, plus incomplete discovery. Developer browser and screen-reader check of the modal.
 8. **Retire the legacy editor** (D21). Independent; any time.
