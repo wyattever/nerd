@@ -4,7 +4,7 @@
  * (Node 25 strips types; type-only imports are erased.)
  */
 
-import { test } from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 import { planPromote } from "../frontend/lib/mirror-planner.ts";
@@ -1533,4 +1533,297 @@ test("D27/D28 invariant (Vendors): the new cases change only couldNotCheck", () 
   assert.ok(withNew.report.removed.length >= 1);
   assert.equal(withNew.report.couldNotCheck.length, without.report.couldNotCheck.length + extra.length);
   assert.deepEqual(withoutCouldNotCheck(withNew), withoutCouldNotCheck(without));
+});
+
+// ---------------------------------------------------------------------------
+// D36 — vendors with no directory URL
+// ---------------------------------------------------------------------------
+
+describe("D36: vendors with no directory URL", () => {
+  const NOT_ON_SITE_YET = "not on the site yet (no directory URL)";
+
+  function possibleMatch(storedProductName: string): string {
+    return `possible match for "${storedProductName}"; add its directory URL to link them`;
+  }
+
+  test("(a) a stored vendor with vendor_directory_url null is kept and reported once", () => {
+    const stored = vendor("NoUrl Co", V("nourl"), { vendor_directory_url: null });
+    const plan = okPlan(
+      planPromote(
+        makeInput({
+          category: "vendors",
+          stored: [stored],
+          run: makeRun([]),
+          tracking: [tr("NoUrl Co")],
+        })
+      )
+    );
+    assert.deepEqual(plan.nextStored, [stored]);
+    assert.equal(plan.nextStored[0], stored);
+    assert.deepEqual(plan.report.couldNotCheck, [{ url: "", name: "NoUrl Co", reason: NOT_ON_SITE_YET }]);
+    assert.deepEqual(plan.report.removed, []);
+    assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+    assert.equal(plan.deletionsAllowed, true);
+    assert.deepEqual(plan.trackingNamesToDelete, []);
+  });
+
+  test("(b) the same for an empty and a whitespace-only vendor_directory_url", () => {
+    for (const blank of ["", "   "]) {
+      const stored = vendor("Blank Co", V("blank"), { vendor_directory_url: blank });
+      const plan = okPlan(
+        planPromote(makeInput({ category: "vendors", stored: [stored], run: makeRun([]) }))
+      );
+      assert.deepEqual(plan.nextStored, [stored], `url ${JSON.stringify(blank)}`);
+      assert.deepEqual(
+        plan.report.couldNotCheck,
+        [{ url: "", name: "Blank Co", reason: NOT_ON_SITE_YET }],
+        `url ${JSON.stringify(blank)}`
+      );
+      assert.deepEqual(plan.report.removed, []);
+      assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+    }
+  });
+
+  test("(c) incomplete discovery: the URL-less vendor is reported only with the D36 reason", () => {
+    const urlLess = vendor("NoUrl Co", V("nourl"), { vendor_directory_url: null });
+    const acme = vendor("Acme", V("acme"));
+    const plan = okPlan(
+      planPromote(
+        makeInput({
+          category: "vendors",
+          stored: [urlLess, acme],
+          run: makeRun([], { productComplete: false, vendorComplete: false }),
+        })
+      )
+    );
+    assert.equal(plan.deletionsAllowed, false);
+    assert.equal(typeof plan.deletionsBlockedReason, "string");
+    assert.deepEqual(plan.nextStored, [urlLess, acme]);
+    assert.deepEqual(plan.report.couldNotCheck, [
+      { url: "", name: "NoUrl Co", reason: NOT_ON_SITE_YET },
+      { url: V("acme"), name: "Acme", reason: "discovery incomplete" },
+    ]);
+    assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+  });
+
+  test("(d) URL'd vendors not on site are deleted; the URL-less vendor beside them is untouched", () => {
+    const a = V("alpha");
+    const b = V("beta");
+    const urlLess = vendor("NoUrl Co", V("nourl"), { vendor_directory_url: null });
+    const plan = okPlan(
+      planPromote(
+        makeInput({
+          category: "vendors",
+          stored: [vendor("Alpha", a), urlLess, vendor("Beta", b)],
+          run: makeRun([]),
+          tracking: [tr("Alpha"), tr("Beta"), tr("NoUrl Co")],
+        })
+      )
+    );
+    assert.deepEqual(plan.nextStored, [urlLess]);
+    assert.equal(plan.nextStored[0], urlLess);
+    assert.deepEqual(plan.report.removed, [
+      { url: a, name: "Alpha", reason: "not on site" },
+      { url: b, name: "Beta", reason: "not on site" },
+    ]);
+    assert.deepEqual(plan.report.couldNotCheck, [{ url: "", name: "NoUrl Co", reason: NOT_ON_SITE_YET }]);
+    assertReportEmptyExcept(plan.report, ["removed", "couldNotCheck"]);
+    assert.deepEqual(plan.trackingNamesToDelete, ["Alpha", "Beta"]);
+  });
+
+  test("(e) two URL-less vendors: both kept in stored order; url \"\" entries sort first, in stored order", () => {
+    const err = V("err");
+    const zed = vendor("Zed", V("zed"), { vendor_directory_url: null });
+    const storedErr = vendor("Err", err);
+    const ace = vendor("Ace", V("ace"), { vendor_directory_url: "" });
+    const plan = okPlan(
+      planPromote(
+        makeInput({
+          category: "vendors",
+          stored: [zed, storedErr, ace],
+          run: makeRun([outcome(err, "fetch_error")]),
+        })
+      )
+    );
+    assert.deepEqual(plan.nextStored, [zed, storedErr, ace]);
+    assert.deepEqual(plan.report.couldNotCheck, [
+      { url: "", name: "Zed", reason: NOT_ON_SITE_YET },
+      { url: "", name: "Ace", reason: NOT_ON_SITE_YET },
+      { url: err, name: "Err", reason: "fetch error" },
+    ]);
+    assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+  });
+
+  test("(f) duplicate guard: a live vendor matching a URL-less stored vendor's normalized name is held back", () => {
+    const url = V("acme-learning");
+    const urlLess = vendor("Acme Learning (draft)", V("draft"), {
+      vendor_directory_url: null,
+      vendor_name: "Acme  Learning",
+    });
+    const live = vendor("Acme Learning", url, { vendor_name: "  ACME learning " });
+    const plan = okPlan(
+      planPromote(
+        makeInput({
+          category: "vendors",
+          stored: [urlLess],
+          live: [live],
+          run: makeRun([outcome(url, "public_ok", { name: "Acme Learning Inc." })]),
+        })
+      )
+    );
+    assert.deepEqual(plan.nextStored, [urlLess]);
+    assert.deepEqual(plan.report.appended, []);
+    assert.deepEqual(plan.report.couldNotCheck, [
+      { url: "", name: "Acme Learning (draft)", reason: NOT_ON_SITE_YET },
+      { url, name: "Acme Learning Inc.", reason: possibleMatch("Acme Learning (draft)") },
+    ]);
+    assertReportEmptyExcept(plan.report, ["couldNotCheck"]);
+  });
+
+  test("(f) duplicate guard: Unicode NFC normalization; name falls back to the live product_name", () => {
+    const url = V("cafe");
+    const urlLess = vendor("Café Draft", V("draft"), { vendor_directory_url: "", vendor_name: "Café" });
+    const live = vendor("Café", url, { vendor_name: "Café" });
+    const plan = okPlan(
+      planPromote(
+        makeInput({
+          category: "vendors",
+          stored: [urlLess],
+          live: [live],
+          run: makeRun([outcome(url, "public_ok")]),
+        })
+      )
+    );
+    assert.deepEqual(plan.nextStored, [urlLess]);
+    assert.deepEqual(plan.report.appended, []);
+    assert.deepEqual(plan.report.couldNotCheck, [
+      { url: "", name: "Café Draft", reason: NOT_ON_SITE_YET },
+      { url, name: "Café", reason: possibleMatch("Café Draft") },
+    ]);
+  });
+
+  test("(g) a live vendor whose normalized vendor_name differs is appended as before", () => {
+    const url = V("other");
+    const urlLess = vendor("Acme Draft", V("draft"), { vendor_directory_url: null, vendor_name: "Acme" });
+    const live = vendor("Acme Other", url, { vendor_name: "Acme Other" });
+    const plan = okPlan(
+      planPromote(
+        makeInput({
+          category: "vendors",
+          stored: [urlLess],
+          live: [live],
+          run: makeRun([outcome(url, "public_ok", { name: "Acme Other" })]),
+        })
+      )
+    );
+    assert.deepEqual(plan.nextStored, [urlLess, live]);
+    assert.deepEqual(plan.report.appended, [{ url, name: "Acme Other" }]);
+    assert.deepEqual(plan.report.couldNotCheck, [{ url: "", name: "Acme Draft", reason: NOT_ON_SITE_YET }]);
+    assertReportEmptyExcept(plan.report, ["appended", "couldNotCheck"]);
+  });
+
+  test("(h) vendor_name null on either side matches nothing; the live vendor is appended", () => {
+    const url = V("acme");
+    const cases: { stored: string | null; live: string | null }[] = [
+      { stored: "Acme", live: null },
+      { stored: null, live: "Acme" },
+      { stored: null, live: null },
+    ];
+    for (const names of cases) {
+      const urlLess = vendor("Acme", V("draft"), { vendor_directory_url: null, vendor_name: names.stored });
+      const live = vendor("Acme", url, { vendor_name: names.live });
+      const plan = okPlan(
+        planPromote(
+          makeInput({
+            category: "vendors",
+            stored: [urlLess],
+            live: [live],
+            run: makeRun([outcome(url, "public_ok", { name: "Acme" })]),
+          })
+        )
+      );
+      const label = JSON.stringify(names);
+      assert.deepEqual(plan.nextStored, [urlLess, live], label);
+      assert.deepEqual(plan.report.appended, [{ url, name: "Acme" }], label);
+      assert.deepEqual(
+        plan.report.couldNotCheck,
+        [{ url: "", name: "Acme", reason: NOT_ON_SITE_YET }],
+        label
+      );
+    }
+  });
+
+  test("(i) a URL-less vendor's tracking row is kept, and its name protects a deleted vendor's row (D20)", () => {
+    const shared = V("shared");
+    const gone = V("gone");
+    const urlLess = vendor("Shared", V("draft"), { vendor_directory_url: null });
+    const plan = okPlan(
+      planPromote(
+        makeInput({
+          category: "vendors",
+          stored: [urlLess, vendor("Shared", shared), vendor("Gone", gone)],
+          run: makeRun([]),
+          tracking: [tr("Shared"), tr("Gone")],
+        })
+      )
+    );
+    assert.deepEqual(plan.nextStored, [urlLess]);
+    assert.deepEqual(plan.report.removed, [
+      { url: gone, name: "Gone", reason: "not on site" },
+      { url: shared, name: "Shared", reason: "not on site" },
+    ]);
+    assert.deepEqual(plan.trackingNamesToDelete, ["Gone"]);
+    assert.ok(!plan.trackingNamesToDelete.includes("Shared"));
+  });
+
+  test("(j) Vendors: an undefined (absent) or non-string vendor_directory_url still refuses", () => {
+    const absent: Partial<DirectoryRecord> = { ...vendor("Absent Co", V("absent")) };
+    delete absent.vendor_directory_url;
+    const numeric = { ...vendor("Numeric Co", V("numeric")), vendor_directory_url: 42 } as unknown as DirectoryRecord;
+    const cases: [DirectoryRecord, string][] = [
+      [absent as DirectoryRecord, "Absent Co"],
+      [numeric, "Numeric Co"],
+    ];
+    for (const [record, name] of cases) {
+      const error = refused(
+        planPromote(makeInput({ category: "vendors", stored: [record], run: makeRun([]) }))
+      );
+      assert.equal(
+        error,
+        `Stored vendors record "${name}" has no vendor_directory_url; it cannot be matched to the run record.`
+      );
+    }
+  });
+
+  test("(k) Added and Published: a stored record with ncademi_product_url null still refuses", () => {
+    for (const category of ["added", "published"] as const) {
+      const record = { ...product("No Url", P("nourl")), ncademi_product_url: null } as unknown as PublishedProductRecord;
+      const error = refused(planPromote(makeInput({ category, stored: [record], run: makeRun([]) })));
+      assert.equal(
+        error,
+        `Stored ${category} record "No Url" has no ncademi_product_url; it cannot be matched to the run record.`
+      );
+    }
+  });
+
+  test("(l) purity: inputs are deep-equal before and after planPromote for the duplicate-guard case", () => {
+    const url = V("acme-learning");
+    const input = makeInput({
+      category: "vendors",
+      stored: [
+        vendor("Acme Learning (draft)", V("draft"), { vendor_directory_url: null, vendor_name: "Acme  Learning" }),
+        vendor("Kept", V("kept")),
+      ],
+      live: [vendor("Acme Learning", url, { vendor_name: "  ACME learning " }), vendor("Kept", V("kept"))],
+      run: makeRun([outcome(url, "public_ok", { name: "Acme Learning Inc." }), outcome(V("kept"), "public_ok")]),
+      namesInOtherCategories: ["Acme Learning"],
+      tracking: [tr("Acme Learning (draft)"), tr("Kept")],
+    });
+    const before = structuredClone(input);
+    const plan = okPlan(planPromote(input));
+    assert.deepEqual(input, before);
+    plan.nextStored.pop();
+    plan.report.couldNotCheck.pop();
+    assert.deepEqual(input, before);
+  });
 });

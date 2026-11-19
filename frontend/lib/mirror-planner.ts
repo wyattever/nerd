@@ -5,6 +5,7 @@
  * promotes. It implements the case tables of §3.2, §3.3 and §3.4, the
  * discovery gate (D15), the full-run gate (D18), the shared-name rule (D20)
  * and the protected-vendor rule (D22), against the §3.9 run-record format.
+ * Vendors with no directory URL are left untouched and guard against duplicates (D36).
  *
  * Purity: no I/O, no clock, no randomness, and no mutation of any input.
  * Only `import type` statements are used so the module runs under Node's
@@ -90,7 +91,7 @@ export interface PlanReport {
   needsCorrectPassword: ReportEntry[];
   /** Added only: `no_password`. */
   needsPassword: ReportEntry[];
-  /** fetch/parse error, protected vendor page, discovery incomplete; items with no stored record (D27, D28). */
+  /** fetch/parse error, protected vendor page, discovery incomplete; items with no stored record (D27, D28); vendors with no directory URL and their possible live matches (D36). */
   couldNotCheck: { url: string; name: string; reason: string }[];
   /** Added only: `not_tracked` outcomes with no stored record. */
   untrackedProtected: { url: string; name: string | null }[];
@@ -178,6 +179,20 @@ function matchKey(category: Category, record: StoredRecord): string | null {
       ? record.vendor_directory_url
       : readProp(record, "ncademi_product_url");
   return typeof raw === "string" && raw.length > 0 ? raw : null;
+}
+
+/** D36: vendor_name for duplicate matching: NFC, trimmed, whitespace runs collapsed, lower-cased. */
+function normalizeVendorName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
+  return normalized === "" ? null : normalized;
+}
+
+/** D36: true when vendor_directory_url is null, or a string that is empty or whitespace-only. */
+function hasNoDirectoryUrl(record: StoredRecord): boolean {
+  const raw: unknown = record.vendor_directory_url;
+  if (raw === null) return true;
+  return typeof raw === "string" && raw.trim() === "";
 }
 
 function withDetail(base: string, detail: string | null): string {
@@ -367,9 +382,26 @@ export function planPromote(input: PlanInput): PlanResult {
 
   // ---- Index stored and live records -----------------------------------------
 
-  const storedEntries: { key: string; record: StoredRecord }[] = [];
+  // key null: a URL-less stored vendor (D36), carried in stored order.
+  const storedEntries: { key: string | null; record: StoredRecord }[] = [];
   const storedByKey = new Map<string, StoredRecord>();
+  // D36: normalized vendor_name → product_name of a URL-less stored vendor (first entry wins).
+  const urlLessVendorNames = new Map<string, string>();
   for (const record of input.stored) {
+    // RESOLVED (D36): a stored vendor whose vendor_directory_url is null, empty or
+    // whitespace-only is "not on the site yet". It is kept unchanged, never
+    // deleted and never blocks the promote; it bypasses decide(), the D15 gate
+    // and the duplicate-key check. Checked before matchKey, which accepts a
+    // whitespace-only key. Undefined or non-string URLs still refuse below.
+    // Ruling: untouched, reported under couldNotCheck.
+    if (category === "vendors" && hasNoDirectoryUrl(record)) {
+      const normalizedName = normalizeVendorName(record.vendor_name);
+      if (normalizedName !== null && !urlLessVendorNames.has(normalizedName)) {
+        urlLessVendorNames.set(normalizedName, record.product_name);
+      }
+      storedEntries.push({ key: null, record });
+      continue;
+    }
     const key = matchKey(category, record);
     if (key === null) {
       return fail(
@@ -428,6 +460,12 @@ export function planPromote(input: PlanInput): PlanResult {
 
   for (const { key, record } of storedEntries) {
     const name = record.product_name;
+    if (key === null) {
+      // D36 (see the indexing loop): kept unchanged, before decide() and the D15 gate.
+      nextStored.push(record);
+      couldNotCheck.push({ url: "", name, reason: "not on the site yet (no directory URL)" });
+      continue;
+    }
     const outcome = outcomesByUrl.get(key);
 
     if (outcome !== undefined && outcome.post_type !== postType) {
@@ -525,6 +563,23 @@ export function planPromote(input: PlanInput): PlanResult {
       if (storedByKey.has(key)) continue;
       const outcome = outcomesByUrl.get(key);
       const outcomeName = outcome !== undefined ? outcome.name : null;
+      if (category === "vendors") {
+        // RESOLVED (D36): duplicate guard. A live vendor whose normalized
+        // vendor_name matches a URL-less stored vendor is not appended; it is
+        // reported as a possible match so the operator can add the URL.
+        // Ruling: not appended; reported under couldNotCheck.
+        const normalizedName = normalizeVendorName(record.vendor_name);
+        const storedProductName =
+          normalizedName !== null ? urlLessVendorNames.get(normalizedName) : undefined;
+        if (storedProductName !== undefined) {
+          couldNotCheck.push({
+            url: key,
+            name: outcomeName ?? record.product_name,
+            reason: `possible match for "${storedProductName}"; add its directory URL to link them`,
+          });
+          continue;
+        }
+      }
       nextStored.push(record);
       appended.push({ url: key, name: outcomeName ?? record.product_name });
     }
