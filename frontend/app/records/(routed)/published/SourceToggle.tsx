@@ -74,7 +74,7 @@ export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMod
   const searchParams = useSearchParams();
   const router = useRouter();
   const source: "stored" | "live" = searchParams.get("source") === "live" ? "live" : "stored";
-  const { setLiveLog, focusMessages } = useMessages();
+  const { appendLog, focusMessages } = useMessages();
   const [isPromoting, setIsPromoting] = useState(false);
 
   async function handleUpdateStoredData() {
@@ -105,52 +105,38 @@ export function SourceToggle({ category, hasLiveScrapeData, lastScraped, viewMod
       };
 
       if (!response.ok) {
-        setLiveLog((prev) => [
-          ...prev,
-          {
-            stage: "promote-error",
-            message: `Update Stored Data failed: ${result.error ?? `server responded ${response.status}`}.`,
-          },
-        ]);
+        appendLog(
+          "promote-error",
+          `Update Stored Data failed: ${result.error ?? `server responded ${response.status}`}.`
+        );
         return;
       }
 
-      setLiveLog((prev) => [
-        ...prev,
-        {
-          stage: "promote",
-          message:
-            `Merged live ${category} data into your stored ${category} records ` +
-            `(${result.updated ?? 0} updated, ${result.keptFromStored ?? 0} kept, ${result.addedNew ?? 0} new; ` +
-            `${result.total ?? 0} total). Previous version backed up; live snapshot cleared.`,
-        },
-      ]);
+      appendLog(
+        "promote",
+        `Merged live ${category} data into your stored ${category} records ` +
+          `(${result.updated ?? 0} updated, ${result.keptFromStored ?? 0} kept, ${result.addedNew ?? 0} new; ` +
+          `${result.total ?? 0} total). Previous version backed up; live snapshot cleared.`
+      );
       // Separate entry (distinct `stage`, since LiveLogEntry.stage doubles as
       // this list's React key) so the count summary above and the name list
       // read as two distinct lines, not one runon. Only pushed when there's
       // something to say -- no "no new products" noise line.
       if (result.addedProducts && result.addedProducts.length > 0) {
-        setLiveLog((prev) => [
-          ...prev,
-          {
-            stage: "promote-added",
-            message: `New records created for the following products: ${result.addedProducts!.join(", ")}.`,
-          },
-        ]);
+        appendLog(
+          "promote-added",
+          `New records created for the following products: ${result.addedProducts!.join(", ")}.`
+        );
       }
       // Distinct stage again, same reasoning as promote-added above -- a
       // third, separate line rather than folding into either of the other
       // two. Only pushed when there's something to say.
       if (result.stubProducts && result.stubProducts.length > 0) {
-        setLiveLog((prev) => [
-          ...prev,
-          {
-            stage: "promote-stubs",
-            message:
-              `New products discovered on the live site, added for tracking with a generated ` +
-              `password: ${result.stubProducts!.join(", ")}. Set each one's real password on WordPress to match.`,
-          },
-        ]);
+        appendLog(
+          "promote-stubs",
+          `New products discovered on the live site, added for tracking with a generated ` +
+            `password: ${result.stubProducts!.join(", ")}. Set each one's real password on WordPress to match.`
+        );
       }
       // The live snapshot is gone -- leave the live view so the refresh
       // below doesn't try to render a record from a document that no longer
