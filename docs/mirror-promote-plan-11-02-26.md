@@ -439,6 +439,7 @@ Each step is one dispatch with stop-and-report gates, validated before the next 
    - 6.2 The D9 modal component (D43–D49, D51, D54, D55), statically verified.
    - 6.3 `SourceToggle` wiring: preview, apply, conflict, refused, error and unknown flows; Messages lines; focus on close; navigation after apply (D52); the button gate (D53); focus-ring contrast (D55). Developer browser and VoiceOver check before commit.
 7. **Emulator end-to-end test.** Fixtures covering every row of §3.2–3.4, plus incomplete discovery. Developer browser and screen-reader check of the modal.
+   - **Done** — tests-ts/promote-e2e.test.ts (11 cases; every §3.2–3.4 row covered), emulator-verified 2026-11-19; screen-reader check of the modal done in 6.3.
 8. **Retire the legacy editor** (D21). Independent; any time.
 9. **DECISION_LOG entry** recording D1–D29, with a forward pointer on the merge-rule entry it reverses.
 
