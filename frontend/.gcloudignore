@@ -9,3 +9,9 @@
 emulator-data/
 *.log
 test-results/
+# Local data and working files that must never reach a Cloud Build upload.
+# passwords.json holds vendor-review password values; no frontend code
+# imports it, so the build does not need it.
+lib/passwords.json
+.scratch/
+.claude/

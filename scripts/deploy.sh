@@ -1,11 +1,54 @@
 #!/bin/bash
-# scripts/deploy.sh — N.E.R.D. Phase 5 Deployment Script
-# Provisions infrastructure and deploys the two Cloud Run services:
-#   nerd-api       the Python parse service (private)
-#   nerd-frontend  the Next.js app (public)
-# Run from project root: bash scripts/deploy.sh --prod
-# Prerequisites: gcloud CLI authenticated, firebase CLI authenticated,
-#   Firestore in Native mode initialized.
+# scripts/deploy.sh -- N.E.R.D. Cloud Run deploys, one named service per run.
+#
+# USAGE (run from anywhere inside the repo):
+#   bash scripts/deploy.sh candidate <frontend|api>
+#       Build the image from a clean HEAD equal to origin/main, tagged with
+#       the git short SHA. Resolve its digest, then deploy by digest with
+#       --no-traffic --tag=candidate. Print the candidate URL and the exact
+#       promote and rollback commands, then exit. Never shifts traffic.
+#   bash scripts/deploy.sh promote <frontend|api> <revision>
+#       Route 100% of traffic to <revision>, after the operator types the
+#       revision name exactly. Then remove the `candidate` tag and print the
+#       rollback command.
+#   bash scripts/deploy.sh status <frontend|api>
+#       Read-only: serving revision(s), traffic split, tags, image.
+#   bash scripts/deploy.sh [-h|--help]
+#       This usage.
+#
+# Infrastructure provisioning (APIs, Artifact Registry repo, service
+# accounts, IAM bindings, Firestore rules and indexes, nerd-api FRONTEND_URL)
+# lives in scripts/provision.sh, one named step at a time.
+#
+# DECISIONS (deploy-sh recon 2026-11-19, section C3; all accepted):
+#   Q1  Rollback = `promote <service> <previous revision>`; candidate and
+#       promote both print it, with the revision that was serving at 100%.
+#   Q2  NEXT_PUBLIC_FIREBASE_API_KEY / _APP_ID come from the operator's
+#       environment, with the placeholder checks (frontend builds only).
+#   Q3  nerd-api has its own candidate/promote path, built by
+#       cloudbuild.api.yaml with -f Dockerfile.api (no Dockerfile copy).
+#   Q4  This script never sets, updates or removes env vars. No env flags.
+#   Q5  KNOWN: nerd-frontend still carries runtime env vars
+#       NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_APP_ID from an
+#       earlier deploy. They are inert (the bundle bakes these at build time)
+#       and are deliberately left in place.
+#   Q6  The nerd-api FRONTEND_URL patch lives in provision.sh.
+#   Q7  All provisioning lives in provision.sh.
+#   Q8  The Firestore rules and indexes deploy lives in provision.sh.
+#   Q9  candidate requires a clean tree and HEAD == origin/main, after
+#       `git fetch origin main`. No override flag.
+#   Q10 Refuses to run if FIRESTORE_EMULATOR_HOST, FIREBASE_AUTH_EMULATOR_HOST,
+#       LOCAL_MODE or NEXT_PUBLIC_DISABLE_AUTH is set and non-empty. This is
+#       checked before any git or gcloud command.
+#   Q11 promote requires the revision name typed exactly. No --yes, no bypass.
+#   Q12 promote removes the `candidate` tag after the traffic switch.
+#   Q13 Upload contexts: the root .gcloudignore is an allowlist;
+#       frontend/.gcloudignore excludes local data.
+#   Q14 The unused NEXT_PUBLIC_API_BASE_URL build arg is removed.
+#
+# Every gcloud command passes --project explicitly (and --region for Cloud
+# Run). This script never writes the operator's gcloud configuration and
+# never reads GOOGLE_CLOUD_PROJECT.
 
 set -euo pipefail
 
@@ -13,290 +56,249 @@ PROJECT_ID="edtech-agent-2026"
 REGION="us-central1"
 REPO="us-central1-docker.pkg.dev/${PROJECT_ID}/nerd-repo"
 
-FRONTEND_SA="nerd-frontend-sa@${PROJECT_ID}.iam.gserviceaccount.com"
-API_SA="nerd-api-sa@${PROJECT_ID}.iam.gserviceaccount.com"
-
-# ── PRODUCTION GUARD ──────────────────────────────────────────────────────────
-# Everything below touches the real project. There is no emulator path and no
-# dry run, so the only protection is refusing to start without an explicit
-# --prod. Same stance as scripts/scrape_ncademi_live.py: fail fast, before any
-# work, rather than part-way through a multi-minute deploy.
-
-PROD=0
-for arg in "$@"; do
-  case "${arg}" in
-    --prod) PROD=1 ;;
-    *)
-      echo "Unknown argument: ${arg}" >&2
-      echo "Usage: bash scripts/deploy.sh --prod" >&2
-      exit 2
-      ;;
-  esac
+# ── Q10 GUARD: first, before argument parsing, git or gcloud ─────────────────
+for guard_var in FIRESTORE_EMULATOR_HOST FIREBASE_AUTH_EMULATOR_HOST LOCAL_MODE NEXT_PUBLIC_DISABLE_AUTH; do
+  if [ -n "${!guard_var:-}" ]; then
+    echo "Refusing to run: ${guard_var} is set in this environment." >&2
+    echo "Emulator and local-mode variables must never reach a production build or deploy." >&2
+    echo "Unset it (unset ${guard_var}) and re-run." >&2
+    exit 2
+  fi
 done
 
-if [ "${PROD}" -ne 1 ]; then
-  echo "Refusing to run: this script deploys to the REAL ${PROJECT_ID} project" >&2
-  echo "in ${REGION}. There is no staging target and no dry run." >&2
-  echo "" >&2
-  echo "  to deploy:  bash scripts/deploy.sh --prod" >&2
-  exit 2
-fi
+usage() {
+  cat <<'USAGE'
+Usage:
+  bash scripts/deploy.sh candidate <frontend|api>
+  bash scripts/deploy.sh promote   <frontend|api> <revision>
+  bash scripts/deploy.sh status    <frontend|api>
 
-# ── OPERATOR INPUT CHECKS ─────────────────────────────────────────────────────
-# All of these are checked BEFORE the first gcloud call. A container build that
-# runs for minutes and only then discovers a missing variable is strictly worse
-# than a fast failure.
+Exactly one service per run. Provisioning: scripts/provision.sh.
+USAGE
+}
 
-if [ -z "${NEXT_PUBLIC_FIREBASE_API_KEY:-}" ] || [ "${NEXT_PUBLIC_FIREBASE_API_KEY}" = "PLACEHOLDER_FROM_FIREBASE_CONSOLE" ]; then
-  echo "  ERROR: NEXT_PUBLIC_FIREBASE_API_KEY is not set or is still a placeholder." >&2
-  echo "  Set it before running deploy.sh: export NEXT_PUBLIC_FIREBASE_API_KEY=your_key" >&2
+die() {
+  echo "ERROR: $*" >&2
   exit 1
+}
+
+# ── ARGUMENT VALIDATION ───────────────────────────────────────────────────────
+
+if [ "$#" -eq 0 ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
 fi
 
-if [ -z "${NEXT_PUBLIC_FIREBASE_APP_ID:-}" ] || [ "${NEXT_PUBLIC_FIREBASE_APP_ID}" = "PLACEHOLDER_FROM_FIREBASE_CONSOLE" ]; then
-  echo "  ERROR: NEXT_PUBLIC_FIREBASE_APP_ID is not set or is still a placeholder." >&2
-  exit 1
-fi
+COMMAND="$1"
+case "${COMMAND}" in
+  candidate|status)
+    [ "$#" -eq 2 ] || { usage >&2; exit 2; }
+    ;;
+  promote)
+    [ "$#" -eq 3 ] || { usage >&2; exit 2; }
+    ;;
+  *)
+    echo "Unknown command: ${COMMAND}" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
 
-# The sign-in allowlist. Deliberately NOT hardcoded here: it is the list of
-# humans who can use the deployed app, and it changes independently of this
-# script. lib/server/session.ts fails CLOSED -- an empty or unset list denies
-# everyone, including whoever is running this deploy.
-if [ -z "${NERD_ALLOWED_EMAILS:-}" ]; then
-  echo "  ERROR: NERD_ALLOWED_EMAILS is not set." >&2
-  echo "  Comma-separated sign-in allowlist. lib/server/session.ts fails closed:" >&2
-  echo "  deploying with this unset locks everyone out of the app." >&2
-  echo "  Example: export NERD_ALLOWED_EMAILS=\"a@example.com,b@example.com\"" >&2
-  exit 1
-fi
+case "$2" in
+  frontend|api) SERVICE_KEY="$2" ;;
+  *)
+    echo "Unknown service: $2 (expected frontend or api)" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+SERVICE="nerd-${SERVICE_KEY}"
 
-echo "==> N.E.R.D. Phase 5 Deployment"
-echo "[target] PRODUCTION -- project ${PROJECT_ID}, region ${REGION}."
-echo ""
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# ── 0. PRE-FLIGHT ─────────────────────────────────────────────────────────────
+# ── READ-ONLY HELPERS ─────────────────────────────────────────────────────────
 
-echo "[0] Pre-flight..."
-gcloud config set project "${PROJECT_ID}"
+# The service description as JSON (read-only).
+describe_service_json() {
+  gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format=json
+}
 
-# Enable required APIs
-gcloud services enable \
-  run.googleapis.com \
-  firestore.googleapis.com \
-  artifactregistry.googleapis.com \
-  cloudbuild.googleapis.com \
-  firebase.googleapis.com \
-  iam.googleapis.com \
-  --quiet
+# Reads service JSON on stdin and prints one field:
+#   serving    the revision(s) at 100% (or the split), space-separated
+#   candidate  "<revision> <url>" of the traffic entry tagged `candidate`
+#   summary    a human-readable traffic/tags/image summary
+service_field() {
+  python3 -c '
+import json, sys
+field = sys.argv[1]
+svc = json.load(sys.stdin)
+traffic = svc.get("status", {}).get("traffic", [])
+if field == "serving":
+    names = [t.get("revisionName", "") for t in traffic if t.get("percent", 0) > 0]
+    print(" ".join(n for n in names if n))
+elif field == "candidate":
+    for t in traffic:
+        if t.get("tag") == "candidate":
+            print(t.get("revisionName", ""), t.get("url", ""))
+            break
+elif field == "summary":
+    print("service:", svc.get("metadata", {}).get("name"))
+    print("traffic:")
+    for t in traffic:
+        print("  revision={} percent={} tag={} latest={}".format(
+            t.get("revisionName"), t.get("percent", 0), t.get("tag"), t.get("latestRevision", False)))
+    image = svc.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [{}])[0].get("image")
+    print("template image:", image)
+    print("latest ready revision:", svc.get("status", {}).get("latestReadyRevisionName"))
+    print("url:", svc.get("status", {}).get("url"))
+' "$1"
+}
 
-# Create Artifact Registry repo if it doesn't exist
-if ! gcloud artifacts repositories describe nerd-repo --location="${REGION}" &>/dev/null; then
-  echo "  Creating Artifact Registry repository: nerd-repo..."
-  gcloud artifacts repositories create nerd-repo \
-    --repository-format=docker \
-    --location="${REGION}" \
-    --description="N.E.R.D. container images"
-fi
+# ── status ────────────────────────────────────────────────────────────────────
 
-# ── 1. SERVICE ACCOUNTS ───────────────────────────────────────────────────────
-# One identity per service, rather than the project default Compute Engine SA
-# both used to inherit. Same describe-then-create shape as the repo above.
+cmd_status() {
+  describe_service_json | service_field summary
+}
 
-echo "[1] Service accounts..."
+# ── candidate ─────────────────────────────────────────────────────────────────
 
-if ! gcloud iam service-accounts describe "${FRONTEND_SA}" &>/dev/null; then
-  echo "  Creating nerd-frontend-sa..."
-  gcloud iam service-accounts create nerd-frontend-sa \
-    --display-name="N.E.R.D. frontend (Cloud Run runtime)"
-fi
+cmd_candidate() {
+  # Q2: frontend build values from the environment, checked before any work.
+  # Values are never printed.
+  if [ "${SERVICE_KEY}" = "frontend" ]; then
+    for v in NEXT_PUBLIC_FIREBASE_API_KEY NEXT_PUBLIC_FIREBASE_APP_ID; do
+      if [ -z "${!v:-}" ] || [ "${!v}" = "PLACEHOLDER_FROM_FIREBASE_CONSOLE" ]; then
+        die "${v} is not set or is still a placeholder. Export it before running a frontend candidate."
+      fi
+      # Firebase web config values are [A-Za-z0-9:_-]. Anything else (a URL,
+      # a host:port, a comma that would split --substitutions) is refused.
+      if ! [[ "${!v}" =~ ^[A-Za-z0-9:_-]+$ ]]; then
+        die "${v} contains characters outside [A-Za-z0-9:_-]; refusing to pass it to the build."
+      fi
+    done
+  fi
 
-if ! gcloud iam service-accounts describe "${API_SA}" &>/dev/null; then
-  echo "  Creating nerd-api-sa..."
-  gcloud iam service-accounts create nerd-api-sa \
-    --display-name="N.E.R.D. Python parse service (Cloud Run runtime)"
-fi
+  # Q9: a clean tree, and HEAD equal to origin/main. No override.
+  cd "${REPO_ROOT}"
+  git fetch --quiet origin main
+  local head origin_main
+  head="$(git rev-parse HEAD)"
+  origin_main="$(git rev-parse origin/main)"
+  if [ "${head}" != "${origin_main}" ]; then
+    die "HEAD (${head:0:12}) is not origin/main (${origin_main:0:12}). Candidates are built only from a pushed main."
+  fi
+  if [ -n "$(git status --porcelain)" ]; then
+    git status --short >&2
+    die "The working tree is not clean (including untracked files). Commit, stash or remove them first."
+  fi
 
-# nerd-frontend-sa reads and writes every document in nerd_documents through
-# the Firebase Admin SDK (lib/server/documents.ts), and mints/verifies session
-# cookies (lib/server/session.ts). datastore.user covers the Firestore half.
-echo "  Granting roles/datastore.user to nerd-frontend-sa..."
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${FRONTEND_SA}" \
-  --role="roles/datastore.user" \
-  --condition=None \
-  --quiet >/dev/null
+  local tag
+  tag="$(git rev-parse --short HEAD)"
 
-# Session-cookie minting (verifyIdToken / createSessionCookie in
-# lib/server/session.ts) requires this role. Without it, sign-in fails with
-# a generic 403 that gives no indication IAM is the cause -- hit live on the
-# first production deploy of a fresh nerd-frontend-sa. See Decision #67.
-echo "  Granting roles/firebaseauth.admin to nerd-frontend-sa..."
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${FRONTEND_SA}" \
-  --role="roles/firebaseauth.admin" \
-  --condition=None \
-  --quiet >/dev/null
+  echo "[target] project ${PROJECT_ID}, region ${REGION}, service ${SERVICE}, commit ${tag}"
 
-# NOTE, if sign-in breaks after this change: Decision #61 recorded
-# createSessionCookie() working under ADC WITHOUT an explicit
-# roles/iam.serviceAccountTokenCreator grant -- and flagged that it might not
-# on a fresh environment. A dedicated service account IS a fresh environment.
-# If session-cookie minting starts failing, that grant is the first thing to
-# try:
-#   gcloud iam service-accounts add-iam-policy-binding "${FRONTEND_SA}" \
-#     --member="serviceAccount:${FRONTEND_SA}" \
-#     --role="roles/iam.serviceAccountTokenCreator"
-# It is deliberately NOT applied speculatively.
+  # Recorded before the deploy, for the rollback command (Q1).
+  local previous
+  previous="$(describe_service_json | service_field serving)"
 
-# nerd-api-sa gets NO project-level roles. The service touches exactly one
-# Google Cloud resource: a Firestore get() in /healthz (api/main.py, via
-# api/store.py's AsyncClient) against a document that does not exist. That
-# probe is the only reason it reaches Firestore at all. Everything else it does
-# -- parsing markdown, checking link liveness over plain HTTP -- needs no GCP
-# permission. If /healthz's Firestore probe is ever dropped, this SA needs
-# nothing whatsoever.
+  # Build. The image is tagged with the git short SHA.
+  if [ "${SERVICE_KEY}" = "frontend" ]; then
+    gcloud builds submit "${REPO_ROOT}/frontend" --project "${PROJECT_ID}" \
+      --config "${REPO_ROOT}/frontend/cloudbuild.yaml" \
+      --substitutions "_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID},_REPO=${REPO},_TAG=${tag}" \
+      --quiet
+  else
+    gcloud builds submit "${REPO_ROOT}" --project "${PROJECT_ID}" \
+      --config "${REPO_ROOT}/cloudbuild.api.yaml" \
+      --substitutions "_REPO=${REPO},_TAG=${tag}" \
+      --quiet
+  fi
 
-# ── 2. FIRESTORE RULES AND INDEXES ────────────────────────────────────────────
-# Runs BEFORE any service deploy, because the index configuration is a hard
-# precondition for the app functioning at all.
-#
-# firestore.indexes.json declares single-field index EXEMPTIONS on
-# nerd_documents.bytes and backups.bytes. Firestore indexes every field
-# automatically and rejects any commit whose indexed value exceeds 1,500 bytes
-# with INVALID_ARGUMENT. The `bytes` field holds a whole JSON document -- 9 KB
-# to 128 KB -- so without these exemptions EVERY write of EVERY document fails,
-# including the initial migration. This is not tuning; it is load-bearing.
-#
-# firestore.rules is deny-all by design (see its header): all access is via the
-# Admin SDK, which bypasses rules entirely.
-#
-# --project is explicit: .firebaserc aliases `prod` but declares no `default`,
-# so `firebase deploy` with no project flag would fail to resolve a target.
+  # Resolve the tag to a digest (read-only) and deploy by digest.
+  local digest
+  digest="$(gcloud artifacts docker images describe "${REPO}/${SERVICE}:${tag}" --project "${PROJECT_ID}" \
+    --format='value(image_summary.digest)')"
+  [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || die "Could not resolve a digest for ${REPO}/${SERVICE}:${tag}."
 
-echo "[2] Firestore rules and indexes..."
-firebase deploy \
-  --only firestore:rules,firestore:indexes \
-  --project "${PROJECT_ID}" \
-  --non-interactive
+  # Q4: no env flags. Service account, ingress and auth settings are inherited
+  # from the existing service.
+  gcloud run deploy "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" \
+    --image "${REPO}/${SERVICE}@${digest}" \
+    --no-traffic \
+    --tag=candidate \
+    --quiet
 
-# ── 3. BUILD AND DEPLOY API ───────────────────────────────────────────────────
+  local cand cand_rev cand_url
+  cand="$(describe_service_json | service_field candidate)"
+  cand_rev="${cand%% *}"
+  cand_url="${cand#* }"
+  [ -n "${cand_rev}" ] || die "Deployed, but no traffic entry is tagged candidate. Check: bash scripts/deploy.sh status ${SERVICE_KEY}"
 
-echo "[3] Building and deploying API..."
-cp Dockerfile.api Dockerfile
-gcloud builds submit \
-  --tag "${REPO}/nerd-api" \
-  --quiet
-rm Dockerfile
+  echo ""
+  echo "==> Candidate deployed (0% traffic)."
+  echo "    service:            ${SERVICE}"
+  echo "    image:              ${REPO}/${SERVICE}@${digest}"
+  echo "    candidate revision: ${cand_rev}"
+  echo "    candidate URL:      ${cand_url}"
+  echo "    currently serving:  ${previous:-<none>}"
+  echo ""
+  echo "    Check the candidate URL, then promote:"
+  echo "      bash scripts/deploy.sh promote ${SERVICE_KEY} ${cand_rev}"
+  if [ -n "${previous}" ] && [ "${previous}" = "${previous%% *}" ]; then
+    echo "    Rollback (after promoting), back to the revision serving now:"
+    echo "      bash scripts/deploy.sh promote ${SERVICE_KEY} ${previous}"
+  else
+    echo "    Rollback: traffic is currently split (${previous:-none}); see: bash scripts/deploy.sh status ${SERVICE_KEY}"
+  fi
+}
 
-# --no-allow-unauthenticated: nothing in a browser ever calls nerd-api. The
-# only caller is frontend/app/api/ingest/draft/route.ts, a server-side Route
-# Handler that mints a Google-signed OIDC identity token for this service's
-# audience (frontend/lib/server/gcp-identity.ts, via the instance metadata
-# server) and sends it as a Bearer token. Cloud Run IAM is therefore the
-# authentication boundary, and the frontend SA's roles/run.invoker below is
-# what makes that call succeed.
-#
-# NERD_FIREBASE_PROJECT_ID is REQUIRED: api/store.py raises at import if it is
-# unset, so the container will not start without it. It pins the Firestore
-# client explicitly rather than letting AsyncClient() resolve from
-# GOOGLE_CLOUD_PROJECT -- see that file and DECISION_LOG.md #66.
-gcloud run deploy nerd-api \
-  --image "${REPO}/nerd-api" \
-  --platform managed \
-  --region "${REGION}" \
-  --service-account "${API_SA}" \
-  --no-allow-unauthenticated \
-  --memory 2Gi \
-  --max-instances 1 \
-  --update-env-vars="GCP_LOCATION=${REGION},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},NERD_FIREBASE_PROJECT_ID=${PROJECT_ID}"
+# ── promote ───────────────────────────────────────────────────────────────────
 
-API_URL=$(gcloud run services describe nerd-api \
-  --platform managed --region "${REGION}" \
-  --format "value(status.url)")
-echo "  API deployed: ${API_URL}"
+cmd_promote() {
+  local target="$3"
+  if ! [[ "${target}" =~ ^${SERVICE}-[0-9]{5}-[a-z0-9]{3}$ ]]; then
+    die "\"${target}\" is not a ${SERVICE} revision name (expected ${SERVICE}-NNNNN-xxx)."
+  fi
 
-# Scoped to this ONE service, not granted project-wide.
-echo "  Granting roles/run.invoker on nerd-api to nerd-frontend-sa..."
-gcloud run services add-iam-policy-binding nerd-api \
-  --platform managed \
-  --region "${REGION}" \
-  --member="serviceAccount:${FRONTEND_SA}" \
-  --role="roles/run.invoker" \
-  --quiet >/dev/null
+  # Read-only checks before the prompt.
+  local ready
+  ready="$(gcloud run revisions describe "${target}" --project "${PROJECT_ID}" --region "${REGION}" \
+    --format='value(status.conditions[0].type,status.conditions[0].status)')"
+  [ "${ready}" = "Ready	True" ] || die "Revision ${target} is not Ready (got: ${ready:-nothing})."
 
-# ── 4. BUILD AND DEPLOY FRONTEND ──────────────────────────────────────────────
+  local previous
+  previous="$(describe_service_json | service_field serving)"
 
-echo "[4] Building and deploying FRONTEND..."
-# NEXT_PUBLIC_* values are inlined into the JS bundle at BUILD time, so they are
-# passed as build args here and NOT set at runtime below -- setting them on the
-# service would have no effect on the shipped bundle.
-( cd frontend && gcloud builds submit \
-  --config cloudbuild.yaml \
-  --substitutions="_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID},_REPO=${REPO}" \
-  --quiet )
+  echo "[target] project ${PROJECT_ID}, region ${REGION}, service ${SERVICE}"
+  echo "    currently serving: ${previous:-<none>}"
+  echo "    promote to:        ${target} (100%)"
+  echo ""
+  # Q11: typed confirmation, exact match, no bypass.
+  local typed=""
+  read -r -p "Type the revision name to confirm: " typed || true
+  if [ "${typed}" != "${target}" ]; then
+    die "Confirmation did not match. Nothing was changed."
+  fi
 
-# --update-env-vars, never --set-env-vars. --set-env-vars REPLACES the whole
-# environment, which would wipe every variable below that a previous deploy or
-# a manual fix had set.
-#
-# All four are read on the SERVER at runtime and are required:
-#   NERD_FIREBASE_PROJECT_ID   lib/server/firebase-admin.ts THROWS if unset; it
-#                              deliberately refuses to fall back to
-#                              GOOGLE_CLOUD_PROJECT.
-#   NERD_ALLOWED_EMAILS        lib/server/session.ts fails CLOSED; unset denies
-#                              every sign-in.
-#   NERD_PY_SERVICE_URL        base URL of nerd-api, no trailing slash
-#                              (app/api/ingest/draft/route.ts).
-#   NERD_PY_SERVICE_AUDIENCE   the OIDC `aud` claim nerd-api will require. For
-#                              Cloud Run this is that service's own base URL,
-#                              so it matches the line above; kept separate
-#                              because they diverge behind a custom domain.
-gcloud run deploy nerd-frontend \
-  --image "${REPO}/nerd-frontend" \
-  --platform managed \
-  --region "${REGION}" \
-  --service-account "${FRONTEND_SA}" \
-  --allow-unauthenticated \
-  --update-env-vars="^;^NERD_FIREBASE_PROJECT_ID=${PROJECT_ID};NERD_ALLOWED_EMAILS=${NERD_ALLOWED_EMAILS};NERD_PY_SERVICE_URL=${API_URL};NERD_PY_SERVICE_AUDIENCE=${API_URL}" \
-  --no-traffic \
-  --tag=candidate
+  gcloud run services update-traffic "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" \
+    --to-revisions="${target}=100"
 
-FRONTEND_URL=$(gcloud run services describe nerd-frontend \
-  --platform managed --region "${REGION}" \
-  --format "value(status.url)")
-echo "  Frontend deployed: ${FRONTEND_URL}"
+  # Q12: remove the candidate tag once traffic has moved.
+  gcloud run services update-traffic "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" \
+    --remove-tags=candidate
 
-echo "[4b] Patching nerd-api with resolved FRONTEND_URL..."
-gcloud run services update nerd-api \
-  --platform managed \
-  --region "${REGION}" \
-  --update-env-vars="FRONTEND_URL=${FRONTEND_URL}"
-echo "  nerd-api FRONTEND_URL set to: ${FRONTEND_URL}"
+  echo ""
+  echo "==> ${SERVICE} now serves ${target} at 100%; candidate tag removed."
+  describe_service_json | service_field summary
+  if [ -n "${previous}" ] && [ "${previous}" = "${previous%% *}" ] && [ "${previous}" != "${target}" ]; then
+    echo ""
+    echo "    Rollback:"
+    echo "      bash scripts/deploy.sh promote ${SERVICE_KEY} ${previous}"
+  fi
+}
 
-# ── 4c. PROMOTE FRONTEND TRAFFIC ─────────────────────────────────────────────
-# Additive: 4 (above) deploys the new revision with --no-traffic --tag=candidate;
-# this step routes 100% of traffic to it. Comment out 4c for an
-# inspect-the-candidate-before-promoting workflow.
-echo "[4c] Promoting nerd-frontend traffic to the latest revision..."
-gcloud run services update-traffic nerd-frontend \
-  --platform managed \
-  --region "${REGION}" \
-  --to-latest
-echo "  nerd-frontend traffic promoted to latest revision."
-
-# ── 5. SUMMARY ────────────────────────────────────────────────────────────────
-
-echo ""
-echo "==> Deployment Complete"
-echo "    API:      ${API_URL}  (private, OIDC only)"
-echo "    Frontend: ${FRONTEND_URL}"
-echo ""
-echo "    Post-deploy checklist:"
-echo "    [ ] Update Firebase Auth > Authorized Domains: add ${FRONTEND_URL}"
-echo "    [ ] Confirm sign-in works for an address in NERD_ALLOWED_EMAILS"
-echo "    [ ] Confirm Import Data works (proves the frontend's OIDC token is"
-echo "        accepted by nerd-api)"
-echo "    [ ] Firestore rules stay deny-all. They are not a gap: every read and"
-echo "        write goes through the Admin SDK, which bypasses rules entirely."
-echo "        Do NOT loosen them to 'let the service account in' -- the service"
-echo "        account was never subject to them."
+case "${COMMAND}" in
+  candidate) cmd_candidate ;;
+  status) cmd_status ;;
+  promote) cmd_promote "$@" ;;
+esac

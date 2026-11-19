@@ -1,0 +1,26 @@
+# cloudbuild.api.yaml -- Cloud Build config for the nerd-api image.
+#
+# Submitted from the repo root by `scripts/deploy.sh candidate api`. Builds
+# with -f Dockerfile.api, so the old `cp Dockerfile.api Dockerfile` step is
+# gone. The upload context is the repo root, filtered by the root
+# .gcloudignore, which is an allowlist of exactly what Dockerfile.api COPYs.
+#
+# _REPO: Artifact Registry path, us-central1-docker.pkg.dev/edtech-agent-2026/nerd-repo
+# _TAG:  the git short SHA of the commit being built (deploy.sh passes it).
+#        deploy.sh resolves this tag to a digest and deploys by digest.
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-f"
+      - "Dockerfile.api"
+      - "-t"
+      - "${_REPO}/nerd-api:${_TAG}"
+      - "."
+
+images:
+  - "${_REPO}/nerd-api:${_TAG}"
+
+substitutions:
+  _REPO: ""
+  _TAG: ""
