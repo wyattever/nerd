@@ -486,6 +486,129 @@ export async function promoteLive(params: {
   });
 }
 
+/** What transactDocuments hands `decide`: every requested key, in the order
+ *  requested, mapped to its stored bytes and etag, or null when absent. */
+export type TransactionDocs = ReadonlyMap<DocumentKey, { bytes: string; etag: string } | null>;
+
+/** What `decide` returns: complete new bytes for stored or side documents,
+ *  live snapshots to delete, and a result to hand back to the caller. */
+export interface TransactionPlan<R> {
+  writes: ReadonlyArray<{ key: DataKind | AuxKind; bytes: string }>;
+  deletes: ReadonlyArray<LiveKind>;
+  result: R;
+}
+
+/** Stages the deletion of live snapshot `key`, refreshing its rolling backup
+ *  first with the same fields promoteLive uses. A no-op when `current` is
+ *  null (the snapshot is already absent). Caller must already have
+ *  performed every transaction read. */
+function stageDelete(
+  t: Transaction,
+  key: LiveKind,
+  current: { bytes: string; etag: string } | null,
+  actor: string
+): void {
+  if (!current) return;
+  const ref = db().collection(COLLECTION).doc(key);
+  t.set(ref.collection(BACKUPS).doc(BACKUP_DOC), {
+    bytes: current.bytes,
+    etag: current.etag,
+    backed_up_at: FieldValue.serverTimestamp(),
+    replaced_by: actor,
+  });
+  t.delete(ref);
+}
+
+/**
+ * Reads several documents, decides, and writes and deletes in ONE Firestore
+ * transaction -- the mirror promote's document layer (plan D30, D31). The
+ * promote reads seven documents and writes up to four; no existing helper
+ * spans that many, and composing them would open one transaction each.
+ *
+ * Every key in `keys` is read in parallel before any write and handed to
+ * `decide` as a Map in `keys` order (null for an absent document). `decide`
+ * returns the complete new bytes for each document to write, the live
+ * snapshots to delete, and a `result`. Its plan is validated before
+ * anything is staged: every write and delete key must be one of `keys` and
+ * appear at most once, and every write must pass the size limit. Any throw,
+ * from `decide` or from validation, aborts the transaction with nothing
+ * written.
+ *
+ * `decide` MUST be a pure function of its input. Firestore re-runs the
+ * whole transaction callback on contention, so `decide` may be invoked more
+ * than once per call. The value returned is the `result` of the invocation
+ * that committed.
+ *
+ * Like the rest of this module it knows nothing about record shape: the
+ * planning, parsing and serialization all happen in `decide`. Writes are
+ * restricted by type to stored and side documents (DataKind, AuxKind), and
+ * deletions to live snapshots (LiveKind). Every write keeps the rolling
+ * backup (stageWrite); every deletion refreshes the live snapshot's backup
+ * first, as promoteLive does. Deleting a live key that is absent is a no-op.
+ *
+ * Why this exists alongside mutateDocument: mutateDocument is a
+ * single-document read-modify-write whose restriction to "passwords" is a
+ * standing decision, and it is not widened here.
+ */
+export async function transactDocuments<R>(params: {
+  keys: readonly DocumentKey[];
+  actor: string;
+  decide: (docs: TransactionDocs) => TransactionPlan<R>;
+}): Promise<R> {
+  const { keys, actor, decide } = params;
+  if (keys.length === 0) {
+    throw new Error("transactDocuments: keys must not be empty.");
+  }
+  if (new Set(keys).size !== keys.length) {
+    throw new Error(`transactDocuments: keys contain a duplicate (${keys.join(", ")}).`);
+  }
+
+  const database = db();
+  const refs = keys.map((key) => database.collection(COLLECTION).doc(key));
+
+  return database.runTransaction(async (t) => {
+    // Every read precedes every write, as Firestore requires.
+    const snaps = await Promise.all(refs.map((ref) => t.get(ref)));
+    const docs = new Map<DocumentKey, { bytes: string; etag: string } | null>();
+    keys.forEach((key, i) => docs.set(key, snapshotOf(snaps[i])));
+
+    const plan = decide(docs);
+
+    // Validate the whole plan before staging anything.
+    const requested = new Set<DocumentKey>(keys);
+    const writeKeys = new Set<DocumentKey>();
+    for (const { key, bytes } of plan.writes) {
+      if (!requested.has(key)) {
+        throw new Error(`transactDocuments: write to "${key}", which was not read.`);
+      }
+      if (writeKeys.has(key)) {
+        throw new Error(`transactDocuments: "${key}" is written more than once.`);
+      }
+      writeKeys.add(key);
+      assertSize(key, bytes);
+    }
+    const deleteKeys = new Set<DocumentKey>();
+    for (const key of plan.deletes) {
+      if (!requested.has(key)) {
+        throw new Error(`transactDocuments: delete of "${key}", which was not read.`);
+      }
+      if (deleteKeys.has(key)) {
+        throw new Error(`transactDocuments: "${key}" is deleted more than once.`);
+      }
+      deleteKeys.add(key);
+    }
+
+    for (const { key, bytes } of plan.writes) {
+      stageWrite(t, key, docs.get(key) ?? null, bytes, actor);
+    }
+    for (const key of plan.deletes) {
+      stageDelete(t, key, docs.get(key) ?? null, actor);
+    }
+
+    return plan.result;
+  });
+}
+
 /** Deletes `key`, refreshing its rolling backup first. Only the live
  *  snapshots are ever deleted in normal operation; exposed generally
  *  because the promote is not the only caller that may need it. */
