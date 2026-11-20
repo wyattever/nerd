@@ -1307,3 +1307,28 @@ A promote makes the stored Added, Published or Vendors document match what the l
   - Vendors 30 to 30: 22 updated with no content change; the 8 protected vendors left untouched (D22).
 - **Safety copy:** a full pre-apply export of all documents was saved locally outside the repository.
 - **Open items:** Grammarly's fetch error left its stored record untouched; it is re-checked on the next scrape. Nearpod's stored password was cleared (D5); the correct one is entered through the Added editor's Password field.
+### 70. NEXT.JS SECURITY UPGRADE — `next` and `eslint-config-next` 16.2.9 to 16.4.6.
+
+**Date:** 2026-11-20
+**Status:** Implemented, merged to `main` (bb0ac5c), deployed and promoted as revision `nerd-frontend-00023-hog`. Rollback target: `nerd-frontend-00020-num`. Updates #69's "currently serving" revision.
+
+#### DECISION
+
+Upgrade `next` and `eslint-config-next` from 16.2.9 to 16.4.6, both pinned exactly in `frontend/package.json`. `npm audit --omit=dev` listed 25 advisories against `next` 16.2.9, five of them critical: remote code execution through the image optimizer (AVIF and SVG inputs), `next/og` `ImageResponse`, `use cache` functions returning typed arrays, and Windows-hosted servers.
+
+**Exposure assessment (a judgment from reading the code, not a confirmed result):** the app has no `ImageResponse`, no `use cache`, no Server Actions, no rewrites and no Edge-runtime routes; the container is Linux; `next/image` is used only for static local icons. The image optimization endpoint exists with default configuration, and its exposure could not be ruled out from the code, so the upgrade was done rather than deferred.
+
+**Result:** audit 24 to 20 vulnerabilities (critical 1 to 0, high 9 to 6). `next`, `postcss` and `sharp` are cleared, and `nanoid` was patched as a side effect. React is unchanged.
+
+#### VERIFIED
+
+- `npm ci`, typecheck, lint, production build and the unit suites (77, 28, 38) on the branch.
+- Candidate deploy through Cloud Build under Node 20: install and build succeeded; unauthenticated checks (login 200, records redirect to /login, promote 401) and a signed-in browser check passed.
+- Production checks after the promote: the same terminal checks, and a signed-in check of the record counts (Added 3, Published 76, Vendors 30) and the editor icons.
+
+#### KNOWN, NOT ADDRESSED
+
+- `source-map-js` (high, denial of service) is still listed. It is a transitive dependency of the CSS tooling and needs a separate bump of a transitive package.
+- `firebase` (browser SDK), `@firebase/firestore` and `@grpc/grpc-js` (high): npm's suggested fix is a downgrade to `firebase@9.14.0`; not followed.
+- The `firebase-admin` chain (`uuid`, `protobufjs`, `gaxios` and others, moderate): separate cleanup.
+- The image runs Node 20 while `firebase-admin@14.3.0` declares Node 22 or later (a build-log warning). Production runs correctly on Node 20; unchanged.
