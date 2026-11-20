@@ -1253,7 +1253,7 @@ Typecheck and lint; a pure-function test of `setPassword`; manual browser and Vo
 ### 69. MIRROR PROMOTE — "Update Stored Data" makes stored data mirror the live site; transactional, previewed and confirmed in a modal.
 
 **Date:** 2026-11-19
-**Status:** Decided; implemented and verified on branch `mirror-promote`. Not yet merged or deployed (production still runs the 2026-11-02 build, with the D13 Added guard in place).
+**Status:** Implemented, merged to `main` (28da944) and deployed 2026-11-20 as revision `nerd-frontend-00020-num`. The first production promotes were applied the same day (see "Production rollout").
 **Supersedes in part:** #44 — its merge rule ("a stored record with no live counterpart is kept, a live-only record is appended") and its rationale that a merge protects against incomplete scrapes. #68 — its listing of "promote-live's stub step" as a password writer and a password generator, and its known issue that promote-live's password write runs outside the promote transaction. #44's routing and #68's other decisions stand.
 **Authoritative detail:** `docs/mirror-promote-plan-11-02-26.md`, §3 (decisions D1–D55, case tables §3.2–3.4, run-record format §3.9, route contract §3.13, step 6 rulings §3.14). This entry summarizes; the plan governs.
 **Commits (mirror-promote):** scraper run record 5564a65; planner 00b11a4, e538930, 62162db; document layer 66b7818, bef6eed; decision module 28b40e7, 43aa2b4; route 321b01b; Messages panel 75efd32; modal 24766e7; SourceToggle 4ad1b6d; end-to-end test f069944; plan updates 83db7a6, 76ce91a and others. Full list: `git log --oneline 00b11a4^..f069944`. Related: legacy /editor retired (D21) on `retire-legacy-editor` (cc0531e); deploy script rebuilt on `deploy-script` (03d81a8).
@@ -1293,4 +1293,17 @@ A promote makes the stored Added, Published or Vendors document match what the l
 - The full vendor lifecycle (Vendor Candidates, Admin-only promotion) is deferred.
 - `session.ts` verifies cookies with `checkRevoked: false`, so a leaked session cookie cannot be revoked before it expires.
 - Nested `<main>` landmarks on `/records` category pages; the legacy `/records` page's stubbed "Update Stored Data" button.
-- Not yet deployed. The first production promote (Added first) will delete the records the site shows as public and flag the wrong passwords (Grammarly, Nearpod).
+- The confirmation modal shows the URL twice for a could-not-check entry that has no name (cosmetic).
+- The build log warns that `firebase-admin@14.3.0` requires Node 22 or later, while the image runs Node 20. Production previews and applies ran correctly on it.
+- `npm audit` reports 34 vulnerabilities (1 critical) in the frontend dependencies.
+
+#### PRODUCTION ROLLOUT (2026-11-20)
+
+- **Deploy:** built and deployed with the rebuilt `scripts/deploy.sh` (candidate, check, promote): revision `nerd-frontend-00020-num`, image digest `sha256:1647b934fc219b599ccc6ce2d95f02316f09d0b673089d9f3468f71628459df9`. Rollback target: `nerd-frontend-00018-vad`.
+- **Scrape (run-record scraper, production):** discovery complete (100 of 100 product URLs, 30 of 30 vendor URLs). Products: 76 public_ok, 21 not_tracked, 1 protected_unlocked, 1 password_rejected (Nearpod), 1 fetch_error (Grammarly). Vendors: 22 public_ok, 8 protected_vendor.
+- **Promotes applied, in order:**
+  - Added 8 to 3: ABCmouse (not on the site) and four now-public products (CommonLit 360 and three Lexia products, already present in stored Published) removed; 5 password rows removed; Nearpod kept with its password cleared (D5).
+  - Published 76 to 76: no content change; the scraper-only `is_protected` field was stripped from all records.
+  - Vendors 30 to 30: 22 updated with no content change; the 8 protected vendors left untouched (D22).
+- **Safety copy:** a full pre-apply export of all documents was saved locally outside the repository.
+- **Open items:** Grammarly's fetch error left its stored record untouched; it is re-checked on the next scrape. Nearpod's stored password was cleared (D5); the correct one is entered through the Added editor's Password field.
