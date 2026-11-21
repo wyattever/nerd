@@ -102,6 +102,8 @@ jobs:
         env:
           USER: github-actions
           MAX_ATTEMPTS: "3"
+          # Output is piped through tee; unbuffered keeps log lines in order and survives a timeout kill.
+          PYTHONUNBUFFERED: "1"
         run: |
           set +e
           source "$RUNNER_TEMP/venv/bin/activate"
