@@ -1,9 +1,9 @@
 """
 nerd_core/pipeline.py — Shared validate-and-build sequence.
 
-Extracted from api/worker.py (_validate + _build_result_payload) so the same
-logic can be called from the worker's research path and, in a later commit,
-from a synchronous draft-ingest endpoint. Behavior is preserved exactly from
+Validates and parses a pasted Gemini Gem draft for the synchronous
+draft-ingest endpoint (POST /ingest/draft in api/main.py), which calls
+validate_draft() below. Behavior is preserved exactly from
 the pre-extraction version at commit 1e14ce9 — see
 nerd-import-data-architecture-v4.md §4.1 and §11.2 for the rationale and the
 ordering constraints that must not be "optimized" away here.
@@ -47,7 +47,7 @@ async def validate_links(
     draft_markdown: str,
     url_cache: dict[str, str],
 ) -> tuple[str, list[str]]:
-    """Behavioral equivalent of api/worker.py::_validate (pre-extraction).
+    """Resolve and liveness-check the draft's URLs, then drop broken links.
 
     Mutates url_cache in place. Returns (validated_markdown, rejections).
     """

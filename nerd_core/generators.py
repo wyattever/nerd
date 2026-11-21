@@ -1,7 +1,7 @@
 """
 nerd_core/generators.py — Artifact Engine for N.E.R.D.
 =================================================
-Converts a parsed NCADEMI listing (from the GEPA-optimized agent) into:
+Converts a parsed NCADEMI listing (from a pasted Gemini Gem draft) into:
   - A standalone HTML preview
 """
 

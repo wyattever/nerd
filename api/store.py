@@ -2,7 +2,7 @@
 api/store.py — Persistence helpers for N.E.R.D.
 
 Owns all storage state (in-memory for LOCAL_MODE, Firestore for production)
-and exposes a clean async public API used by both api/main.py and api/worker.py.
+and exposes a clean async public API used by api/main.py.
 
 Public API:
     slugify(text) -> str

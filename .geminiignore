@@ -17,12 +17,11 @@ __pycache__/
 storage/
 ncademi_archive/
 
-# --- Test Outputs, Artifacts & Evaluation Logs ---
+# --- Test Outputs, Artifacts ---
 artifacts/
 .pytest_cache/
 .playwright/
 test-results/
-eval/
 
 # --- Legacy & Non-Live Documentation ---
 archive/
