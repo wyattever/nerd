@@ -1,0 +1,205 @@
+# Daily NCADEMI scrape (docs/mirror-promote-plan-11-02-26.md section 8.1,
+# Option A: GitHub Actions).
+#
+# What it writes: ONLY the three live snapshots nerd_documents/published-live,
+# nerd_documents/added-live and nerd_documents/vendors-live, in one atomic
+# batch (scripts/scrape_ncademi_live.py --prod). Promotes stay manual: they go
+# through the reviewed D9 modal, and D32 version tokens refuse an apply if a
+# scrape lands between preview and apply.
+#
+# Identity: Workload Identity Federation, with no key files and no repository
+# secrets at all; the OIDC token is exchanged through
+# projects/660897852208/locations/global/workloadIdentityPools/github-pool/providers/github-provider,
+# whose condition accepts only wyattever/nerd (repository id 1271513145), ref
+# refs/heads/main, and this exact file. It impersonates
+# nerd-scraper@edtech-agent-2026.iam.gserviceaccount.com (roles/datastore.user).
+#
+# NO SCHEDULE YET: this version is manual (workflow_dispatch) only. A cron is
+# added in a later commit, after a manual full run has succeeded end to end.
+# The default mode, auth-check, authenticates and reads one document without
+# writing anything.
+#
+# Retries and gate: the scraper itself retries transient fetch failures and
+# aborts without writing if the site appears down. On top of that, this
+# workflow re-runs a failed scrape up to MAX_ATTEMPTS times, waiting between
+# attempts; a failed attempt writes nothing, so a retry never leaves partial
+# data. After a successful run, a completeness gate fails the job (the written
+# snapshot stays in place) if discovery was incomplete, any page ended
+# fetch_error or parse_error, or fewer than three snapshots were saved.
+#
+# Accuracy and completeness take priority over speed: waits are long, the job
+# timeout is generous, and any gap is reported as a failure, not a warning.
+name: "Scrape ncademi.org"
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "auth-check = authenticate and read one Firestore document, writing nothing; full = scrape and write the three live snapshots"
+        type: choice
+        options:
+          - auth-check
+          - full
+        default: auth-check
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: scrape-ncademi
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    if: github.repository == 'wyattever/nerd'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: projects/660897852208/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: nerd-scraper@edtech-agent-2026.iam.gserviceaccount.com
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          source "$RUNNER_TEMP/venv/bin/activate"
+          pip install --disable-pip-version-check -c constraints.txt requests==2.32.5 beautifulsoup4==4.15.0 google-cloud-firestore==2.26.0 google-auth==2.50.0 protobuf==4.25.3
+          python3 --version
+
+      - name: Auth check (reads one document, writes nothing)
+        if: ${{ inputs.mode == 'auth-check' }}
+        shell: bash
+        run: |
+          source "$RUNNER_TEMP/venv/bin/activate"
+          python3 - <<'AUTH_PY'
+          from google.cloud import firestore
+
+          PROJECT = "edtech-agent-2026"
+          client = firestore.Client(project=PROJECT)
+          assert client.project == PROJECT, "Firestore client resolved the wrong project"
+          snap = client.collection("nerd_documents").document("added").get()
+          print(f"project: {client.project}")
+          print(f"nerd_documents/added exists: {snap.exists}")
+          print(f"bytes field length: {len(snap.get('bytes')) if snap.exists else 'n/a'}")
+          AUTH_PY
+
+      - name: Scrape (writes the three live snapshots)
+        if: ${{ inputs.mode != 'auth-check' }}
+        timeout-minutes: 100
+        shell: bash
+        env:
+          USER: github-actions
+          MAX_ATTEMPTS: "3"
+        run: |
+          set +e
+          source "$RUNNER_TEMP/venv/bin/activate"
+          retry_sleep="${RETRY_SLEEP_SECONDS:-900}"
+          attempt=1
+          while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
+            echo "::group::Scrape attempt $attempt of $MAX_ATTEMPTS"
+            python3 scripts/scrape_ncademi_live.py --prod 2>&1 | tee "$RUNNER_TEMP/scrape-$attempt.log"
+            status=${PIPESTATUS[0]}
+            echo "::endgroup::"
+            if [ "$status" -eq 0 ]; then
+              cp "$RUNNER_TEMP/scrape-$attempt.log" "$RUNNER_TEMP/scrape-final.log"
+              echo "$attempt" > "$RUNNER_TEMP/scrape-attempt.txt"
+              echo "Scrape attempt $attempt succeeded."
+              exit 0
+            fi
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              echo "Scrape attempt $attempt failed (exit $status); nothing was written. Waiting before attempt $((attempt + 1))."
+              sleep "$retry_sleep"
+            fi
+            attempt=$((attempt + 1))
+          done
+          echo "::error::All $MAX_ATTEMPTS scrape attempts failed; nothing was written."
+          exit 1
+
+      - name: Completeness gate
+        if: ${{ inputs.mode != 'auth-check' && success() }}
+        shell: bash
+        run: |
+          python3 - "$RUNNER_TEMP/scrape-final.log" "$RUNNER_TEMP/scrape-attempt.txt" <<'GATE_PY'
+          import os
+          import re
+          import sys
+          from collections import Counter
+
+          log_path, attempt_path = sys.argv[1], sys.argv[2]
+          with open(log_path, encoding="utf-8") as fh:
+              lines = [line.rstrip("\n") for line in fh]
+          try:
+              with open(attempt_path, encoding="utf-8") as fh:
+                  attempt = fh.read().strip() or "unknown"
+          except FileNotFoundError:
+              attempt = "unknown"
+
+          def esc(text):
+              return text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+          discovery_re = re.compile(r"^Found \d+ (product|vendor) URLs \(expected .*\): (.*)$")
+          url_re = re.compile(r"^\[\d+/\d+\] (\S+) -> ([a-z_]+)(?: \((.*)\))?$")
+          saved_re = re.compile(r"^Saved \d+ records to nerd_documents/")
+          GAP_STATUSES = {"fetch_error", "parse_error"}
+
+          discovery = {}
+          statuses = Counter()
+          gaps = []
+          saved = [l for l in lines if saved_re.match(l)]
+          retries = [l for l in lines if l.startswith("Retries: ")]
+          complete_line = any(l.startswith("PROGRESS_JSON:") and '"Process complete"' in l for l in lines)
+
+          for line in lines:
+              d = discovery_re.match(line)
+              if d:
+                  discovery[d.group(1)] = line
+                  if d.group(2).startswith("INCOMPLETE"):
+                      gaps.append(f"{d.group(1)} discovery incomplete: {line}")
+                  continue
+              u = url_re.match(line)
+              if u:
+                  statuses[u.group(2)] += 1
+                  if u.group(2) in GAP_STATUSES:
+                      detail = f" ({u.group(3)})" if u.group(3) else ""
+                      gaps.append(f"page gap: {u.group(1)} -> {u.group(2)}{detail}")
+
+          for post_type in ("product", "vendor"):
+              if post_type not in discovery:
+                  gaps.append(f"{post_type} discovery line missing")
+          if len(saved) != 3:
+              gaps.append(f"expected 3 'Saved ... records to nerd_documents/' lines, found {len(saved)}")
+          if not complete_line:
+              gaps.append("'Process complete' progress line missing")
+
+          for gap in gaps:
+              print(f"::error::{esc(gap)}")
+
+          summary = ["## Scrape completeness gate", "", f"Succeeded on attempt: {attempt}", "", "### Discovery"]
+          summary += [f"- `{discovery[p]}`" if p in discovery else f"- {p}: line missing" for p in ("product", "vendor")]
+          summary += ["", "### Saved"] + ([f"- `{l}`" for l in saved] or ["- none"])
+          summary += ["", "### Retries"] + ([f"- `{l}`" for l in retries] or ["- line missing"])
+          summary += ["", "### Per-URL outcomes", "", "| status | count |", "| --- | --- |"]
+          summary += [f"| {s} | {n} |" for s, n in sorted(statuses.items())] or ["| (none) | 0 |"]
+          summary += ["", "### Gaps"] + ([f"- {g}" for g in gaps] or ["- no gaps"])
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as fh:
+                  fh.write("\n".join(summary) + "\n")
+
+          if gaps:
+              print(f"Completeness gate FAILED with {len(gaps)} gap(s); the written snapshot stays in place.")
+              sys.exit(1)
+          print("Completeness gate passed: no gaps.")
+          GATE_PY
