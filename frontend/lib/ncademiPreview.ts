@@ -29,8 +29,8 @@ function formatLastUpdated(raw: string): string {
   }).format(d);
 }
 
-// h1#product-name retained -- used by frontend/tests/e2e/candidate_lifecycle.spec.ts,
-// frontend/tests/e2e/live_run.spec.ts, and frontend/app/nerd-table.css.
+// h1#product-name retained -- used by frontend/tests/e2e/candidate_lifecycle.spec.ts
+// and frontend/app/nerd-table.css.
 // Matches the live page's outer <header class="mb-4"><h1 class="mb-0"> wrapper.
 function genHeaderTagHtml(listing: ListingData): string {
   return [
