@@ -912,7 +912,7 @@ question for a later review.
 ---
 
 ### 66. SCRAPE RUNS LOCALLY — standalone terminal script over Firestore; no Cloud Run Job, no job-trigger route, no in-browser progress UI.
-
+> **Superseded in part by [#71](#71-daily-scrape-from-github-actions--federated-to-google-cloud-retried-and-gated-for-completeness):** the scrape no longer runs only from a local terminal; it also runs daily from GitHub Actions. The standalone script, the passwords read from Firestore (#65) and the three-document write scope stand.
 **Date:** 2026-09-03
 **Status:** Decided
 **Source:** `.scratch/verification/local-scrape-recon-20260903-1252-raw.md` (audited at `a8550b3`);
@@ -1332,3 +1332,44 @@ Upgrade `next` and `eslint-config-next` from 16.2.9 to 16.4.6, both pinned exact
 - `firebase` (browser SDK), `@firebase/firestore` and `@grpc/grpc-js` (high): npm's suggested fix is a downgrade to `firebase@9.14.0`; not followed.
 - The `firebase-admin` chain (`uuid`, `protobufjs`, `gaxios` and others, moderate): separate cleanup.
 - The image runs Node 20 while `firebase-admin@14.3.0` declares Node 22 or later (a build-log warning). Production runs correctly on Node 20; unchanged.
+### 71. DAILY SCRAPE FROM GITHUB ACTIONS — federated to Google Cloud, retried, and gated for completeness.
+
+**Date:** 2026-11-21
+**Status:** Implemented and merged to `main` (7cd1145). The probe, the auth check and one manual full run passed on 2026-11-21. The first scheduled run is due 2026-11-22 at 09:17 UTC and has not run yet (see "Known, not addressed").
+**Supersedes in part:** #66 — its decision that the scrape runs only from a local terminal. The scrape still runs locally on demand (`python3 scripts/scrape_ncademi_live.py --prod`); #66's other decisions stand: a standalone script, passwords read from Firestore (#65), and writes only to the three live snapshots.
+**Related:** #65, #66, #69 (promote). **Authoritative detail:** `docs/mirror-promote-plan-11-02-26.md` section 8 (Option A), not yet updated to say it was built.
+**Commits (main):** scraper retries 82c781a; probe 593d677 (workflow removed again in 59ff8a1); workflow 4640841; unbuffered logs ec8f037; schedule f35eb34. Merges 41a5b69, 673861c, 46bd236, 6a63b05, 7cd1145. Setup reports are kept locally under `.scratch/verification/` (wif-recon, wif-create, scrape-workflow, scrape-cron).
+
+#### DECISION — scrape every day from a GitHub-hosted runner.
+
+`.github/workflows/scrape-ncademi.yml` runs `scripts/scrape_ncademi_live.py --prod` daily at 09:17 UTC (02:17 Utah in winter, 03:17 in summer) and on demand. It writes only the three live snapshots (`nerd_documents/published-live`, `added-live`, `vendors-live`). It never changes stored data, and promotes stay manual through the D9 modal.
+
+**Why:** N.E.R.D. sits idle between sprints, so stored data drifts from the site. A fresh snapshot every day keeps the promote preview current without anyone running the scraper. A GitHub Actions workflow was chosen over a UI-triggered Cloud Run Job (plan section 8, Option B) because it needs no Admin role, no server route and no progress UI, and costs essentially nothing. Accuracy and completeness take priority over speed throughout.
+
+#### HOW IT IS MADE SAFE
+
+- **Reachability was proven first.** A throwaway probe workflow (since removed) ran on an Azure runner: the REST product list returned 100 items, 25 of 25 sampled public pages returned 200, and one password unlock succeeded, with no challenge pages. The site answers as nginx with no Cloudflare in front. The first full run used an AWS runner and was complete as well, so both address ranges have worked.
+- **No key files.** Workload Identity Federation: pool `github-pool` and OIDC provider `github-provider` in project `edtech-agent-2026`. The provider condition accepts only repository `wyattever/nerd` with repository id `1271513145`, ref `refs/heads/main`, and this exact workflow file. Service account `nerd-scraper` holds `roles/datastore.user` (project-wide; IAM cannot scope Firestore to three documents, the #66 caveat) and has no keys. Only the `wyattever/nerd` principal set may impersonate it. The organization has no policy blocking this. The rollback sequence is in the `wif-create` report.
+- **Least privilege and pinning.** The workflow's permissions are `contents: read` and `id-token: write`. It uses no repository secrets and no third-party actions beyond `actions/checkout` v7.0.1 and `google-github-actions/auth` v3.0.0, both pinned to full commit SHAs (126 and 449 days old when chosen). The runner image is `ubuntu-24.04` (Python 3.12), with exact dependency pins and `constraints.txt`. Runs cannot overlap, and the timeout is 120 minutes.
+- **Retries that cannot corrupt anything.** The scraper writes once, at the very end, in one batch. A run that exits with an error therefore writes nothing, so the workflow re-runs a failed scrape up to 3 times, 15 minutes apart.
+- **Scraper hardening.** Every GET retries transient failures (timeouts, connection errors, HTTP 408, 429, 500, 502, 503, 504) up to three times after 5, 20 and 60 seconds, honoring `Retry-After` up to 120 seconds. After the last attempt the result is exactly what it was before. 403 and 404 are never retried, and the password POST is never retried. If 5 consecutive requests exhaust their retries, the run exits non-zero without writing, so an outage cannot replace the last good snapshot with an empty one. Scraper tests went from 41 to 67.
+- **Completeness gate.** After a successful scrape, the job fails (and GitHub emails according to the owner's settings) if discovery was incomplete, any page ended `fetch_error` or `parse_error`, fewer than three snapshots were saved, or the "Process complete" line is missing. The snapshot stays in place, and the planner refuses deletions on an incomplete run (D15). A step summary lists discovery, saved snapshots, retries, per-status counts and gaps. Data states such as `password_rejected`, `no_password` and `not_tracked` are not gaps.
+- **Interaction with promotes.** A scrape landing between a promote preview and its apply is refused by the D32 version tokens, which refresh the preview. A promote consumes its snapshot, and the next scrape recreates it, so "Update Stored Data" is enabled daily (D53).
+- **Provenance and logs.** `updated_by` reads `github-actions`. Output is unbuffered, so log lines stay in order and survive a timeout kill. The repository is public, so run logs are public: they list product URLs with per-URL outcomes (including `password_rejected` and `no_password`) but never a password, cookie or credential.
+
+#### VERIFIED
+
+- Local: 24 static workflow assertions; eight stub scenarios (clean, incomplete discovery, `fetch_error`, `parse_error`, retry then success, three failures, missing snapshot line, missing discovery line); extracted scripts checked byte-identical before and after each change; the dependency set installed and imported cleanly in a scratch Python 3.12 environment.
+- GitHub: an `auth-check` run (reads `nerd_documents/added`, writes nothing) confirmed the whole federation chain end to end. A manual `full` run succeeded on attempt 1 in about two minutes: discovery complete (100 of 100 product URLs, 30 of 30 vendor URLs), no retries needed, 76 published, 1 added and 22 vendors records saved, gate passed with no gaps.
+- Outcomes of that run: 98 `public_ok` (76 products and 22 vendors), 21 `not_tracked`, 8 `protected_vendor`, 1 `protected_unlocked` (Newsela Student Platform), 2 `password_rejected` (Grammarly and Nearpod).
+
+#### KNOWN, NOT ADDRESSED
+
+- **The first scheduled run has not happened.** It is the confirmation that GitHub's token for a scheduled run carries the same `ref` and `workflow_ref` as a manual run, which the provider condition requires. If the scheduled run fails at the Authenticate step, that is the cause to check.
+- **Schedules in public repositories may be disabled** after 60 days without repository activity (the current rule is unverified). If the Actions tab shows the schedule disabled, re-enable it.
+- **Failure emails depend on GitHub notification settings** for failed workflows.
+- **Grammarly and Nearpod stay `password_rejected` every day** until their correct passwords are entered in the Added editor (Nearpod's was cleared by the first production promote, D5). This is data, not a scrape gap.
+- `nerd-scraper`'s Firestore role is database-wide. An in-app page to run the scrape or change its time is deferred; it needs the Admin role first, and the time would have to live in a Firestore setting because the federation trusts one exact workflow file.
+- `beautifulsoup4` is not pinned in `requirements.txt` (the workflow pins 4.15.0).
+- `.github/workflows/eval.yml` pre-dates this work and has not been reviewed.
+- Plan section 8 still describes the options and does not yet say Option A was built.
