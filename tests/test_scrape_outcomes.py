@@ -105,6 +105,16 @@ def item(link, protected=False, title=None):
     return d
 
 
+@pytest.fixture(autouse=True)
+def retry_delays(monkeypatch):
+    """Records every retry wait instead of sleeping, and starts each test with
+    a zero exhausted streak and zero retry statistics."""
+    delays: list[float] = []
+    monkeypatch.setattr(m, "_sleep", delays.append)
+    m.reset_retry_state()
+    return delays
+
+
 # --- discover ---------------------------------------------------------------
 
 
@@ -262,7 +272,8 @@ def test_product_fetch_error_unlock_post_http_500():
 
 def test_product_fetch_error_on_unlock_refetch():
     s = FakeSession(
-        {PAGE: [FakeResponse(200, text=PASSWORD_FORM_HTML), requests.exceptions.ReadTimeout("slow")]},
+        # The re-fetch is retried, so every one of its four attempts times out.
+        {PAGE: [FakeResponse(200, text=PASSWORD_FORM_HTML)] + [requests.exceptions.ReadTimeout("slow") for _ in range(4)]},
         {m.POSTPASS_URL: FakeResponse(302)},
     )
     o = classify(s, protected_by_rest=True, added_entry=ENTRY)
@@ -532,3 +543,253 @@ def test_main_violation_writes_nothing_and_exits_nonzero(monkeypatch, capsys):
     assert exc.value.code == 1
     assert client.commits == []
     assert "NOTHING was written" in capsys.readouterr().err
+
+
+# --- retries for transient fetch failures ---------------------------------------
+# The autouse retry_delays fixture records each wait instead of sleeping.
+
+REAL_CLASSIFY_PRODUCT = m.classify_product
+
+
+def test_retry_timeout_then_200_public_ok(retry_delays):
+    s = FakeSession({PAGE: [requests.exceptions.ReadTimeout("slow"), FakeResponse(200, text=PUBLIC_PRODUCT_HTML)]})
+    o = classify(s)
+    assert o["status"] == "public_ok" and o["name"] == "Alpha Math"
+    assert len(s.get_calls) == 2
+    assert retry_delays == [5]
+
+
+def test_retry_503_503_then_200_public_ok(retry_delays):
+    s = FakeSession({PAGE: [FakeResponse(503), FakeResponse(503), FakeResponse(200, text=PUBLIC_PRODUCT_HTML)]})
+    o = classify(s)
+    assert o["status"] == "public_ok"
+    assert len(s.get_calls) == 3
+    assert retry_delays == [5, 20]
+
+
+@pytest.mark.parametrize(
+    "status,retry_after,expected_delay",
+    [
+        (429, "7", 7),        # honored
+        (429, "9999", 120),   # clamped to MAX_RETRY_AFTER_SECONDS
+        (429, "abc", 5),      # not an integer: falls back to the schedule
+        (503, "7", 7),        # 503 honors it too
+        (500, "7", 5),        # ignored on any other status
+    ],
+)
+def test_retry_after_header(retry_delays, status, retry_after, expected_delay):
+    s = FakeSession({PAGE: [FakeResponse(status, headers={"Retry-After": retry_after}), FakeResponse(200, text=PUBLIC_PRODUCT_HTML)]})
+    o = classify(s)
+    assert o["status"] == "public_ok"
+    assert retry_delays == [expected_delay]
+
+
+@pytest.mark.parametrize(
+    "exc,detail",
+    [
+        (requests.exceptions.ConnectionError("down"), "connection error"),
+        (requests.exceptions.ReadTimeout("slow"), "timeout"),
+    ],
+)
+def test_retry_exhausted_exception_same_detail_as_before(retry_delays, exc, detail):
+    s = FakeSession({PAGE: exc})  # a bare exception is raised on every call
+    o = classify(s)
+    assert (o["status"], o["detail"]) == ("fetch_error", detail)
+    assert len(s.get_calls) == 4
+    assert retry_delays == [5, 20, 60]
+
+
+def test_retry_exhausted_503_same_detail_as_before(retry_delays):
+    s = FakeSession({PAGE: FakeResponse(503)})
+    o = classify(s)
+    assert (o["status"], o["detail"]) == ("fetch_error", "HTTP 503")
+    assert len(s.get_calls) == 4
+    assert retry_delays == [5, 20, 60]
+
+
+@pytest.mark.parametrize("status", [404, 403])
+def test_no_retry_on_404_or_403(retry_delays, status):
+    s = FakeSession({PAGE: FakeResponse(status)})
+    o = classify(s)
+    assert (o["status"], o["detail"]) == ("fetch_error", f"HTTP {status}")
+    assert len(s.get_calls) == 1
+    assert retry_delays == []
+
+
+def test_unlock_post_500_never_retried(retry_delays):
+    s = FakeSession({PAGE: FakeResponse(200, text=PASSWORD_FORM_HTML)}, {m.POSTPASS_URL: FakeResponse(500)})
+    o = classify(s, protected_by_rest=True, added_entry=ENTRY)
+    assert (o["status"], o["detail"]) == ("fetch_error", "unlock request: HTTP 500")
+    assert len(s.post_calls) == 1
+    assert retry_delays == []
+
+
+def test_unlock_post_timeout_never_retried(retry_delays):
+    s = FakeSession({PAGE: FakeResponse(200, text=PASSWORD_FORM_HTML)}, {m.POSTPASS_URL: requests.exceptions.ReadTimeout("slow")})
+    o = classify(s, protected_by_rest=True, added_entry=ENTRY)
+    assert (o["status"], o["detail"]) == ("fetch_error", "unlock request: timeout")
+    assert len(s.post_calls) == 1
+    assert retry_delays == []
+
+
+def test_unlock_refetch_retried_then_unlocked(retry_delays):
+    s = FakeSession(
+        {PAGE: [FakeResponse(200, text=PASSWORD_FORM_HTML), requests.exceptions.ConnectionError("blip"), FakeResponse(200, text=UNLOCKED_PRODUCT_HTML)]},
+        {m.POSTPASS_URL: FakeResponse(302)},
+    )
+    o = classify(s, protected_by_rest=True, added_entry=ENTRY)
+    assert (o["status"], o["name"]) == ("protected_unlocked", "Kate’s Math Lessons")
+    assert len(s.post_calls) == 1
+    assert retry_delays == [5]
+
+
+def test_vendor_500_then_200_public_ok(retry_delays):
+    s = FakeSession({VENDOR_PAGE: [FakeResponse(500), FakeResponse(200, text=PUBLIC_VENDOR_HTML)]})
+    o = m.classify_vendor(VENDOR_PAGE, protected_by_rest=False, session=s)
+    assert (o["status"], o["name"]) == ("public_ok", "Acme Learning")
+    assert retry_delays == [5]
+
+
+def test_discover_page2_503_once_then_complete(retry_delays):
+    s = FakeSession({
+        TYPES: types_ok(),
+        page_url(1): FakeResponse(200, json_body=[item("u1")], headers={"X-WP-Total": "2", "X-WP-TotalPages": "2"}),
+        page_url(2): [FakeResponse(503), FakeResponse(200, json_body=[item("u2")])],
+    })
+    r = m.discover("product", session=s)
+    assert r["complete"] is True and r["urls"] == {"u1", "u2"} and r["error"] is None
+    assert retry_delays == [5]
+
+
+def test_discover_types_fails_once_then_complete(retry_delays):
+    s = FakeSession({
+        TYPES: [requests.exceptions.ConnectionError("blip"), types_ok()],
+        page_url(1): FakeResponse(200, json_body=[item("u1")], headers={"X-WP-Total": "1", "X-WP-TotalPages": "1"}),
+    })
+    r = m.discover("product", session=s)
+    assert r["complete"] is True and r["urls"] == {"u1"}
+    assert retry_delays == [5]
+
+
+def test_discover_page2_503_exhausted_incomplete_same_error(retry_delays):
+    s = FakeSession({
+        TYPES: types_ok(),
+        page_url(1): FakeResponse(200, json_body=[item("u1")], headers={"X-WP-Total": "2", "X-WP-TotalPages": "2"}),
+        page_url(2): [FakeResponse(503) for _ in range(4)],
+    })
+    r = m.discover("product", session=s)
+    assert r["complete"] is False
+    assert r["error"] == "page 2: HTTP 503"
+    assert [u for u, _ in s.get_calls].count(page_url(2)) == 4
+    assert r["urls"] == {"u1"}
+
+
+# --- exhausted streak ---------------------------------------------------------
+
+
+def test_streak_increments_on_exhaustion():
+    s = FakeSession({PAGE: FakeResponse(503), VENDOR_PAGE: requests.exceptions.ConnectionError("down")})
+    m._get_with_retries(s, PAGE)
+    assert m._retry_state["exhausted_streak"] == 1
+    with pytest.raises(requests.exceptions.ConnectionError):
+        m._get_with_retries(s, VENDOR_PAGE)
+    assert m._retry_state["exhausted_streak"] == 2
+    assert (m._retry_state["retried"], m._retry_state["exhausted"]) == (2, 2)
+
+
+def test_streak_reset_by_200():
+    s = FakeSession({PAGE: [FakeResponse(503)] * 4 + [FakeResponse(200)]})
+    m._get_with_retries(s, PAGE)
+    assert m._retry_state["exhausted_streak"] == 1
+    m._get_with_retries(s, PAGE)
+    assert m._retry_state["exhausted_streak"] == 0
+
+
+def test_streak_reset_by_404():
+    s = FakeSession({PAGE: [FakeResponse(503)] * 4 + [FakeResponse(404)]})
+    m._get_with_retries(s, PAGE)
+    assert m._retry_state["exhausted_streak"] == 1
+    resp = m._get_with_retries(s, PAGE)
+    assert resp.status_code == 404 and m._retry_state["exhausted_streak"] == 0
+
+
+# --- circuit breaker through main() -------------------------------------------
+
+BREAKER_URLS = [f"https://ncademi.org/provide/directory/products/p{n}/" for n in range(1, 10)]
+
+
+def run_breaker_main(monkeypatch, get_routes):
+    """run_main's offline harness, with discovery returning BREAKER_URLS and the
+    REAL classify_product fetching through _get_with_retries from a FakeSession."""
+    client = run_main(monkeypatch)
+    s = FakeSession(get_routes)
+    discs = {"product": disc_full(BREAKER_URLS), "vendor": disc_full([])}
+    monkeypatch.setattr(m, "discover", lambda post_type, session=None: discs[post_type])
+
+    def real_classify(url, *, protected_by_rest, rest_title, added_entry, session=None):
+        return REAL_CLASSIFY_PRODUCT(url, protected_by_rest=protected_by_rest, rest_title=rest_title, added_entry=added_entry, session=s)
+
+    monkeypatch.setattr(m, "classify_product", real_classify)
+    return client, s
+
+
+def test_breaker_aborts_after_five_consecutive_exhausted(monkeypatch, capsys):
+    client, s = run_breaker_main(monkeypatch, {u: FakeResponse(503) for u in BREAKER_URLS})
+    with pytest.raises(SystemExit) as exc:
+        m.main()
+    assert exc.value.code == 1
+    assert client.commits == []
+    err = capsys.readouterr().err
+    assert "Site appears unreachable: 5 consecutive requests failed after retries -- NOTHING was written" in err
+    # p1..p5 fetched (4 attempts each); p6 onwards never requested.
+    assert len(s.get_calls) == 20
+    assert BREAKER_URLS[5] not in {u for u, _ in s.get_calls}
+
+
+def test_breaker_does_not_abort_when_a_success_breaks_the_streak(monkeypatch, capsys):
+    routes = {u: FakeResponse(503) for u in BREAKER_URLS}
+    routes[BREAKER_URLS[4]] = FakeResponse(200, text=PUBLIC_PRODUCT_HTML)  # 4 fail, 1 ok, 4 fail
+    client, s = run_breaker_main(monkeypatch, routes)
+    m.main()
+    assert len(client.commits) == 1
+    out = capsys.readouterr().out
+    assert "Retries: 8 request(s) needed a retry; 8 exhausted all attempts" in out
+
+
+# --- no leakage in retry output -------------------------------------------------
+
+
+def test_retry_line_shows_path_not_query(capsys):
+    s = FakeSession({
+        TYPES: types_ok(),
+        page_url(1): FakeResponse(200, json_body=[item("u1")], headers={"X-WP-Total": "2", "X-WP-TotalPages": "2"}),
+        page_url(2): [FakeResponse(503), FakeResponse(200, json_body=[item("u2")])],
+    })
+    m.discover("product", session=s)
+    out = capsys.readouterr().out
+    assert "  retry 1/3 in 5s: GET /wp-json/wp/v2/product (HTTP 503)" in out
+    assert "per_page" not in out and "page=2" not in out and "?" not in out
+
+
+def test_no_password_in_output_with_retries_and_unlock(monkeypatch, capsys):
+    # run_main configures the fixture password "fixture-value" for P_PROT.
+    client = run_main(monkeypatch)
+    s = FakeSession(
+        {
+            P_PUB: [FakeResponse(503), FakeResponse(200, text=PUBLIC_PRODUCT_HTML)],
+            P_PROT: [FakeResponse(200, text=PASSWORD_FORM_HTML), requests.exceptions.ConnectionError("blip"), FakeResponse(200, text=UNLOCKED_PRODUCT_HTML)],
+        },
+        {m.POSTPASS_URL: FakeResponse(302)},
+    )
+
+    def real_classify(url, *, protected_by_rest, rest_title, added_entry, session=None):
+        return REAL_CLASSIFY_PRODUCT(url, protected_by_rest=protected_by_rest, rest_title=rest_title, added_entry=added_entry, session=s)
+
+    monkeypatch.setattr(m, "classify_product", real_classify)
+    m.main()
+    assert len(client.commits) == 1
+    assert s.post_calls[0][1]["data"]["post_password"] == "fixture-value"  # it was used...
+    captured = capsys.readouterr()
+    assert "fixture-value" not in captured.out and "fixture-value" not in captured.err  # ...never printed
+    assert "retry 1/3 in 5s: GET /provide/directory/products/kates/ (connection error)" in captured.out
+    assert "Retries: 2 request(s) needed a retry; 0 exhausted all attempts" in captured.out

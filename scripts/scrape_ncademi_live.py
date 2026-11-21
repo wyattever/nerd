@@ -78,6 +78,19 @@ kept because they mark the run's shape legibly for whoever is watching the
 terminal, which is now the only place this output goes. emit_progress()
 still flushes explicitly, so the ordering stays honest even when stdout is
 piped somewhere that block-buffers it.
+
+Retries: every GET (discovery's types and list pages, each product and
+vendor page, and the unlock re-fetch) goes through _get_with_retries(). A
+timeout, connection error, truncated body, or HTTP 408/429/500/502/503/504 is
+retried after RETRY_DELAYS_SECONDS (5, 20, 60: four attempts in total); an
+integer Retry-After on a 429/503 replaces the scheduled wait, capped at
+MAX_RETRY_AFTER_SECONDS (120). 403, 404 and every other status are never
+retried. After the last attempt the outcome is exactly what it was without
+retries (the same fetch_error or incomplete-discovery detail). The unlock POST
+is NEVER retried: one password request per page. Circuit breaker: if
+MAX_CONSECUTIVE_EXHAUSTED (5) consecutive GETs exhaust their retries, main()
+exits non-zero before the write, so an aborted run writes nothing and the last
+good snapshots stay in place. A "Retries:" summary line precedes the save.
 """
 
 from __future__ import annotations
@@ -91,6 +104,7 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 import requests
 from bs4 import BeautifulSoup
@@ -583,6 +597,7 @@ def assert_write_target(prod: bool) -> None:
 
 
 def main() -> None:
+    reset_retry_state()
     args = parse_args()
     # Before URL discovery, not before the writes -- see assert_write_target.
     assert_write_target(args.prod)
@@ -620,6 +635,7 @@ def main() -> None:
             added_entry=build_added_entry(url, by_url, names_by_url),
         )
         print(f"[{i}/{len(product_urls)}] {url} -> {o['status']}" + (f" ({o['detail']})" if o["detail"] else ""))
+        _abort_if_site_unreachable()
         # Re-parse the classifier's page HTML with the same parser it validated
         # against; record shaping is unchanged from the previous main().
         if o["status"] == "public_ok":
@@ -637,6 +653,7 @@ def main() -> None:
     for i, url in enumerate(vendor_urls, start=1):
         o = classify_vendor(url, protected_by_rest=url in vendor_disc["protected"])
         print(f"[{i}/{len(vendor_urls)}] {url} -> {o['status']}" + (f" ({o['detail']})" if o["detail"] else ""))
+        _abort_if_site_unreachable()
         # protected_vendor produces no vendors-live record (D22).
         if o["status"] == "public_ok":
             vendors_out.append(parse_public_vendor(o["html"], url))
@@ -669,6 +686,10 @@ def main() -> None:
     )
     emit_progress("outcomes", f"Outcomes -- {summary}.", counts=counts, discovery_complete=discovery_complete)
 
+    print(
+        f"Retries: {_retry_state['retried']} request(s) needed a retry; "
+        f"{_retry_state['exhausted']} exhausted all attempts"
+    )
     print("\n--- 5. Saving Results ---")
     published_fields = build_live_document_fields("products", published_out, finished_at, run)
     added_fields = build_live_document_fields("products", added_out, finished_at, run)
@@ -699,6 +720,110 @@ def main() -> None:
 
 # (connect, read) seconds for every request made by the functions below.
 REQUEST_TIMEOUT_CONNECT_READ = (10, 30)
+
+# --- Retries for transient fetch failures (see the module docstring) ---
+# Waits before retries 1, 2 and 3: four attempts in total per GET.
+RETRY_DELAYS_SECONDS = (5, 20, 60)
+# Upper bound on a server-supplied Retry-After (429/503 only), in seconds.
+MAX_RETRY_AFTER_SECONDS = 120
+TRANSIENT_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+# main() aborts, writing nothing, after this many consecutive GETs end with
+# every attempt failing transiently: the site is treated as down.
+MAX_CONSECUTIVE_EXHAUSTED = 5
+_TRANSIENT_EXCEPTIONS = (
+    requests.exceptions.Timeout,
+    requests.exceptions.ConnectionError,
+    requests.exceptions.ChunkedEncodingError,
+)
+
+# exhausted_streak: consecutive GETs that ended exhausted (reset by any
+# non-transient response). retried / exhausted: run statistics, each request
+# counted once.
+_retry_state = {"exhausted_streak": 0, "retried": 0, "exhausted": 0}
+
+
+def reset_retry_state() -> None:
+    """Zeroes the exhausted streak and the retry statistics (main() and tests)."""
+    _retry_state.update(exhausted_streak=0, retried=0, exhausted=0)
+
+
+def _sleep(seconds: float) -> None:
+    """Every retry wait goes through here so tests can patch it."""
+    time.sleep(seconds)
+
+
+def _retry_after_seconds(resp) -> int | None:
+    """A Retry-After header holding an integer number of seconds, clamped to
+    0..MAX_RETRY_AFTER_SECONDS; None when absent or not an integer (an HTTP
+    date is ignored)."""
+    raw = resp.headers.get("Retry-After")
+    if raw is None:
+        return None
+    try:
+        value = int(str(raw).strip())
+    except ValueError:
+        return None
+    return max(0, min(value, MAX_RETRY_AFTER_SECONDS))
+
+
+def _get_with_retries(session, url: str, *, timeout=REQUEST_TIMEOUT_CONNECT_READ):
+    """session.get(url, timeout=timeout) with bounded retries.
+
+    Transient: a Timeout, ConnectionError or ChunkedEncodingError, or a status
+    in TRANSIENT_STATUSES. Those are retried after RETRY_DELAYS_SECONDS (a
+    429/503 integer Retry-After replaces the scheduled wait). After the last
+    attempt the exception is re-raised, or the last response returned, so each
+    call site's existing handling produces exactly the outcome it did before.
+    Any other exception propagates at once; any other status (403 and 404
+    included) is returned at once. Only GETs come through here -- the unlock
+    POST is never retried. Retry lines show the URL path only."""
+    total = len(RETRY_DELAYS_SECONDS)
+    path = urlsplit(url).path
+    counted = False
+    for attempt in range(total + 1):
+        last = attempt == total
+        try:
+            resp = session.get(url, timeout=timeout)
+        except _TRANSIENT_EXCEPTIONS as e:
+            if last:
+                _retry_state["exhausted_streak"] += 1
+                _retry_state["exhausted"] += 1
+                raise
+            reason = _request_failure_detail(e)
+            delay = RETRY_DELAYS_SECONDS[attempt]
+        else:
+            if resp.status_code not in TRANSIENT_STATUSES:
+                _retry_state["exhausted_streak"] = 0
+                return resp
+            if last:
+                _retry_state["exhausted_streak"] += 1
+                _retry_state["exhausted"] += 1
+                return resp
+            reason = f"HTTP {resp.status_code}"
+            delay = RETRY_DELAYS_SECONDS[attempt]
+            if resp.status_code in (429, 503):
+                retry_after = _retry_after_seconds(resp)
+                if retry_after is not None:
+                    delay = retry_after
+        if not counted:
+            _retry_state["retried"] += 1
+            counted = True
+        print(f"  retry {attempt + 1}/{total} in {delay}s: GET {path} ({reason})", flush=True)
+        _sleep(delay)
+    raise AssertionError("unreachable: the final attempt always returns or raises")
+
+
+def _abort_if_site_unreachable() -> None:
+    """main()'s circuit breaker, checked after every classified URL: when
+    MAX_CONSECUTIVE_EXHAUSTED consecutive GETs have exhausted their retries,
+    exit non-zero before anything is written."""
+    streak = _retry_state["exhausted_streak"]
+    if streak >= MAX_CONSECUTIVE_EXHAUSTED:
+        print(
+            f"Site appears unreachable: {streak} consecutive requests failed after retries -- NOTHING was written",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
 
 PRODUCT_STATUSES = frozenset(
     {
@@ -788,7 +913,7 @@ def discover(post_type: str, session=None) -> dict:
 
     # Endpoint resolution, with a timeout and an explicit failure.
     try:
-        type_resp = session.get(f"{API_BASE}/types/{post_type}", timeout=REQUEST_TIMEOUT_CONNECT_READ)
+        type_resp = _get_with_retries(session, f"{API_BASE}/types/{post_type}")
     except requests.exceptions.RequestException as e:
         errors.append(f"endpoint resolution: {_request_failure_detail(e)}")
         return result()
@@ -807,7 +932,7 @@ def discover(post_type: str, session=None) -> dict:
 
     def get_page(page: int):
         try:
-            resp = session.get(f"{items_url}?per_page=100&page={page}", timeout=REQUEST_TIMEOUT_CONNECT_READ)
+            resp = _get_with_retries(session, f"{items_url}?per_page=100&page={page}")
         except requests.exceptions.RequestException as e:
             errors.append(f"{_request_failure_detail(e)} on page {page}")
             return None
@@ -884,7 +1009,7 @@ def classify_product(
 
     session.cookies.clear()
     try:
-        resp = session.get(url, timeout=REQUEST_TIMEOUT_CONNECT_READ)
+        resp = _get_with_retries(session, url)
     except requests.exceptions.RequestException as e:
         return outcome("fetch_error", detail=_request_failure_detail(e))
     if resp.status_code != 200:
@@ -925,7 +1050,7 @@ def classify_product(
     if post_resp.status_code >= 400:
         return outcome("fetch_error", detail=f"unlock request: HTTP {post_resp.status_code}")
     try:
-        unlocked = session.get(url, timeout=REQUEST_TIMEOUT_CONNECT_READ)
+        unlocked = _get_with_retries(session, url)
     except requests.exceptions.RequestException as e:
         return outcome("fetch_error", detail=f"unlock re-fetch: {_request_failure_detail(e)}")
     if unlocked.status_code != 200:
@@ -952,7 +1077,7 @@ def classify_vendor(url: str, *, protected_by_rest: bool, session=None) -> dict:
         return {"url": url, "post_type": "vendor", "status": status, "name": name, "detail": detail, "html": page_html}
 
     try:
-        resp = session.get(url, timeout=REQUEST_TIMEOUT_CONNECT_READ)
+        resp = _get_with_retries(session, url)
     except requests.exceptions.RequestException as e:
         return outcome("fetch_error", detail=_request_failure_detail(e))
     if resp.status_code != 200:
