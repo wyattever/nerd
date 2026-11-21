@@ -14,10 +14,15 @@
 # refs/heads/main, and this exact file. It impersonates
 # nerd-scraper@edtech-agent-2026.iam.gserviceaccount.com (roles/datastore.user).
 #
-# NO SCHEDULE YET: this version is manual (workflow_dispatch) only. A cron is
-# added in a later commit, after a manual full run has succeeded end to end.
-# The default mode, auth-check, authenticates and reads one document without
-# writing anything.
+# Schedule: runs daily at 09:17 UTC and on demand (workflow_dispatch, whose
+# default mode, auth-check, authenticates and reads one document without
+# writing anything). Scheduled runs always do the full scrape. A run that
+# fails (all 3 attempts fail, or the completeness gate finds gaps) turns red,
+# and GitHub emails according to the owner's notification settings. A failed
+# or gap run never deletes or promotes anything: promotes stay manual (D9 and
+# D32). GitHub may disable scheduled workflows in a public repository after 60
+# days without repository activity; if the Actions tab shows the schedule
+# disabled, re-enable it.
 #
 # Retries and gate: the scraper itself retries transient fetch failures and
 # aborts without writing if the site appears down. On top of that, this
@@ -41,6 +46,11 @@ on:
           - auth-check
           - full
         default: auth-check
+  # 09:17 UTC = 02:17 in Utah in winter (MST), 03:17 in summer (MDT). The odd
+  # minute avoids the busy top of the hour. Scheduled runs have no inputs and
+  # always run the full scrape.
+  schedule:
+    - cron: "17 9 * * *"
 
 permissions:
   contents: read
@@ -96,7 +106,7 @@ jobs:
           AUTH_PY
 
       - name: Scrape (writes the three live snapshots)
-        if: ${{ inputs.mode != 'auth-check' }}
+        if: ${{ github.event_name == 'schedule' || inputs.mode == 'full' }}
         timeout-minutes: 100
         shell: bash
         env:
@@ -130,7 +140,7 @@ jobs:
           exit 1
 
       - name: Completeness gate
-        if: ${{ inputs.mode != 'auth-check' && success() }}
+        if: ${{ (github.event_name == 'schedule' || inputs.mode == 'full') && success() }}
         shell: bash
         run: |
           python3 - "$RUNNER_TEMP/scrape-final.log" "$RUNNER_TEMP/scrape-attempt.txt" <<'GATE_PY'
