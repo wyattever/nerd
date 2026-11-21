@@ -2,11 +2,9 @@ import re
 import asyncio
 from typing import Dict, Any, Tuple
 from nerd_core.tools.liveness_validator import validate_link
-from dataclasses import dataclass, field
-from urllib.parse import urlparse, urlsplit, urlunsplit, parse_qsl, urlencode
+from urllib.parse import urlparse
 from functools import lru_cache
 import os
-from url_normalize import url_normalize
 
 # --- SECURITY & NETWORK UTILS ---
 
@@ -114,80 +112,7 @@ async def filter_broken_links(md_text: str) -> Tuple[str, list[str]]:
     return processed_md, rejections
 
 
-# --- URL INTEGRITY, MASKING & NORMALIZATION ---
-
-@dataclass
-class URLMask:
-    """Masks URLs with short placeholders before an LLM call, restores after."""
-    _to_placeholder: dict[str, str] = field(default_factory=dict)
-    _to_original: dict[str, str] = field(default_factory=dict)
-    _counter: int = 0
-
-    _URL_RE = re.compile(r"https?://[^\s<>\x22\x27\)\\]}]+")
-    _PLACEHOLDER_RE = re.compile(r"<<URL_(\d+)>>")
-
-    def mask(self, text: str) -> str:
-        def _sub(match: re.Match) -> str:
-            url = match.group(0)
-            if url not in self._to_placeholder:
-                self._counter += 1
-                token = f"<<URL_{self._counter}>>"
-                self._to_placeholder[url] = token
-                self._to_original[token] = url
-            return self._to_placeholder[url]
-        return self._URL_RE.sub(_sub, text)
-
-    def unmask(self, text: str, strict: bool = True) -> str:
-        def _sub(match: re.Match) -> str:
-            token = match.group(0)
-            if token in self._to_original:
-                return self._to_original[token]
-            if strict:
-                raise ValueError(f"LLM emitted unknown placeholder: {token}")
-            return token
-        return self._PLACEHOLDER_RE.sub(_sub, text)
-
-    def audit(self, output_text: str) -> dict[str, list[str]]:
-        emitted = set(self._PLACEHOLDER_RE.findall(output_text))
-        issued = {t.strip("<>").split("_")[1] for t in self._to_original}
-        leaked_raw_urls = self._URL_RE.findall(output_text)
-        return {
-            "preserved": sorted(emitted & issued),
-            "dropped": sorted(issued - emitted),
-            "leaked_raw_urls": leaked_raw_urls,
-        }
-
-_TRACKING_PREFIXES = ("utm_",)
-_TRACKING_EXACT = {
-    "fbclid", "gclid", "gclsrc", "dclid", "msclkid", "mc_eid", "mc_cid",
-    "_hsenc", "_hsmi", "igshid", "ref", "ref_src", "ref_url", "yclid",
-    "wbraid", "gbraid", "vero_id", "oicd", "soc_src", "soc_trk",
-}
-
-def _strip_tracking(url: str) -> str:
-    parts = urlsplit(url)
-    if not parts.query:
-        return url
-    kept = [
-        (k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True)
-        if not (k.lower() in _TRACKING_EXACT
-                or any(k.lower().startswith(p) for p in _TRACKING_PREFIXES))
-    ]
-    kept.sort()
-    new_query = urlencode(kept)
-    return urlunsplit(parts._replace(query=new_query))
-
-def normalize_url(url: str) -> str:
-    if not url or not url.strip():
-        return ""
-    url = url.strip()
-    url = _strip_tracking(url)
-    url = url_normalize(url, default_scheme="https", filter_params=False)
-    parts = urlsplit(url)
-    path = parts.path
-    if len(path) > 1 and path.endswith("/"):
-        path = path.rstrip("/")
-    return urlunsplit(parts._replace(path=path, fragment=""))
+# --- CSS LOADING & URL EXTRACTION ---
 
 @lru_cache(maxsize=4)
 def _load_css_cached(path, _mtime):
