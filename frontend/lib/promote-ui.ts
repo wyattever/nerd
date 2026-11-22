@@ -184,10 +184,13 @@ export function sections(body: PromotePlanBody): ModalSection[] {
     out.push({
       id: "could-not-check",
       heading: `Could not check (${report.couldNotCheck.length})`,
-      items: report.couldNotCheck.map((e) => ({
-        primary: e.name,
-        secondary: e.url === "" ? e.reason : `${e.url} — ${e.reason}`,
-      })),
+      // An entry with no name of its own (the planner falls back to the URL,
+      // or the name is empty) shows its URL once, as the label.
+      items: report.couldNotCheck.map((e) =>
+        e.url !== "" && (e.name === "" || e.name === e.url)
+          ? { primary: e.url, secondary: e.reason }
+          : { primary: e.name, secondary: e.url === "" ? e.reason : `${e.url} — ${e.reason}` }
+      ),
     });
   }
 

@@ -349,7 +349,7 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
         <div className="flex h-full flex-1 flex-col overflow-hidden">
           <main className="flex-1 h-full overflow-y-scroll p-6">{children}</main>
 
-          <footer className="flex-shrink-0 border-t border-gray-200 p-6">
+          <div className="flex-shrink-0 border-t border-gray-200 p-6">
             <div className="w-full rounded-md border border-gray-300 bg-white">
               <div id={messagesTitleId} className="flex items-center rounded-t-md bg-gray-50 px-4 py-2.5 text-xs font-bold uppercase text-gray-500 border-b border-gray-300">Messages</div>
               {/* The status and alert regions sit beside the log, not inside it,
@@ -377,7 +377,7 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
                 </div>
               </div>
             </div>
-          </footer>
+          </div>
         </div>
       </MessagesContext.Provider>
     </div>

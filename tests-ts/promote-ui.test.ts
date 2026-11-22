@@ -346,6 +346,25 @@ test("4. sections: couldNotCheck with url '' (D36) shows the reason alone", () =
   assert.deepEqual(sections(body)[0]?.items, [{ primary: "Another Test", secondary: "not on the site yet (no directory URL)" }]);
 });
 
+test("4. sections: couldNotCheck with no name of its own shows the URL once, then the reason", () => {
+  // The planner falls back to the URL when an outcome has no name (mirror-planner.ts:600).
+  const body = planBody({}, {
+    couldNotCheck: [
+      { url: P("nameless"), name: P("nameless"), reason: "fetch error: HTTP 503" },
+      { url: P("blank"), name: "", reason: "parse error" },
+    ],
+  });
+  assert.deepEqual(sections(body)[0]?.items, [
+    { primary: P("nameless"), secondary: "fetch error: HTTP 503" },
+    { primary: P("blank"), secondary: "parse error" },
+  ]);
+});
+
+test("4. sections: couldNotCheck with a name still shows the name, then the URL and reason", () => {
+  const body = planBody({}, { couldNotCheck: [{ url: P("named"), name: "Named Product", reason: "parse error" }] });
+  assert.deepEqual(sections(body)[0]?.items, [{ primary: "Named Product", secondary: `${P("named")} — parse error` }]);
+});
+
 test("4. sections: untrackedProtected with a null name uses the url as primary", () => {
   const body = planBody({ category: "added" }, { untrackedProtected: [{ url: P("n"), name: null }] });
   assert.deepEqual(sections(body)[0]?.items, [{ primary: P("n"), secondary: null }]);
