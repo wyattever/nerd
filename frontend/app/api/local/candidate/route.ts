@@ -4,9 +4,9 @@
  *
  * PORTED FROM THE FILESYSTEM VERSION. Deliberately unchanged: the HTTP
  * contract. GET still returns the document plus a strong ETag, in both the
- * header and the body's `$etag` (a compressing intermediary can strip the
- * header without touching the body -- verified against the nerd_cloud.sh
- * Cloudflare tunnel -- so every client-side reader falls back to the body
+ * header and the body's `$etag` (a compressing proxy such as a Cloudflare
+ * tunnel can strip the ETag header without touching the body, so every
+ * client-side reader falls back to the body
  * value). POST still requires If-Match and still answers 412 on mismatch.
  * tracking_* fields are still merged in on read and split back out on
  * write. No client component changes because of this file.

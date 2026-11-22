@@ -73,10 +73,9 @@ export async function GET(): Promise<Response> {
   );
 
   // `$etag` is echoed into the body as well as the header. A compressing
-  // intermediary can strip a custom response header without touching the
-  // body -- verified against the nerd_cloud.sh Cloudflare tunnel, where the
-  // header survived until the client negotiated compression, which every
-  // real browser does. VendorEditor.tsx's saveToServer falls back to this.
+  // proxy such as a Cloudflare tunnel can strip the ETag header without
+  // touching the body; the header survives only until the client negotiates
+  // compression, which every real browser does. VendorEditor.tsx's saveToServer falls back to this.
   return jsonResponse({ ...parsed, $etag: etag }, 200, { ETag: etag });
 }
 

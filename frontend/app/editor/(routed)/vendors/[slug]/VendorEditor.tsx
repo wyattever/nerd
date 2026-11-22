@@ -116,9 +116,9 @@ export function VendorEditor({ record: initialRecord, existingVendorNames = [] }
       if (!getRes.ok) throw new Error(`GET failed with ${getRes.status}`);
       const body = (await getRes.json()) as DirectoryFile & { $etag?: string };
       // Header first, `$etag` (the same value, echoed into the body by the
-      // route) as fallback -- a compressing intermediary between this
-      // server and the browser (confirmed against the nerd_cloud.sh
-      // Cloudflare tunnel) can strip a custom response header like ETag
+      // route) as fallback -- a compressing proxy between this server and
+      // the browser, such as a Cloudflare tunnel, can strip a custom
+      // response header like ETag
       // without touching the body, so the header alone isn't reliable
       // there even though it always is in local dev (no compressing proxy
       // in that path). See app/api/local/vendors/route.ts's GET.

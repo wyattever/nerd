@@ -10,10 +10,12 @@
  * SourceToggle (imported from ../published/SourceToggle.tsx, same as
  * RecordsVendorDetail.tsx does) replaces this file's own standalone
  * HTML/JSON button row -- adds the Stored/Live data-source toggle plus
- * "Update Stored Data"/"Retrieve Live Data". `category="added"` drives a
- * `{ target: "added" }` scrape, which unlocks each password-protected
- * product page and writes full detail to added-live.json; the ?source=live
- * view reads that file (see [slug]/page.tsx's own header).
+ * "Update Stored Data". `category="added"` scopes both to the added-live
+ * snapshot: "Update Stored Data" opens the mirror-promote confirmation for
+ * the added category, and the ?source=live view reads that snapshot (see
+ * [slug]/page.tsx's own header). The snapshot itself is written by the
+ * scrape (scripts/scrape_ncademi_live.py, which unlocks each
+ * password-protected product page), not by this component.
  */
 
 import { Suspense, useState } from "react";
