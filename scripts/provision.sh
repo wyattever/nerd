@@ -12,11 +12,9 @@
 # STEPS (in the order the old deploy.sh ran them):
 #   apis              enable the required Google Cloud APIs
 #   repo              create the nerd-repo Artifact Registry repository if missing
-#   service-accounts  create nerd-frontend-sa and nerd-api-sa if missing
+#   service-accounts  create nerd-frontend-sa if missing
 #   iam               grant the frontend SA roles/datastore.user and roles/firebaseauth.admin
 #   firestore         deploy firestore.rules and firestore.indexes.json (firebase CLI)
-#   api-invoker       grant the frontend SA roles/run.invoker on nerd-api
-#   frontend-url      set nerd-api's FRONTEND_URL env var to nerd-frontend's URL
 #
 # Every gcloud command passes --project explicitly (and --region or
 # --location where it applies). This script never writes the operator's
@@ -29,7 +27,6 @@ PROJECT_ID="edtech-agent-2026"
 REGION="us-central1"
 
 FRONTEND_SA="nerd-frontend-sa@${PROJECT_ID}.iam.gserviceaccount.com"
-API_SA="nerd-api-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # ── GUARD: first, before argument parsing or any command ─────────────────────
 for guard_var in FIRESTORE_EMULATOR_HOST FIREBASE_AUTH_EMULATOR_HOST LOCAL_MODE NEXT_PUBLIC_DISABLE_AUTH; do
@@ -41,7 +38,7 @@ for guard_var in FIRESTORE_EMULATOR_HOST FIREBASE_AUTH_EMULATOR_HOST LOCAL_MODE 
   fi
 done
 
-STEPS="apis repo service-accounts iam firestore api-invoker frontend-url"
+STEPS="apis repo service-accounts iam firestore"
 
 usage() {
   cat <<'USAGE'
@@ -50,11 +47,9 @@ Usage: bash scripts/provision.sh <step> [<step> ...]
 Each step runs only when named. Steps (old deploy.sh order):
   apis              enable the required Google Cloud APIs
   repo              create the nerd-repo Artifact Registry repository if missing
-  service-accounts  create nerd-frontend-sa and nerd-api-sa if missing
+  service-accounts  create nerd-frontend-sa if missing
   iam               grant the frontend SA roles/datastore.user and roles/firebaseauth.admin
   firestore         deploy Firestore rules and indexes (firebase CLI)
-  api-invoker       grant the frontend SA roles/run.invoker on nerd-api
-  frontend-url      set nerd-api's FRONTEND_URL to nerd-frontend's URL
 USAGE
 }
 
@@ -117,12 +112,6 @@ step_service_accounts() {
     gcloud iam service-accounts create nerd-frontend-sa --project "${PROJECT_ID}" \
       --display-name="N.E.R.D. frontend (Cloud Run runtime)"
   fi
-
-  if ! gcloud iam service-accounts describe "${API_SA}" --project "${PROJECT_ID}" &>/dev/null; then
-    echo "  Creating nerd-api-sa..."
-    gcloud iam service-accounts create nerd-api-sa --project "${PROJECT_ID}" \
-      --display-name="N.E.R.D. Python parse service (Cloud Run runtime)"
-  fi
 }
 
 # ── iam (old deploy.sh:119-157) ───────────────────────────────────────────────
@@ -159,14 +148,6 @@ step_iam() {
   #     --member="serviceAccount:${FRONTEND_SA}" \
   #     --role="roles/iam.serviceAccountTokenCreator"
   # It is deliberately NOT applied speculatively.
-
-  # nerd-api-sa gets NO project-level roles. The service touches exactly one
-  # Google Cloud resource: a Firestore get() in /healthz (api/main.py, via
-  # api/store.py's AsyncClient) against a document that does not exist. That
-  # probe is the only reason it reaches Firestore at all. Everything else it does
-  # -- parsing markdown, checking link liveness over plain HTTP -- needs no GCP
-  # permission. If /healthz's Firestore probe is ever dropped, this SA needs
-  # nothing whatsoever.
 }
 
 # ── firestore (old deploy.sh:159-180) ─────────────────────────────────────────
@@ -193,43 +174,6 @@ step_firestore() {
     --non-interactive )
 }
 
-# ── api-invoker (old deploy.sh:218-225) ───────────────────────────────────────
-# --no-allow-unauthenticated is set on nerd-api: nothing in a browser ever
-# calls it. The only caller is frontend/app/api/ingest/draft/route.ts, a
-# server-side Route Handler that mints a Google-signed OIDC identity token for
-# nerd-api's audience and sends it as a Bearer token. Cloud Run IAM is
-# therefore the authentication boundary, and this binding is what makes that
-# call succeed. Scoped to this ONE service, not granted project-wide.
-
-step_api_invoker() {
-  echo "[api-invoker] Granting roles/run.invoker on nerd-api to nerd-frontend-sa..."
-  gcloud run services add-iam-policy-binding nerd-api --project "${PROJECT_ID}" \
-    --platform managed \
-    --region "${REGION}" \
-    --member="serviceAccount:${FRONTEND_SA}" \
-    --role="roles/run.invoker" \
-    --quiet >/dev/null
-}
-
-# ── frontend-url (old deploy.sh:264-274) ──────────────────────────────────────
-# Note: `services update` creates a new nerd-api revision, which takes traffic
-# if nerd-api follows its latest revision.
-
-step_frontend_url() {
-  local frontend_url
-  frontend_url=$(gcloud run services describe nerd-frontend --project "${PROJECT_ID}" \
-    --platform managed --region "${REGION}" \
-    --format "value(status.url)")
-  [ -n "${frontend_url}" ] || { echo "ERROR: could not resolve nerd-frontend's URL." >&2; exit 1; }
-
-  echo "[frontend-url] Patching nerd-api with resolved FRONTEND_URL..."
-  gcloud run services update nerd-api --project "${PROJECT_ID}" \
-    --platform managed \
-    --region "${REGION}" \
-    --update-env-vars="FRONTEND_URL=${frontend_url}"
-  echo "  nerd-api FRONTEND_URL set to: ${frontend_url}"
-}
-
 for step in "$@"; do
   case "${step}" in
     apis) step_apis ;;
@@ -237,8 +181,6 @@ for step in "$@"; do
     service-accounts) step_service_accounts ;;
     iam) step_iam ;;
     firestore) step_firestore ;;
-    api-invoker) step_api_invoker ;;
-    frontend-url) step_frontend_url ;;
   esac
 done
 

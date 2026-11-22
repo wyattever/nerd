@@ -2,37 +2,37 @@
 # scripts/deploy.sh -- N.E.R.D. Cloud Run deploys, one named service per run.
 #
 # USAGE (run from anywhere inside the repo):
-#   bash scripts/deploy.sh candidate <frontend|api>
+#   bash scripts/deploy.sh candidate <frontend>
 #       Build the image from a clean HEAD equal to origin/main, tagged with
 #       the git short SHA. Resolve its digest, then deploy by digest with
 #       --no-traffic --tag=candidate. Print the candidate URL and the exact
 #       promote and rollback commands, then exit. Never shifts traffic.
-#   bash scripts/deploy.sh promote <frontend|api> <revision>
+#   bash scripts/deploy.sh promote <frontend> <revision>
 #       Route 100% of traffic to <revision>, after the operator types the
 #       revision name exactly. Then remove the `candidate` tag and print the
 #       rollback command.
-#   bash scripts/deploy.sh status <frontend|api>
+#   bash scripts/deploy.sh status <frontend>
 #       Read-only: serving revision(s), traffic split, tags, image.
 #   bash scripts/deploy.sh [-h|--help]
 #       This usage.
 #
 # Infrastructure provisioning (APIs, Artifact Registry repo, service
-# accounts, IAM bindings, Firestore rules and indexes, nerd-api FRONTEND_URL)
+# accounts, IAM bindings, Firestore rules and indexes)
 # lives in scripts/provision.sh, one named step at a time.
+#
+# The api service (nerd-api, the Python Import Data service) has been removed;
+# its last code is the python-service-final tag. `api` is rejected below.
 #
 # DECISIONS (deploy-sh recon 2026-11-19, section C3; all accepted):
 #   Q1  Rollback = `promote <service> <previous revision>`; candidate and
 #       promote both print it, with the revision that was serving at 100%.
 #   Q2  NEXT_PUBLIC_FIREBASE_API_KEY / _APP_ID come from the operator's
 #       environment, with the placeholder checks (frontend builds only).
-#   Q3  nerd-api has its own candidate/promote path, built by
-#       cloudbuild.api.yaml with -f Dockerfile.api (no Dockerfile copy).
 #   Q4  This script never sets, updates or removes env vars. No env flags.
 #   Q5  KNOWN: nerd-frontend still carries runtime env vars
 #       NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_APP_ID from an
 #       earlier deploy. They are inert (the bundle bakes these at build time)
 #       and are deliberately left in place.
-#   Q6  The nerd-api FRONTEND_URL patch lives in provision.sh.
 #   Q7  All provisioning lives in provision.sh.
 #   Q8  The Firestore rules and indexes deploy lives in provision.sh.
 #   Q9  candidate requires a clean tree and HEAD == origin/main, after
@@ -42,8 +42,9 @@
 #       checked before any git or gcloud command.
 #   Q11 promote requires the revision name typed exactly. No --yes, no bypass.
 #   Q12 promote removes the `candidate` tag after the traffic switch.
-#   Q13 Upload contexts: the root .gcloudignore is an allowlist;
-#       frontend/.gcloudignore excludes local data.
+#   Q13 Upload contexts: the root .gcloudignore denies everything (no build
+#       is submitted from the repo root); frontend/.gcloudignore excludes
+#       local data.
 #   Q14 The unused NEXT_PUBLIC_API_BASE_URL build arg is removed.
 #
 # Every gcloud command passes --project explicitly (and --region for Cloud
@@ -69,9 +70,9 @@ done
 usage() {
   cat <<'USAGE'
 Usage:
-  bash scripts/deploy.sh candidate <frontend|api>
-  bash scripts/deploy.sh promote   <frontend|api> <revision>
-  bash scripts/deploy.sh status    <frontend|api>
+  bash scripts/deploy.sh candidate <frontend>
+  bash scripts/deploy.sh promote   <frontend> <revision>
+  bash scripts/deploy.sh status    <frontend>
 
 Exactly one service per run. Provisioning: scripts/provision.sh.
 USAGE
@@ -105,10 +106,11 @@ case "${COMMAND}" in
 esac
 
 case "$2" in
-  frontend|api) SERVICE_KEY="$2" ;;
+  frontend) SERVICE_KEY="$2" ;;
   *)
-    echo "Unknown service: $2 (expected frontend or api)" >&2
+    echo "Unknown service: $2 (expected frontend)" >&2
     usage >&2
+    echo "The api service has been removed; its last code is the python-service-final tag." >&2
     exit 2
     ;;
 esac
@@ -206,11 +208,6 @@ cmd_candidate() {
     gcloud builds submit "${REPO_ROOT}/frontend" --project "${PROJECT_ID}" \
       --config "${REPO_ROOT}/frontend/cloudbuild.yaml" \
       --substitutions "_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID},_REPO=${REPO},_TAG=${tag}" \
-      --quiet
-  else
-    gcloud builds submit "${REPO_ROOT}" --project "${PROJECT_ID}" \
-      --config "${REPO_ROOT}/cloudbuild.api.yaml" \
-      --substitutions "_REPO=${REPO},_TAG=${tag}" \
       --quiet
   fi
 
