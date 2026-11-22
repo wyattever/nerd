@@ -16,7 +16,7 @@ export default function RecordsRoutedLayout({
 }) {
   return (
     <div className="flex min-h-screen min-w-[1200px]">
-      <main className="flex-1">{children}</main>
+      <div className="flex-1">{children}</div>
     </div>
   );
 }
