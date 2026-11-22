@@ -93,8 +93,8 @@ async function fetchDocument(url: string): Promise<{
   const body = (await res.json()) as { $schema_version?: unknown; $meta?: unknown; products?: unknown; $etag?: unknown };
   // Header first, `$etag` (the same value, echoed into the body by the
   // route) as fallback -- see app/api/local/vendors/route.ts's GET for why
-  // the header alone isn't reliable behind a compressing intermediary like
-  // the nerd_cloud.sh Cloudflare tunnel.
+  // the header alone isn't reliable behind a compressing proxy such as a
+  // Cloudflare tunnel, which strips the ETag header.
   const etag = res.headers.get("ETag") ?? (typeof body.$etag === "string" ? body.$etag : null);
   return {
     products: Array.isArray(body.products) ? (body.products as PublishedProductRecord[]) : [],

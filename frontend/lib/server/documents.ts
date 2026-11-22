@@ -440,55 +440,6 @@ export async function mutateDocument<R>(params: {
   });
 }
 
-/**
- * Replaces `storedKey` with `bytes` and deletes `liveKey`, atomically --
- * the promote path (/records' "Update Stored Data"). The fs version was
- * backupThenWrite() followed by backupThenDelete(), two independent
- * operations with a window between them where a crash left the live
- * snapshot consumed but the stored document unchanged, or vice versa.
- *
- * The MERGE itself is not done here. It is domain logic about record
- * identity (matching on ncademi_product_url / vendor_directory_url) and it
- * stays in the route handler where it already lives; this function takes
- * the already-merged bytes. Keeping the datastore free of record-shape
- * knowledge is the same boundary lib/local-write.ts held.
- */
-export async function promoteLive(params: {
-  storedKey: DataKind;
-  liveKey: LiveKind;
-  bytes: string;
-  actor: string;
-}): Promise<{ etag: string }> {
-  const { storedKey, liveKey, bytes, actor } = params;
-  assertSize(storedKey, bytes);
-
-  const database = db();
-  const storedRef = database.collection(COLLECTION).doc(storedKey);
-  const liveRef = database.collection(COLLECTION).doc(liveKey);
-
-  return database.runTransaction(async (t) => {
-    const [storedSnap, liveSnap] = await Promise.all([t.get(storedRef), t.get(liveRef)]);
-
-    const etag = stageWrite(t, storedKey, snapshotOf(storedSnap), bytes, actor);
-
-    // The live snapshot's own rolling backup is refreshed before deletion,
-    // matching backupThenDelete() -- a promote that turns out to have
-    // merged wrongly can still be diagnosed against what was consumed.
-    const liveCurrent = snapshotOf(liveSnap);
-    if (liveCurrent) {
-      t.set(liveRef.collection(BACKUPS).doc(BACKUP_DOC), {
-        bytes: liveCurrent.bytes,
-        etag: liveCurrent.etag,
-        backed_up_at: FieldValue.serverTimestamp(),
-        replaced_by: actor,
-      });
-    }
-    t.delete(liveRef);
-
-    return { etag };
-  });
-}
-
 /** What transactDocuments hands `decide`: every requested key, in the order
  *  requested, mapped to its stored bytes and etag, or null when absent. */
 export type TransactionDocs = ReadonlyMap<DocumentKey, { bytes: string; etag: string } | null>;
@@ -502,7 +453,7 @@ export interface TransactionPlan<R> {
 }
 
 /** Stages the deletion of live snapshot `key`, refreshing its rolling backup
- *  first with the same fields promoteLive uses. A no-op when `current` is
+ *  first with the same fields stageWrite's backup uses. A no-op when `current` is
  *  null (the snapshot is already absent). Caller must already have
  *  performed every transaction read. */
 function stageDelete(
@@ -547,7 +498,7 @@ function stageDelete(
  * restricted by type to stored and side documents (DataKind, AuxKind), and
  * deletions to live snapshots (LiveKind). Every write keeps the rolling
  * backup (stageWrite); every deletion refreshes the live snapshot's backup
- * first, as promoteLive does. Deleting a live key that is absent is a no-op.
+ * first (stageDelete). Deleting a live key that is absent is a no-op.
  *
  * Why this exists alongside mutateDocument: mutateDocument is a
  * single-document read-modify-write whose restriction to "passwords" is a

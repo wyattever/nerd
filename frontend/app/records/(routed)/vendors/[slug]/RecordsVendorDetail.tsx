@@ -17,10 +17,9 @@
  * component: it also renders the Stored/Live "Data" controls.
  * `hasLiveScrapeData` (from page.tsx's getLiveVendors() read) now drives
  * "Live Data" the same way it does for published records, and
- * `category="vendors"` scopes "Retrieve Live Data" to a
- * `{ target: "vendors" }` scrape. "Stored Data" and the two (one still
- * stubbed) action buttons still render since SourceToggle has no prop to
- * hide them.
+ * `category="vendors"` scopes "Update Stored Data" to the vendors mirror
+ * promote. "Stored Data" and the "Update Stored Data" button still render
+ * since SourceToggle has no prop to hide them.
  */
 
 import { Suspense, useState } from "react";
