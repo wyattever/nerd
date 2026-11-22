@@ -393,14 +393,6 @@ export default function RecordsPage() {
 
               <button
                 type="button"
-                onClick={() => alert("Stubbed")}
-                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Update Stored Data
-              </button>
-
-              <button
-                type="button"
                 disabled={!hasLiveScrapeData}
                 onClick={() => setDataSource("live")}
                 className={`rounded border px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
