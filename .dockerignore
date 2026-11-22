@@ -1,7 +1,0 @@
-__pycache__/
-*.pyc
-venv312/
-.git/
-.env
-nerd_debug.log
-.pytest_cache/

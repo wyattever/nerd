@@ -1,37 +1,4 @@
-# .gcloudignore (repo root) -- ALLOWLIST. Everything is ignored, then only
-# what the nerd-api image needs is let back in.
-#
-# Why an allowlist: the only Cloud Build submitted from the repo root is the
-# nerd-api image (cloudbuild.api.yaml, via `scripts/deploy.sh candidate api`).
-# The root holds local-only data that must never reach the Cloud Build
-# source bucket: Firestore emulator exports (emulator-data/, which contains
-# the seeded passwords document), .scratch/ working files, the frontend/lib
-# JSON documents including passwords.json, .claude/, .env files, and the
-# ncademi_archive. An exclusion list fails open whenever a new local file
-# appears; an allowlist fails closed. When this file exists, gcloud does not
-# read .gitignore.
-#
-# The entries below are exactly what Dockerfile.api COPYs, plus the two build
-# files. If Dockerfile.api gains a COPY, add its source here, then check with:
-#   gcloud meta list-files-for-upload --project edtech-agent-2026
+# .gcloudignore (repo root) -- DENY-ALL. No Cloud Build is submitted from the
+# repository root any more: the frontend builds from frontend/ with its own context.
+# Everything is denied, so an accidental root `gcloud builds submit` uploads nothing.
 *
-
-!Dockerfile.api
-!cloudbuild.api.yaml
-!requirements.txt
-!constraints.txt
-!prompts/
-!prompts/**
-!nerd_core/
-!nerd_core/**
-!api/
-!api/**
-!templates/
-!templates/**
-
-# Re-exclude build residue inside the allowed directories.
-**/__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.DS_Store
