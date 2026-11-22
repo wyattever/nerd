@@ -1826,4 +1826,37 @@ describe("D36: vendors with no directory URL", () => {
     plan.report.couldNotCheck.pop();
     assert.deepEqual(input, before);
   });
+
+  test("(m) a URL-less vendor between two kept URL'd vendors keeps its stored position", () => {
+    const alpha = V("alpha");
+    const beta = V("beta");
+    const storedAlpha = vendor("Alpha", alpha);
+    const liveAlpha = vendor("Alpha", alpha, { product_website_url: "https://alpha.example/" });
+    const urlLess = vendor("NoUrl Co", V("nourl"), { vendor_directory_url: null });
+    const storedBeta = vendor("Beta", beta);
+    const plan = okPlan(
+      planPromote(
+        makeInput({
+          category: "vendors",
+          stored: [storedAlpha, urlLess, storedBeta],
+          live: [liveAlpha],
+          run: makeRun([outcome(alpha, "public_ok", { name: "Alpha" }), outcome(beta, "protected_vendor")]),
+          tracking: [tr("Alpha"), tr("NoUrl Co"), tr("Beta")],
+        })
+      )
+    );
+    // Stored order preserved: Alpha (updated from live), the URL-less vendor
+    // (D36: untouched), Beta (D22: protected, untouched).
+    assert.deepEqual(plan.nextStored, [liveAlpha, urlLess, storedBeta]);
+    assert.equal(plan.nextStored[1], urlLess);
+    assert.equal(plan.nextStored[2], storedBeta);
+    assert.deepEqual(plan.report.updated, [{ url: alpha, name: "Alpha" }]);
+    assert.deepEqual(plan.report.couldNotCheck, [
+      { url: "", name: "NoUrl Co", reason: NOT_ON_SITE_YET },
+      { url: beta, name: "Beta", reason: "protected vendor page" },
+    ]);
+    assert.deepEqual(plan.report.removed, []);
+    assertReportEmptyExcept(plan.report, ["updated", "couldNotCheck"]);
+    assert.deepEqual(plan.trackingNamesToDelete, []);
+  });
 });
