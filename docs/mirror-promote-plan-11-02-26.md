@@ -442,7 +442,7 @@ Each step is one dispatch with stop-and-report gates, validated before the next 
    - **Done** — tests-ts/promote-e2e.test.ts (11 cases; every §3.2–3.4 row covered), emulator-verified 2026-11-19; screen-reader check of the modal done in 6.3.
 8. **Retire the legacy editor** (D21). Independent; any time.
    - **Done** — on branch retire-legacy-editor, commit cc0531e (/editor redirects to /editor/candidates); merged to main in this sprint close.
-9. **DECISION_LOG entry** recording D1–D29, with a forward pointer on the merge-rule entry it reverses.
+9. **DECISION_LOG entry** recording D1–D55, with a forward pointer on the merge-rule entry it reverses.
    - **Done** — DECISION_LOG #69 (supersedes #44 and #68 in part).
 
 ---
