@@ -324,7 +324,7 @@ function ImportCandidatesDialog({ onClose, onImported }: Omit<ImportCandidatesMo
   else if (isImporting) statusText = "Importing…";
   else if (showResults && preview) {
     const s = preview.summary;
-    statusText = `${s.total} records checked: ${s.ready} ready, ${s.warning} with warnings, ${s.blocked} blocked.`;
+    statusText = `${s.total} ${s.total === 1 ? "record" : "records"} checked: ${s.ready} ready, ${s.warning} with warnings, ${s.blocked} blocked.`;
   }
 
   const describedBy = [hintId, pasteInvalid && alertText ? alertId : null].filter(Boolean).join(" ");
@@ -467,7 +467,7 @@ function ImportCandidatesDialog({ onClose, onImported }: Omit<ImportCandidatesMo
               aria-disabled={importUnavailable ? "true" : undefined}
               className={PRIMARY_BUTTON}
             >
-              Import {selectedCount} candidates
+              Import {selectedCount} {selectedCount === 1 ? "candidate" : "candidates"}
             </button>
           </>
         ) : (

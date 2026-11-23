@@ -407,7 +407,7 @@ export function CandidateEditor({
       const names = body.imported.map((r) => r.product_name);
       const shown = names.slice(0, 5).join(", ");
       const more = names.length > 5 ? ` and ${names.length - 5} more` : "";
-      setStatusMessage(`Imported ${names.length} candidates: ${shown}${more}.`);
+      setStatusMessage(`Imported ${names.length} ${names.length === 1 ? "candidate" : "candidates"}: ${shown}${more}.`);
     },
     [router, setSaveError, setStatusMessage]
   );
