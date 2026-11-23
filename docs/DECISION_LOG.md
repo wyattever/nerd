@@ -1373,3 +1373,58 @@ Upgrade `next` and `eslint-config-next` from 16.2.9 to 16.4.6, both pinned exact
 - `beautifulsoup4` is not pinned in `requirements.txt` (the workflow pins 4.15.0).
 - `.github/workflows/eval.yml` pre-dates this work and has not been reviewed.
 - Plan section 8 still describes the options and does not yet say Option A was built.
+
+### 73. BULK CANDIDATE IMPORT — preview and apply in one transaction, fed by concatenated research outputs.
+
+**Date:** 2026-11-23
+**Status:** Implemented on branch `feat/bulk-candidate-import` (not yet merged or deployed). Browser and VoiceOver check passed on 2026-11-23.
+**Related:** #65 (passwords in Firestore), #68 (editable passwords), #69 (mirror promote: transactDocuments and version tokens).
+**Authoritative detail:** `docs/NERD_System_Architecture.md` §3.G; tests in `docs/TESTING.md` ("Bulk Candidate import (node:test)").
+**Commits (branch):** parser 3f661d4; incomplete-JSON wording 9f91c85; decision 0032635; route and emulator test 546dd5b; dialog 2ac4c32; singular wording bbbb13f; docs eb5bd3f. Reports are kept locally under `.scratch/verification/` (bulk-import-1 to bulk-import-5b).
+
+#### CONTEXT
+
+Candidate research moved out of the Gemini Gem (`prompts/GEM-instructions.txt`, Markdown output, consumed by the retired Python Import Data service) into the **Candidate Researcher**, a Claude Project whose instructions are `prompts/candidate-research-instructions.md`. It researches one product per run and returns one product record as a single fenced JSON code block. Researchers run several chats in parallel tabs. The only intake path was **Import Candidate**, one pasted record at a time, held unsaved in the editor until Save, with its password created before the save.
+
+#### DECISION — paste many research outputs, preview them against stored data, then apply the selection in one transaction.
+
+On `/editor/candidates`, **Bulk Import Candidates** opens a dialog. The researcher pastes the concatenated outputs (bare records, arrays, or a `nerd-candidate-batch` v1 envelope, with or without code fences; at most 25 records and 500 KB). **Check** calls `POST /api/local/candidate-import` in preview mode: one `transactDocuments` read of `candidate`, `tracking`, `passwords`, `added` and `published` produces a per-record status and the documents' version tokens. **Import** sends the selected slugs with those tokens; the same pure decision (`decideCandidateImport`) runs again inside one transaction and writes `candidate`, `tracking` and, when needed, `passwords` together. Any changed token returns 409 with a fresh preview and nothing written.
+
+Per-record status:
+- **Blocked**: a paste error, a missing slug, a schema error, or an exact duplicate (same slug, product name or normalized website) of a record in Candidates, Added or Published, or of an earlier record in the same paste.
+- **Warning**: a normalized (changed) slug, a schema warning, or a near-name match.
+- **Ready**: otherwise.
+
+**Defaults:**
+- **Direct write.** Apply writes to Firestore at once; there is no unsaved client-side stage. The editor refuses to open the dialog while it has unsaved edits, and reloads from the server afterwards.
+- **A second footer button.** The single Import Candidate path and `ImportJsonModal` are unchanged; both now share `applyBoilerplateDefaults`.
+- **Unknown fields are kept, with a warning**, as `validateProductRecord` already does.
+- **Tracking status Gathering** for every imported record, as the single import does.
+- **Passwords are created only on apply**, in the same transaction, and only for products that have no row yet.
+
+#### ALTERNATIVES REJECTED
+
+- **Batching inside the Candidate Researcher** (many products per chat). Rejected: one product per run keeps each research context small and each output reviewable, and parallel tabs already give throughput.
+- **A command-line-only importer.** Rejected: researchers work in the browser, and the preview, the per-record selection and the accessible feedback belong in the editor. The pure decision module stays callable from a script later if needed.
+- **A client-side, unsaved import with passwords created before the save** (extending Import Candidate to many records). Rejected: passwords would be written for records that might never be saved, a large unsaved batch is easy to lose, and the three documents would be written by separate requests with no shared concurrency guard.
+
+#### CONSEQUENCES
+
+- **No link checking at import.** URLs in pasted records are not fetched or validated (the Python liveness and redirect checks were removed with the Python service on 2026-11-22); reviewers verify them in the editor, as with the single import. The Candidate Researcher's failed-fetch rule can cite a URL it could not open, and nothing in the record marks which ones.
+- **Exact-match duplicate detection only.** Slug, product name and normalized website must match exactly to block. Near names only warn, so a renamed or differently spelled product can still be imported twice.
+- **Stale Gem material stays for now.** `prompts/GEM-instructions.txt` and the Python-era documentation (§3.A and §7 of the architecture doc, #38's file move, the August session handoff) stay until the Python-removal docs stage rewrites or retires them.
+- The emulator end-to-end test overwrites emulator documents; the emulator must be restarted from `emulator-data` after it runs.
+
+#### VERIFIED
+
+- Unit tests: `candidate-import-parse` 14 of 14 and `candidate-import-decide` 14 of 14 (node:test, no Firestore). Emulator end-to-end `candidate-import-e2e` 5 of 5 (preview, apply, stale-token conflict, blocked selection, repeat import). `promote-mirror` 28 of 28 and `promote-ui` 40 of 40 unchanged.
+- Typecheck clean at every step; lint clean on the files changed by the dialog and by the singular-wording fix. Browser and VoiceOver checklist (nine items, including 200% and 400% zoom and keyboard-only use) passed on 2026-11-23.
+
+#### KNOWN, NOT ADDRESSED
+
+- A record with a missing closing bracket ends the scan: everything pasted after it is not read. The Check results say so, and the researcher re-pastes the rest.
+- An ACR found only on an excluded domain (`psdschools.org`, `railslibraries.org`) leaves `acr_reports` empty with no signal to the reviewer that one exists elsewhere (seen with i-Ready Inform). Marking it needs a new record field.
+- Phone numbers have nowhere to go (`support_contacts.type` allows only `email` and `url`), and `PublishedAcrReport` has no field for who prepared a report.
+- Retiring the single Import Candidate, and restricting bulk import to Admins once that role exists, are open. For now anyone on the sign-in allowlist can run it.
+- The emulator end-to-end test's `design:` citations name sections of the design document "N.E.R.D. Bulk Candidate Import", which is not in the repository; the citations were not checked against it.
+- Not yet merged to `main`, deployed, or used on production data.
