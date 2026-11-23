@@ -38,6 +38,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { hasBlockingError, validateProductRecord } from "@/lib/published-validate";
+import { applyBoilerplateDefaults } from "@/lib/candidate-import";
 import type { PublishedProductRecord } from "@/lib/published-tables";
 
 interface ImportJsonModalProps {
@@ -88,27 +89,8 @@ export function ImportJsonModal({ onImport, onClose }: ImportJsonModalProps) {
       if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
         const record = parsed as Record<string, unknown>;
 
-        // PLACEHOLDER, not a verified live URL -- mirrors the same
-        // convention used by the AppSheet migration route
-        // (/api/local/migrate-appsheet) for the same reason: a candidate
-        // record has no real ncademi.org URL yet, but the field is
-        // required non-empty by published-validate.ts.
-        if (!record.ncademi_product_url && typeof record.slug === "string" && record.slug) {
-          record.ncademi_product_url = `https://ncademi.org/provide/directory/products/${record.slug}/`;
-        }
-        if (record.vendor_directory_url === undefined) {
-          record.vendor_directory_url = null;
-        }
-        // Represents "when this record was imported," not a real prior
-        // update timestamp from a source -- there is no such timestamp to
-        // carry over for a hand-pasted record.
-        if (record.last_updated === undefined) {
-          record.last_updated = new Date().toISOString();
-        }
-        // Deprecated field, still required by the schema.
-        if (record.ai_insights === undefined) {
-          record.ai_insights = null;
-        }
+        // What each fill means: see applyBoilerplateDefaults in lib/candidate-import.ts.
+        applyBoilerplateDefaults(record, new Date());
       }
     } catch (err) {
       setError(err instanceof Error ? `Invalid JSON: ${err.message}` : "Invalid JSON.");
