@@ -90,6 +90,26 @@ Introduced to replace three separate, inconsistent surfaces — the 1000+ line l
   * The `/api/local/migrate-appsheet` route is a one-off bootstrap (POST-only, no ETag check by design — it's a deliberate overwrite, not the concurrent-edit path) that seeds `added.json`/`candidate.json` from the legacy AppSheet global table.
 * **`vendors.json`** (`frontend/lib/vendors.json`): the global vendor registry. Its schema is the unified `frontend/lib/directory-schema.ts` (`DirectoryRecord`/`DirectoryFile`/`DirectoryRecordKind`), regenerated into that shape by `scripts/migrate_vendors_to_unified.py` (see [Decision #47](DECISION_LOG.md#47-vendor-schema-unification--vendor-schemats-superseded-by-directory-schemats)); the older `frontend/lib/vendor-schema.ts` (`VendorRecord`/`VendorResource`/`VendorsFile`) describes the pre-unification shape and is no longer used by the vendors editor stack. Populated by `scripts/scrape_vendors.py`, which crawls each vendor's own NCADEMI directory page starting from the deduplicated `vendor_directory_url`s in a products JSON file. `scripts/dedupe_vendor_resources.py` then strips a product's own `vendor_resources` entries that exactly duplicate a URL already captured under that same vendor in `vendors.json` (matched by `(vendor_name, url)`), so the frontend doesn't have to de-duplicate at render time.
 
+### G. Bulk Candidate import
+
+Adds several Candidates at once from research results, previewed and then written in one Firestore transaction.
+
+* **Research**: done in the **Candidate Researcher**, a Claude Project whose instructions are `prompts/candidate-research-instructions.md`. One product per chat; researchers run several chats in parallel browser tabs. Each run returns one product record as a single fenced JSON code block.
+* **Paste**: on `/editor/candidates`, the **Bulk Import Candidates** button (a second sidebar footer button, under the unchanged single **Import Candidate**) opens `ImportCandidatesModal.tsx`. The researcher pastes one or more outputs, concatenated. The parser accepts bare records, arrays of records and a `nerd-candidate-batch` (version 1) envelope, with or without code fences, up to 25 records and 500 KB. Text that is not JSON, invalid JSON and an unterminated record become numbered error entries rather than being dropped.
+* **Preview and apply**: **Check** sends `POST /api/local/candidate-import` with `mode: "preview"`; **Import** sends `mode: "apply"` with the selected slugs and the preview's version tokens. Both modes read `candidate`, `tracking`, `passwords`, `added` and `published` in one `transactDocuments` transaction and run the same pure decision (`decideCandidateImport`). A token that no longer matches its document's etag returns 409 with a fresh preview and nothing written.
+* **Per-record status**: each record is normalized first (slug normalized, with a warning when it changes; `tracking_*` fields stripped; the Import Candidate boilerplate defaults applied) and validated with `validateProductRecord`.
+  * **Blocked**: a paste error, a missing or empty slug, a schema error, or an exact duplicate. A duplicate is the same slug, the same product name or the same normalized website (host without `www.`, plus path) as a record in Candidates, Added or Published, or as an earlier record in the same paste.
+  * **Warning**: a changed slug, a schema warning (including an unknown field, which is kept), or a near-name match (letters and digits only, at least four characters, one name contained in the other) against stored names or earlier names in the paste.
+  * **Ready**: none of the above. Ready and warning records start selected; blocked records cannot be selected.
+* **Writes on apply**: the selected records are added to `candidate` (sorted by product name), each gets a `tracking` row with status **Gathering**, and `passwords` gains a row for each product that has none. Passwords are created only on apply, never at preview. The writes are direct: there is no unsaved client-side stage, so the editor refuses to open the dialog while it has unsaved edits, and after an import it reloads products and passwords from the server and refreshes the list.
+* **Files**:
+  * `frontend/lib/candidate-import.ts`: pure paste parser (`parsePaste`), slug, URL and name normalizers, and the shared `applyBoilerplateDefaults` (also used by `ImportJsonModal.tsx`).
+  * `frontend/lib/server/candidate-import.ts`: request parsing and the pure preview/apply decision (`decideCandidateImport`).
+  * `frontend/app/api/local/candidate-import/route.ts`: the authenticated route that runs the decision in one transaction.
+  * `frontend/components/ImportCandidatesModal.tsx`: the dialog (paste step, results table, import), WCAG 2.2 AA.
+
+Sections 3.A and 7 describe the earlier Gem and Import Data path, which is retired separately.
+
 ## 4. Multi-Layer Testing Strategy
 
 Protected by a 4-layer validation suite (documented in `docs/TESTING.md`):
@@ -242,6 +262,7 @@ nerd/
 │   ├── system_prompt.j2 / delta_system_prompt.j2
 │   ├── research_schema_prompt.txt   # AI Studio sandbox mirror, see §7
 │   ├── GEM-instructions.txt         # Gemini Gem researcher persona, see §7
+│   ├── candidate-research-instructions.md # Candidate Researcher (Claude Project) instructions, see 3.G
 │   └── optimized_instructions.json / optimized_instructions_diff.txt
 ├── eval/                         # promptfoo-based eval harness
 │   ├── assertions.py / provider.py / optimize.py

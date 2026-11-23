@@ -39,6 +39,8 @@ import { PublishedOtherResourcesEditor } from "@/components/PublishedOtherResour
 import { PublishedSupportEditor } from "@/components/PublishedSupportEditor";
 import { PublishedAcrEditor } from "@/components/PublishedAcrEditor";
 import { ImportJsonModal } from "@/components/ImportJsonModal";
+import { ImportCandidatesModal } from "@/components/ImportCandidatesModal";
+import type { CandidateImportAppliedBody } from "@/lib/server/candidate-import";
 import { DeleteCandidateModal } from "@/components/DeleteCandidateModal";
 import { CodeViewModal } from "@/components/CodeViewModal";
 import { PasswordField } from "@/components/PasswordField";
@@ -167,7 +169,7 @@ export function CandidateEditor({
     setIsDirty(true);
   }, []);
 
-  const { setStatusMessage, setSaveError, setCreateAction } = useMessages();
+  const { setStatusMessage, setSaveError, setCreateAction, setBulkImportAction } = useMessages();
   const [isSaving, startSaveTransition] = useTransition();
 
   const [isHeaderEditorOpen, setIsHeaderEditorOpen] = useState(false);
@@ -176,6 +178,7 @@ export function CandidateEditor({
   const [isSupportEditorOpen, setIsSupportEditorOpen] = useState(false);
   const [isAcrEditorOpen, setIsAcrEditorOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
 
@@ -197,6 +200,20 @@ export function CandidateEditor({
     setCreateAction(() => () => setIsImportModalOpen(true));
     return () => setCreateAction(null);
   }, [setCreateAction]);
+
+  // "Bulk Import Candidates", registered the same way. A bulk import
+  // reloads products from the server, so it is refused while there are
+  // unsaved edits rather than silently discarding them.
+  useEffect(() => {
+    setBulkImportAction(() => () => {
+      if (isDirty) {
+        setStatusMessage("Save or discard your changes before a bulk import.");
+        return;
+      }
+      setIsBulkImportModalOpen(true);
+    });
+    return () => setBulkImportAction(null);
+  }, [setBulkImportAction, isDirty, setStatusMessage]);
 
   const selected = useMemo(() => products.find((p) => p.slug === activeSlug) ?? null, [products, activeSlug]);
 
@@ -356,6 +373,44 @@ export function CandidateEditor({
     // IntegratedListPanel.tsx's sidebar footer (Phase 4.14). Browser
     // default focus-on-close applies instead.
   }, []);
+
+  const handleBulkImportModalClosed = useCallback(() => {
+    setIsBulkImportModalOpen(false);
+    // ImportCandidatesModal returns focus to the footer button itself.
+  }, []);
+  // The import was written server-side in one transaction, so local state
+  // is reloaded from the server (products, etag, passwords) and the
+  // server-fed list panel is refreshed. No navigation.
+  const handleBulkImported = useCallback(
+    async (body: CandidateImportAppliedBody) => {
+      try {
+        const doc = await fetchDocument("/api/local/candidate");
+        setProducts(doc.products);
+        setEtag(doc.etag);
+      } catch (err) {
+        setSaveError(
+          `The import succeeded, but reloading candidates failed (${err instanceof Error ? err.message : String(err)}). Reload the page.`
+        );
+      }
+      try {
+        const res = await fetch("/api/local/passwords");
+        if (!res.ok) throw new Error(`GET failed with ${res.status}`);
+        const passwordsBody = (await res.json()) as { passwords?: PasswordRecord[] };
+        setPasswordRecords(Array.isArray(passwordsBody.passwords) ? passwordsBody.passwords : []);
+        setPasswordsLoaded(true);
+      } catch {
+        // Same degradation as the mount-time passwords effect: the field
+        // keeps its previous state rather than showing an error.
+      }
+      router.refresh();
+
+      const names = body.imported.map((r) => r.product_name);
+      const shown = names.slice(0, 5).join(", ");
+      const more = names.length > 5 ? ` and ${names.length - 5} more` : "";
+      setStatusMessage(`Imported ${names.length} ${names.length === 1 ? "candidate" : "candidates"}: ${shown}${more}.`);
+    },
+    [router, setSaveError, setStatusMessage]
+  );
   const handleDeleteModalClosed = useCallback(() => {
     setIsDeleteModalOpen(false);
     deleteCandidateButtonRef.current?.focus();
@@ -643,6 +698,11 @@ export function CandidateEditor({
         <PublishedAcrEditor key={selected.slug} record={selected} onSave={handleAcrSave} onClose={handleAcrEditorClosed} />
       ) : null}
       {isImportModalOpen ? <ImportJsonModal onImport={handleImport} onClose={handleImportModalClosed} /> : null}
+      <ImportCandidatesModal
+        isOpen={isBulkImportModalOpen}
+        onClose={handleBulkImportModalClosed}
+        onImported={(importedBody) => void handleBulkImported(importedBody)}
+      />
       {isDeleteModalOpen ? <DeleteCandidateModal onConfirm={handleDeleteConfirm} onClose={handleDeleteModalClosed} /> : null}
       {isCodeModalOpen ? <CodeViewModal code={codeHtml} onClose={handleCodeModalClosed} /> : null}
     </div>

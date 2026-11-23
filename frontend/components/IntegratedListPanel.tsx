@@ -90,6 +90,9 @@ interface MessagesContextValue {
    *  render below. Pass `null` to unregister (e.g. on unmount) so a
    *  stale handler from a previous record can't linger. */
   setCreateAction: (action: (() => void) | null) => void;
+  /** Same as setCreateAction, for the second Candidates footer button,
+   *  "Bulk Import Candidates". Pass `null` to unregister. */
+  setBulkImportAction: (action: (() => void) | null) => void;
   /** Promote-live confirmations, rendered in the Messages footer below. One
    *  entry per "Update Stored Data" press: a `promote` entry carrying the
    *  merge counts, or a `promote-error` entry. SourceToggle.tsx's
@@ -135,6 +138,7 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
   const [statusMessage, setStatusMessage] = useState("");
   const [saveError, setSaveError] = useState("");
   const [createAction, setCreateAction] = useState<(() => void) | null>(null);
+  const [bulkImportAction, setBulkImportAction] = useState<(() => void) | null>(null);
   const [liveLog, setLogEntries] = useState<LiveLogEntry[]>([]);
   const nextLogId = useRef<number>(0);
   const messagesRef = useRef<HTMLDivElement>(null);
@@ -155,6 +159,7 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
       setStatusMessage,
       setSaveError,
       setCreateAction,
+      setBulkImportAction,
       liveLog,
       appendLog,
       focusMessages,
@@ -330,6 +335,16 @@ export function IntegratedListPanel({ items, baseRoute, activeMode, activeCatego
               className="w-full rounded border border-transparent bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Import Candidate
+            </button>
+          )}
+          {activeMode === "editor" && activeCategory === "candidates" && (
+            <button
+              type="button"
+              disabled={!bulkImportAction}
+              onClick={() => bulkImportAction?.()}
+              className="mt-2 w-full rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Bulk Import Candidates
             </button>
           )}
           {activeMode === "editor" && activeCategory === "vendors" && (
