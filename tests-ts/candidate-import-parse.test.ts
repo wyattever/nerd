@@ -142,7 +142,10 @@ test("i. a record missing its final brace gives one incomplete-JSON error", () =
   const entries = entriesOf(text);
   assert.equal(entries.length, 1);
   assert.equal(entries[0].record, null);
-  assert.equal(entries[0].error, "incomplete JSON (missing a closing bracket)");
+  assert.equal(
+    entries[0].error,
+    "incomplete JSON (missing a closing bracket); anything pasted after this point was not read",
+  );
 });
 
 test("j. refusals: empty, too many records, too large, no records", () => {

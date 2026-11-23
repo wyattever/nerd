@@ -30,10 +30,12 @@
  * Before that validation runs, handleImportClick auto-fills a handful of
  * boilerplate fields the schema requires but a hand-authored or partial
  * paste commonly omits (ncademi_product_url, vendor_directory_url,
- * last_updated, ai_insights) -- see the comments at each fill for what each
- * value actually represents (several are placeholders, not real data).
- * This only touches fields that are missing outright; anything the pasted
- * JSON already provides, including an explicit null, is left untouched.
+ * last_updated, ai_insights) -- See applyBoilerplateDefaults in
+ * lib/candidate-import.ts for what each value represents (several are
+ * placeholders, not real data). Missing fields are filled;
+ * ncademi_product_url is also filled when it is null or empty, because the
+ * research Project sends null. Anything else the pasted JSON provides is
+ * left untouched.
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";

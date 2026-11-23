@@ -224,7 +224,9 @@ export function parsePaste(text: string): ParsePasteResult {
     if (ch === "{" || ch === "[") {
       const end = findValueEnd(text, i);
       if (end === -1) {
-        items.push({ error: "incomplete JSON (missing a closing bracket)" });
+        items.push({
+          error: "incomplete JSON (missing a closing bracket); anything pasted after this point was not read",
+        });
         break;
       }
       let parsed: unknown;
