@@ -28,6 +28,20 @@ This document outlines the multi-layer testing strategy for the N.E.R.D. (Ncadem
   - Frontend running: `cd frontend && npm run dev`
 - **Run:** `cd frontend && npx playwright test`
 
+## Bulk Candidate import (node:test)
+
+Three test files cover bulk Candidate import (see `docs/NERD_System_Architecture.md` §3.G). Run each from the repo root.
+
+- **Paste parser and normalizers** (`frontend/lib/candidate-import.ts`), pure, no Firestore:
+  `FIRESTORE_EMULATOR_HOST=127.0.0.1:1 node --experimental-transform-types --import ./tests-ts/support/ts-resolve.mjs --test tests-ts/candidate-import-parse.test.ts`
+- **Preview and apply decision** (`frontend/lib/server/candidate-import.ts`), pure, no Firestore:
+  `FIRESTORE_EMULATOR_HOST=127.0.0.1:1 node --experimental-transform-types --import ./tests-ts/support/ts-resolve.mjs --test tests-ts/candidate-import-decide.test.ts`
+  The unreachable emulator host makes any accidental Firestore call fail.
+- **End to end against the Firestore emulator** (the route's wiring through `transactDocuments`), with the emulator running on 127.0.0.1:8080:
+  `env -u GOOGLE_CLOUD_PROJECT FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 NERD_FIREBASE_PROJECT_ID=edtech-agent-2026 node --experimental-transform-types --import ./tests-ts/support/ts-resolve.mjs --test tests-ts/candidate-import-e2e.test.ts`
+  **Warning:** this test overwrites emulator documents. Afterwards, stop the emulator and restart it with:
+  `firebase emulators:start --only firestore --import=emulator-data`
+
 ## Best Practices
 
 ### Mocking
